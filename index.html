@@ -1,0 +1,1567 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>马马打工记</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{width:100%;height:100%;background:#ffffff;overflow:hidden;touch-action:none;user-select:none;-webkit-user-select:none;font-family:'PingFang SC','Microsoft YaHei',Arial,sans-serif}
+body{display:flex;justify-content:center;align-items:center}
+canvas{display:block;flex-shrink:0}
+</style>
+</head>
+<body>
+<canvas id="game"></canvas>
+<input type="text" id="nameInput" style="position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);width:200px;padding:10px;font-size:20px;text-align:center;border:3px solid #fd4;background:#1a1a2e;color:#fd4;border-radius:8px;font-family:'PingFang SC','Microsoft YaHei',Arial,sans-serif;display:none;z-index:100;outline:none;" placeholder="起个名字" maxlength="12">
+<button id="nameOk" style="position:fixed;top:calc(50% + 60px);left:50%;transform:translateX(-50%);padding:10px 30px;font-size:18px;background:#fd4;color:#000;border:none;border-radius:8px;font-family:'PingFang SC','Microsoft YaHei',Arial,sans-serif;display:none;z-index:100;cursor:pointer;">确 定</button>
+<script>
+// ===== CONSTANTS =====
+let W=480, H=720; const BASE_W=480, BASE_H=720;
+const P={"t":null,"1":"#e8d5b7","2":"#c4956a","3":"#8b5e3c","4":"#4a2c17","5":"#ffffff","6":"#222222","7":"#ff4444","8":"#44dd44","9":"#ffaa00","a":"#44aaff","b":"#ffdd44","c":"#999999","d":"#dd88aa","e":"#664400","f":"#cc8844","g":"#00ccaa","h":"#ff8844","x":"#1a1a2e","y":"#111111","z":"#888888","i":"#39a0ff","j":"#6613d7","k":"#b0b0b0","l":"#ffcc00","m":"#aa0000","n":"#00aa55","o":"#ff6600","p":"#7d00ff","q":"#0099cc","r":"#c0c0c0"};
+const JOKES=[
+  '"你上班，所以你在上班。"',
+  '"加班和不加班，结果都要下班。"',
+  '"你很努力，努力地努力着。"',
+  '"做完这个项目，就可以做下一个了。"',
+  '"今天不加班，明天也要加，所以今天加班=明天不加班。"',
+  '"老板说辛苦了，你说不辛苦，那确实不辛苦。"',
+  '"摸鱼被发现了，说明摸得不够认真。"',
+  '"周一来了，周五还会远吗？远，很远。"',
+  '"工资到账了，又没到账，因为花完了。"',
+  '"你很强，强到没有情绪，因为都用来上班了。"'
+];
+
+// ===== SPRITES =====
+const S={
+pony_idle:["tttttttttytttttttttttttttttttt","ttttttyyzyzytttttttttttttttttt","ttttttyyyyyyzttttttttttttttttt","ttttttyyyyyzzytttttttttttttttt","ttttttyyyyyyyzzttttttttttttttt","ttttyyy55yyyzzzttttttttttttttt","ttttyyyzyyyyyyyttttttttttttttt","ttyyyyyyyyyyyzzttttttttttttttt","ttyyyyyyyyyyyyyttttttttttttttt","ttttyttyyyyyyzzttttttttttttttt","tttttttyyyyyyzztttyyyyyttttttt","tttttttyyyyyyyytyyyyyyyyyttttt","ttttttyyyyyyyyyyyyyzzzyyyttttt","ttttttyyyyyyyyyyyyzzzzzyyytttt","tttttyyyyyyyyyyyyyzyyyzyyytttt","tttttyyyyyyyyyyyyyzyyyzyyytttt","yttttyyyyyyyyyyyyyzzyzzyyyttty","yytttyyyyyyyyyyyyyyyyyyyyyttyy","yyyttyyyyyyyyyyyyyyyyyyyyytyyy","yyyyyyyyyyyyyyyyyyyyyyyyyyyyyy","yyyyyyyyyyyyyyyyyyyyyyyyyyyyyy","tyyyyyyyyyyyyyyyyyyyyyyyyyyyyt","ttyyyyyyyyyyyyyyyyyyyyyyyyyytt","ttttyyyyyyyyyyyyyyyyyyyyyytttt","tttttttyyyyyyyyyyyyyyyyttttttt","ttttttttttyyyyyyyyyytttttttttt"],
+pony_run1:["tttttttttytttttttttttttttttttt","ttttttyyzyzytttttttttttttttttt","ttttttyyyyyyzttttttttttttttttt","ttttttyyyyyzzytttttttttttttttt","ttttttyyyyyyyzzttttttttttttttt","ttttyyy55yyyzzzttttttttttttttt","ttttyyyzyyyyyyyttttttttttttttt","ttyyyyyyyyyyyzzttttttttttttttt","ttyyyyyyyyyyyyyttttttttttttttt","ttttyttyyyyyyzzttttttttttttttt","tttttttyyyyyyzztttyyyyyttttttt","tttttttyyyyyyyytyyyyyyyyyttttt","ttttttyyyyyyyyyyyyyzzzyyyttttt","ttttttyyyyyyyyyyyyzzzzzyyytttt","tttttyyyyyyyyyyyyyzyyyzyyytttt","tttttyyyyyyyyyyyyyzyyyzyyytttt","yttttyyyyyyyyyyyyyzzyzzyyyttty","yytttyyyyyyyyyyyyyyyyyyyyyttyy","yyyttyyyyyyyyyyyyyyyyyyyyytyyy","yyyyyyyyyyyyyyyyyyyyyyyyyyyyyy","yyyyyyyyyyyyyyyyyyyyyyyyyyyyyy","tyyyyyyyyyyyyyyyyyyyyyyyyyyyyt","ttyyyyyyyyyyyyyyyyyyyyyyyyyytt","ttttyyyyyyyyyyyyyyyyyyyyyytttt","tttttttyyyyyyyyyyyyyyyyttttttt","ttttttttttyyyyyyyyyytttttttttt"],
+pony_run2:["tttttttttytttttttttttttttttttt","ttttttyyzyzytttttttttttttttttt","ttttttyyyyyyzttttttttttttttttt","ttttttyyyyyzzytttttttttttttttt","ttttttyyyyyyyzzttttttttttttttt","ttttyyy55yyyzzzttttttttttttttt","ttttyyyzyyyyyyyttttttttttttttt","ttyyyyyyyyyyyzzttttttttttttttt","ttyyyyyyyyyyyyyttttttttttttttt","ttttyttyyyyyyzzttttttttttttttt","tttttttyyyyyyzztttyyyyyttttttt","tttttttyyyyyyyytyyyyyyyyyttttt","ttttttyyyyyyyyyyyyyzzzyyyttttt","ttttttyyyyyyyyyyyyzzzzzyyytttt","tttttyyyyyyyyyyyyyzyyyzyyytttt","tttttyyyyyyyyyyyyyzyyyzyyytttt","yttttyyyyyyyyyyyyyzzyzzyyyttty","yytttyyyyyyyyyyyyyyyyyyyyyttyy","yyyttyyyyyyyyyyyyyyyyyyyyytyyy","yyyyyyyyyyyyyyyyyyyyyyyyyyyyyy","yyyyyyyyyyyyyyyyyyyyyyyyyyyyyy","tyyyyyyyyyyyyyyyyyyyyyyyyyyyyt","ttyyyyyyyyyyyyyyyyyyyyyyyyyytt","ttttyyyyyyyyyyyyyyyyyyyyyytttt","tttttttyyyyyyyyyyyyyyyyttttttt","ttttttttttyyyyyyyyyytttttttttt"],
+pony_jump:["tttttttttytttttttttttttttttttt","ttttttyyzyzytttttttttttttttttt","ttttttyyyyyyzttttttttttttttttt","ttttttyyyyyzzytttttttttttttttt","ttttttyyyyyyyzzttttttttttttttt","ttttyyy55yyyzzzttttttttttttttt","ttttyyyzyyyyyyyttttttttttttttt","ttyyyyyyyyyyyzzttttttttttttttt","ttyyyyyyyyyyyyyttttttttttttttt","ttttyttyyyyyyzzttttttttttttttt","tttttttyyyyyyzztttyyyyyttttttt","tttttttyyyyyyyytyyyyyyyyyttttt","ttttttyyyyyyyyyyyyyzzzyyyttttt","ttttttyyyyyyyyyyyyzzzzzyyytttt","tttttyyyyyyyyyyyyyzyyyzyyytttt","tttttyyyyyyyyyyyyyzyyyzyyytttt","yttttyyyyyyyyyyyyyzzyzzyyyttty","yytttyyyyyyyyyyyyyyyyyyyyyttyy","yyyttyyyyyyyyyyyyyyyyyyyyytyyy","yyyyyyyyyyyyyyyyyyyyyyyyyyyyyy","yyyyyyyyyyyyyyyyyyyyyyyyyyyyyy","tyyyyyyyyyyyyyyyyyyyyyyyyyyyyt","ttyyyyyyyyyyyyyyyyyyyyyyyyyytt","ttttyyyyyyyyyyyyyyyyyyyyyytttt","tttttttyyyyyyyyyyyyyyyyttttttt","ttttttttttyyyyyyyyyytttttttttt"],
+pony_flat:["tttttttttytttttttttttttttttttt","ttttttyyzyzytttttttttttttttttt","ttttttyyyyyyzttttttttttttttttt","ttttttyyyyyzzytttttttttttttttt","ttttttyyyyyyyzzttttttttttttttt","ttttyyy55yyyzzzttttttttttttttt","ttttyyyzyyyyyyyttttttttttttttt","ttyyyyyyyyyyyzzttttttttttttttt","ttyyyyyyyyyyyyyttttttttttttttt","ttttyttyyyyyyzzttttttttttttttt","tttttttyyyyyyzztttyyyyyttttttt","tttttttyyyyyyyytyyyyyyyyyttttt","ttttttyyyyyyyyyyyyyzzzyyyttttt","ttttttyyyyyyyyyyyyzzzzzyyytttt","tttttyyyyyyyyyyyyyzyyyzyyytttt","tttttyyyyyyyyyyyyyzyyyzyyytttt","yttttyyyyyyyyyyyyyzzyzzyyyttty","yytttyyyyyyyyyyyyyyyyyyyyyttyy","yyyttyyyyyyyyyyyyyyyyyyyyytyyy","yyyyyyyyyyyyyyyyyyyyyyyyyyyyyy","yyyyyyyyyyyyyyyyyyyyyyyyyyyyyy","tyyyyyyyyyyyyyyyyyyyyyyyyyyyyt","ttyyyyyyyyyyyyyyyyyyyyyyyyyytt","ttttyyyyyyyyyyyyyyyyyyyyyytttt","tttttttyyyyyyyyyyyyyyyyttttttt","ttttttttttyyyyyyyyyytttttttttt"],
+pony_chubby:["tttttttttytttttttttttttttttttt","ttttttyyzyzytttttttttttttttttt","ttttttyyyyyyzttttttttttttttttt","ttttttyyyyyzzytttttttttttttttt","ttttttyyyyyyyzzttttttttttttttt","ttttyyy55yyyzzzttttttttttttttt","ttttyyyzyyyyyyyttttttttttttttt","ttyyyyyyyyyyyzzttttttttttttttt","ttyyyyyyyyyyyyyttttttttttttttt","ttttyttyyyyyyzzttttttttttttttt","tttttttyyyyyyzztttyyyyyttttttt","tttttttyyyyyyyytyyyyyyyyyttttt","ttttttyyyyyyyyyyyyyzzzyyyttttt","ttttttyyyyyyyyyyyyzzzzzyyytttt","tttttyyyyyyyyyyyyyzyyyzyyytttt","tttttyyyyyyyyyyyyyzyyyzyyytttt","yttttyyyyyyyyyyyyyzzyzzyyyttty","yytttyyyyyyyyyyyyyyyyyyyyyttyy","yyyttyyyyyyyyyyyyyyyyyyyyytyyy","yyyyyyyyyyyyyyyyyyyyyyyyyyyyyy","yyyyyyyyyyyyyyyyyyyyyyyyyyyyyy","tyyyyyyyyyyyyyyyyyyyyyyyyyyyyt","ttyyyyyyyyyyyyyyyyyyyyyyyyyytt","ttttyyyyyyyyyyyyyyyyyyyyyytttt","tttttttyyyyyyyyyyyyyyyyttttttt","ttttttttttyyyyyyyyyytttttttttt"],
+pony_fat:["tttttttttytttttttttttttttttttt","ttttttyyzyzytttttttttttttttttt","ttttttyyyyyyzttttttttttttttttt","ttttttyyyyyzzytttttttttttttttt","ttttttyyyyyyyzzttttttttttttttt","ttttyyy55yyyzzzttttttttttttttt","ttttyyyzyyyyyyyttttttttttttttt","ttyyyyyyyyyyyzzttttttttttttttt","ttyyyyyyyyyyyyyttttttttttttttt","ttttyttyyyyyyzzttttttttttttttt","tttttttyyyyyyzztttyyyyyttttttt","tttttttyyyyyyyytyyyyyyyyyttttt","ttttttyyyyyyyyyyyyyzzzyyyttttt","ttttttyyyyyyyyyyyyzzzzzyyytttt","tttttyyyyyyyyyyyyyzyyyzyyytttt","tttttyyyyyyyyyyyyyzyyyzyyytttt","yttttyyyyyyyyyyyyyzzyzzyyyttty","yytttyyyyyyyyyyyyyyyyyyyyyttyy","yyyttyyyyyyyyyyyyyyyyyyyyytyyy","yyyyyyyyyyyyyyyyyyyyyyyyyyyyyy","yyyyyyyyyyyyyyyyyyyyyyyyyyyyyy","tyyyyyyyyyyyyyyyyyyyyyyyyyyyyt","ttyyyyyyyyyyyyyyyyyyyyyyyyyytt","ttttyyyyyyyyyyyyyyyyyyyyyytttt","tttttttyyyyyyyyyyyyyyyyttttttt","ttttttttttyyyyyyyyyytttttttttt"],
+pony_hit:["tttttttttytttttttttttttttttttt","ttttttyyzyzytttttttttttttttttt","ttttttyyyyyyzttttttttttttttttt","ttttttyyyyyzzytttttttttttttttt","ttttttyyyyyyyzzttttttttttttttt","ttttyyy55yyyzzzttttttttttttttt","ttttyyyzyyyyyyyttttttttttttttt","ttyyyyyyyyyyyzzttttttttttttttt","ttyyyyyyyyyyyyyttttttttttttttt","ttttyttyyyyyyzzttttttttttttttt","tttttttyyyyyyzztttyyyyyttttttt","tttttttyyyyyyyytyyyyyyyyyttttt","ttttttyyyyyyyyyyyyyzzzyyyttttt","ttttttyyyyyyyyyyyyzzzzzyyytttt","tttttyyyyyyyyyyyyyzyyyzyyytttt","tttttyyyyyyyyyyyyyzyyyzyyytttt","yttttyyyyyyyyyyyyyzzyzzyyyttty","yytttyyyyyyyyyyyyyyyyyyyyyttyy","yyyttyyyyyyyyyyyyyyyyyyyyytyyy","yyyyyyyyyyyyyyyyyyyyyyyyyyyyyy","yyyyyyyyyyyyyyyyyyyyyyyyyyyyyy","tyyyyyyyyyyyyyyyyyyyyyyyyyyyyt","ttyyyyyyyyyyyyyyyyyyyyyyyyyytt","ttttyyyyyyyyyyyyyyyyyyyyyytttt","tttttttyyyyyyyyyyyyyyyyttttttt","ttttttttttyyyyyyyyyytttttttttt"],
+headphone:["tttzyyyyttt","ttyyyyyyytt","tyytttttyyt","ty6tttttryt","ty6tttttryt","666ztttzz66","666ztttzz66","666ztttzz66","666ztttzz66","t66tttttz6t"],
+papers:["qqqqqqqqqq5tt","qqqqqqqqqqttt","qqqqqqqqqqttt","qqqqqqqqqq2ll","qqqttttaqqbll","qqq5555aqq2ll","qqqqqqqqqq2l9","qqq5555aqq2ll","qqqttttaqqbl9","qqqqqqqqqq29l","qqqqqqqqqq299","qqqqqqqqqq2l9","qqqqqqqqqq2ll","qqqqqqqqqqbll","tttllllllllll","tttllllllllll"],
+printer:["ttttt6y6ttttt","ttyct666ttytt","t6yctttttty6t","6666666666666","6666666666zz6","6666666666zc6","6666666666666","666yyyyyyy666","6666ttttty666","tyy6tttttyyyt","ttkyyyyyyyttt"],
+hr:["tttoooooooof1tt","tfftttttttttfht","tfotyyyyyytthft","tzzzzzzzzzzzzct","tzzm77mm777zzct","czz77777777zzzc","zzzzzzzzzzzzzzz","zzzzttzzzttczzz","zzzzzzzzzzzzzzz","zzzzzzzzzzzzzzz","zzzzzzzzzzzzzzz","t4yytty66tt664t","t6yyttyyytt6y4t","t6y6ttyyytt6y4t"],
+coffee:["tkyyyyyyt","tryyyyyyt","y4eeeeeey","ye3fff3fy","ye3ff3ffy","ye32tf3fy","ye3t1tffy","ye33tt3fy","ye333333y","y4333333y","y6yyyyyyy","yyyyyyyyy"],
+desk:["tttttttttttttttt","tttttttttttttttt","tttttttttttttttt","tttttttttttttttt","ttoooooooooooooo","ttoooooooooooooo","ttfyyoyyyfyyfyyf","ttf4yoyyy3yyoyyf"],
+chair:["tttttjjjjtttt","tttttjjjjtttt","tttttjjjjtttt","tttttjjjjtttt","tttttjjjjjjjt","ttttttyjjtttt","ttttttjjjjjjj","ttttttjjjjjjt","ttttttttyyttt","ttttttttttttt","tttttt6yyyyyt","tttttyttyytty"],
+notebook:["ttttttttttttt","ttiiiiiiiiaqt","ttiiiiiiiiqjt","ttiiiiiiiiijt","ttiiiiiiiiijt","ttiiiiiiiiijt","ttxyyxxyyxyxt","tyyyyyyyyyyyt","tyyyy4666yyyt","yyyyyyyyyyyyy"],
+boss_suit:["ttttttttttttt","ttttyyyyyyyyt","tttyyyyyyyyyy","tttyyyyyyyyyy","tttyy6yyy6tyy","ttt6yyyyyyyyy","ttt6ymmmmmmyy","tttym7mmmmmyy","tttyyyyyyyyyy","ttttytyyyzyyt","ttttytyyyzyyt"],
+pie:["tttohhhhhfttt","ttfhhhhhhhhtt","thhh3hhhhhhft","1hhhhhhhhhhh2","1hhhhhhh3hhhf","ohhhhhhhhhhhf","ohhhhhhhh3hhf","ohh3hhhhh3hhf","1hhhhhhhhhhh2","tfhhhhhohhhft","tfhhhhhohhhft","tt2fhhhhhhftt","ttttfhfhftttt"],
+pancake:["tttohhhhhfttt","ttfhhhhhhhhtt","thhh3hhhhhhft","1hhhhhhhhhhh2","1hhhhhhh3hhhf","ohhhhhhhhhhhf","ohhhhhhhh3hhf","ohh3hhhhh3hhf","1hhhhhhhhhhh2","tfhhhhhohhhft","tfhhhhhohhhft","tt2fhhhhhhftt","ttttfhfhftttt"],
+car_side:["ztctttttttttttttttt","ttttttz66666666yttt","tttttt6zzzzzzzz6ttt","tttttr6zzzzzzzz6rtt","tt66t6zzzzzzzzzz6t6","tttt66666666666666t","tttr66666666666666t","ttt6y66666666666666","ttt6ytt66yyyy66tt66","ttt6ytt66yyyy66tt66","ttt6666666666666666","ttt6666666666666666","ttttyyktttttttttyyt"],
+cone:["ttttttttotttt","tttttttooottt","tttttttooottt","tttttttooottt","ttttttotttott","ttttttotttott","ttttt5ooooott","tttttooooooot","ttttyoooooooy","ttttyyyyyyyyy"],
+boss_car:["tttttttttttttttt","ttttty6y6yyttttt","tttyyyyyyyy6tttt","ttyyyyyyyyyyyttt","ttyyyyyyyyyy6ytt","66yyyyyyyyyyyy6y","tt6yyyyyyyyyyyt6","ttyyyyyyyyyyyyt6","yyyyyyyyyyyyyyyt","ttyyyyyyyyyyyytt","tttyyyyyyyy6yttt","ttttyyyyy6yytttt","tttttzy6yczttttt"],
+clockout:["tttttt3yytttttt","t111113yy11111t","7ggggggggggggg7","7ggkgggggggggg7","7g5tggtgkgrrgg7","7ggtggtgkgr5gg7","7gtt5gtg5grgtg7","7ggggggggggggg7","7ggggggggllgbg7","7gggggggglgnlg7","7ggggggggnnggg7","t7777777777777t"],
+horse_coin:["tttttbbbttttt","tt1bbbbbbb1tt","t1bbb33ebbb1t","tbbb3333zbbbt","tbb33fbb33bb1","bbb33bbb33bbb","bbb33bbb33bbb","bbb33bbb33bbb","tbbe3fbb33bb5","tb333fbb333bt","t1bbbbbbbbbbt","tt1bbbbbbbbtt","tttttbbb1tttt"],
+horseshoe:["tttttbbbttttt","tt1bbbbbbb1tt","t1bbb33ebbb1t","tbbb3333zbbbt","tbb33fbb33bb1","bbb33bbb33bbb","bbb33bbb33bbb","bbb33bbb33bbb","tbbe3fbb33bb5","tb333fbb333bt","t1bbbbbbbbbbt","tt1bbbbbbbbtt","tttttbbb1tttt"],
+heart:["tt7tt7tt","t777777t","77777777","77777777","t777777t","t777777t","tt7777tt","ttt77ttt"],
+envelope:["tttt","t77t","7bb7","t77t"],
+coin:["tt99tt","t9999t","999999","99yy99","999999","t9999t","tt99tt"],
+cooler:["tttttt","tggggt","g5gg5g","gggggg","tggggt","ttcctt","ttcctt","ttcctt"],
+carrot:["tt9t","t99t","t99t","t99t","t99t","tt9t","t88t","tttt"],
+broccoli:["tt88tt","t8888t","888888","t8tt8t","t8tt8t","t8888t"],
+corn:["8b8b","b8b8","tt8t","tt8t","tt8t","tt8t"],
+tomato:["tttt","t77t","7777","t77t","tttt"],
+guy:["t6t6t6tt","tttttttt","ttxxxxxt","txxxxxxt","txxxxxxt","txxxxxxt","tx7777xt","txxxxxxt","txxxxxxt","ttxxxxxt","t4t44t4t","t4t44t4t"],
+offcard:["taaaaaa","a5555a","a55a5a","a5555a","a5555a","taaaaaat"]
+};
+
+function ds(ctx,spr,x,y,w,h,flip){
+  const pw=w/spr[0].length, ph=h/spr.length;
+  for(let r=0;r<spr.length;r++)for(let c=0;c<spr[r].length;c++){
+    const ch=spr[r][c]; if(ch==='t'||!P[ch])continue;
+    ctx.fillStyle=P[ch];
+    const dx=flip?x+(spr[0].length-1-c)*pw:x+c*pw;
+    ctx.fillRect(Math.round(dx),Math.round(y+r*ph),Math.ceil(pw),Math.ceil(ph));
+  }
+}
+
+// ===== AUDIO =====
+let ac=null;
+function ia(){if(!ac){try{ac=new(window.AudioContext||window.webkitAudioContext)();}catch(e){}}if(ac&&ac.state==='suspended'){ac.resume();}}
+function ua(){ia();if(!ac)return;try{const o=ac.createOscillator(),g=ac.createGain();g.gain.value=0.001;o.connect(g);g.connect(ac.destination);o.start();o.stop(ac.currentTime+0.01);}catch(e){}}
+function bp(f,d,t='square',v=0.08){
+  if(!ac)return;try{const o=ac.createOscillator(),g=ac.createGain();
+  o.type=t;o.frequency.value=f;
+  g.gain.setValueAtTime(v,ac.currentTime);
+  g.gain.exponentialRampToValueAtTime(0.001,ac.currentTime+d);
+  o.connect(g);g.connect(ac.destination);o.start();o.stop(ac.currentTime+d);}catch(e){}
+}
+function sj(){bp(300,0.1);setTimeout(()=>bp(500,0.08),60);}
+function sc(){bp(600,0.08);setTimeout(()=>bp(900,0.1),50);}
+function sh(){bp(150,0.2,'sawtooth',0.08);setTimeout(()=>bp(100,0.3,'sawtooth',0.06),100);}
+function sw(){bp(400,0.1);setTimeout(()=>bp(600,0.1),100);setTimeout(()=>bp(800,0.15),200);}
+function sg(){bp(400,0.08,'triangle',0.05);setTimeout(()=>bp(500,0.08,'triangle',0.05),80);setTimeout(()=>bp(600,0.1,'triangle',0.05),160);}
+function boom(){for(let i=0;i<6;i++)setTimeout(()=>bp(200+i*60,0.15,'sawtooth',0.1),i*70);}
+
+// ===== BACKGROUND MUSIC =====
+// Original procedural music: 3 different loops, one per level (L1 race / L2 pie-run / L3 heart factory)
+let bgmOn=false, bgmNoteIdx=0, bgmTO=null, bgmStyle=0;
+const BGMS=[
+  // [0] L1 办公室赛马: fast C-major run, square wave
+  {wave:'square',notes:[
+    [523,0.11],[659,0.11],[784,0.11],[880,0.11],[784,0.11],[659,0.11],[523,0.11],[587,0.11],
+    [659,0.11],[784,0.11],[880,0.11],[1047,0.22],[880,0.11],[784,0.11],[659,0.11],[587,0.11],
+    [523,0.11],[659,0.11],[784,0.11],[880,0.11],[784,0.11],[659,0.11],[523,0.11],[587,0.11],
+    [523,0.22],[0,0.11],[659,0.22],[0,0.11],[784,0.44],[0,0.22]
+  ]},
+  // [1] L2 吃饼闯关: bouncy playful arpeggios, square wave
+  {wave:'square',notes:[
+    [523,0.15],[659,0.15],[784,0.15],[659,0.15],[698,0.15],[880,0.15],[1047,0.15],[880,0.15],
+    [784,0.15],[659,0.15],[784,0.15],[988,0.15],[880,0.15],[698,0.15],[784,0.15],[523,0.3],
+    [0,0.15],[523,0.15],[659,0.15],[784,0.15],[659,0.15],[698,0.15],[880,0.15],[1047,0.3],
+    [880,0.15],[784,0.15],[659,0.15],[587,0.15],[523,0.3],[0,0.15],[392,0.3],[0,0.15]
+  ]},
+  // [2] L3 爱心工厂: calm dreamy arpeggios, triangle wave
+  {wave:'triangle',notes:[
+    [523,0.3],[659,0.3],[784,0.3],[1047,0.45],[988,0.3],[784,0.3],[659,0.3],[523,0.45],
+    [880,0.3],[1047,0.3],[1319,0.3],[1175,0.45],[1047,0.3],[880,0.3],[784,0.3],[659,0.3],
+    [523,0.3],[659,0.3],[784,0.3],[880,0.45],[784,0.3],[659,0.3],[587,0.3],[523,0.45],
+    [440,0.3],[523,0.3],[659,0.3],[784,0.45],[659,0.3],[587,0.3],[523,0.3],[440,0.3]
+  ]}
+];
+function startBGM(st){
+  ia();ua();
+  bgmStyle=(st===0||st===1||st===2)?st:0;
+  if(bgmOn)return;
+  bgmOn=true;bgmNoteIdx=0;
+  playNextBGMNote();
+}
+function stopBGM(){bgmOn=false;if(bgmTO){clearTimeout(bgmTO);bgmTO=null;}}
+function playNextBGMNote(){
+  if(!bgmOn||!ac){bgmOn=false;return;}
+  const seq=BGMS[bgmStyle];
+  const n=seq.notes[bgmNoteIdx][0];
+  const dur=seq.notes[bgmNoteIdx][1];
+  bgmNoteIdx=(bgmNoteIdx+1)%seq.notes.length;
+  if(n>0){
+    try{
+      const o=ac.createOscillator();o.type=seq.wave;o.frequency.value=n;
+      const g=ac.createGain();g.gain.setValueAtTime(seq.wave==='triangle'?0.04:0.05,ac.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.001,ac.currentTime+dur*0.8);
+      o.connect(g);g.connect(ac.destination);o.start();o.stop(ac.currentTime+dur*0.8+0.01);
+    }catch(e){}
+  }
+  bgmTO=setTimeout(playNextBGMNote,dur*1000);
+}
+
+// ===== RESIZE =====
+function resizeGame(){
+  const vw=window.innerWidth, vh=window.innerHeight;
+  const gameRatio=BASE_W/BASE_H, viewRatio=vw/vh;
+  let cw,ch;
+  if(viewRatio>=gameRatio){ch=vh;cw=Math.floor(ch*gameRatio);}
+  else{cw=vw;ch=Math.floor(cw/gameRatio);}
+  canvas.style.width=cw+'px';
+  canvas.style.height=ch+'px';
+}
+window.addEventListener('resize',resizeGame);
+window.addEventListener('orientationchange',()=>setTimeout(resizeGame,100));
+window.addEventListener('focus',()=>setTimeout(resizeGame,100));
+
+// ===== SAVE & SHOP =====
+function ld(){
+  try{
+    const d=JSON.parse(localStorage.getItem('pg_save'));
+    if(!d)return{name:'',xp:0,ul:3,hs:{},coins:100,items:{},l1done:false,l2done:false};
+    if(!d.items)d.items={}; if(!d.coins)d.coins=100; d.ul=3;
+    if(!d.l1done)d.l1done=false; if(!d.l2done)d.l2done=false;
+    if(!d.l1c)d.l1c=[false,false,false];
+    return d;
+  }catch(e){return{name:'',xp:0,ul:3,hs:{},coins:100,items:{},l1done:false,l2done:false}}
+}
+function sv(d){try{localStorage.setItem('pg_save',JSON.stringify(d));}catch(e){}}
+let save=ld(), ponyName=save.name||'';
+let af=0, gs='menu';
+let menuTip='',menuTipT=0;
+let shake=0;
+
+const SHOP=[
+  {id:'coffee',name:'咖啡补给',lvl:'办公室赛马',price:30,desc:'开局自带咖啡加速，可踩老板'},
+  {id:'headset',name:'耳机',lvl:'办公室赛马',price:20,desc:'开局3秒慢动作，全场减速50%'},
+  {id:'offcard',name:'下班卡',lvl:'办公室赛马',price:40,desc:'开局3秒无敌，穿过一切障碍'},
+  {id:'extralife',name:'额外命',lvl:'办公室大冒险',price:25,desc:'开局+1条命'},
+  {id:'jumpboot',name:'跳跃靴',lvl:'办公室大冒险',price:30,desc:'本局跳跃高度+30%'},
+  {id:'undo',name:'撤销',lvl:'爱心工厂',price:20,desc:'合成时可撤销上一步'},
+  {id:'whitehorse',name:'开局黄心',lvl:'爱心工厂',price:35,desc:'开局自带1颗黄心'},
+];
+
+// ===== INPUT =====
+const inp={keys:{},ts:[],js:{a:false,x:0,y:0,bx:0,by:0},dt:false,dtimer:0,lt:0,ls:'',menuX:0,menuY:0,menuTap:false,rightDown:false,leftDown:false,sx0:0,sy0:0};
+let nameEditing=false;
+const nameInput=document.getElementById('nameInput');
+const nameOk=document.getElementById('nameOk');
+nameOk.addEventListener('click',()=>{
+  const v=nameInput.value.trim();
+  if(v){ponyName=v;save.name=ponyName;sv(save);}
+  nameEditing=false;nameInput.style.display='none';nameOk.style.display='none';
+});
+nameInput.addEventListener('keydown',e=>{if(e.key==='Enter')nameOk.click();});
+
+function si(cv){
+  window.addEventListener('keydown',e=>{inp.keys[e.key]=true;ia();});
+  window.addEventListener('keyup',e=>{inp.keys[e.key]=false;});
+  cv.addEventListener('touchstart',e=>{
+    e.preventDefault();ia();inp.ts=Array.from(e.touches);
+    const n=Date.now(),cx=W/2,rc=cv.getBoundingClientRect(),sx=W/rc.width;
+    for(const t of e.changedTouches){
+      const tx=(t.clientX-rc.left)*sx,ty=(t.clientY-rc.top)*sx,side=tx<cx?'L':'R';
+      if(n-inp.lt<300&&side===inp.ls){inp.dt=true;inp.dtimer=10;}
+      inp.lt=n;inp.ls=side;
+      if(gs==='level3'){inp.sx0=tx;inp.sy0=ty;}
+    }
+    if(gs==='menu'||gs==='shop'){
+      for(const t of e.changedTouches){
+        inp.menuX=(t.clientX-rc.left)*sx;
+        inp.menuY=(t.clientY-rc.top)*sx;
+      }
+      inp.menuTap=true;
+      return;
+    }
+    if(gs==='level2'){
+      for(const t of e.changedTouches){
+        const tx=(t.clientX-rc.left)*sx;
+        if(tx<W/3)inp.leftDown=true;
+        else if(tx>W*2/3)inp.rightDown=true;
+      }
+    } else if(gs==='level1'){
+      for(const t of e.changedTouches){
+        const tx=(t.clientX-rc.left)*sx;
+        if(tx<cx){inp.js.a=true;inp.js.bx=tx;inp.js.by=(t.clientY-rc.top)*sx;}
+      }
+    }
+  },{passive:false});
+  cv.addEventListener('touchmove',e=>{
+    e.preventDefault();inp.ts=Array.from(e.touches);
+    if(gs==='menu'||gs==='shop')return;
+    const rc=cv.getBoundingClientRect(),sx=W/rc.width;
+    if(gs==='level2'){
+      let la=false,ra=false;
+      for(const t of e.touches){const tx=(t.clientX-rc.left)*sx;if(tx<W/3)la=true;else if(tx>W*2/3)ra=true;}
+      inp.rightDown=ra;inp.leftDown=la;return;
+    }
+    if(gs==='level3')return;
+    let la=false,ra=false;
+    for(const t of e.touches){
+      const tx=(t.clientX-rc.left)*sx;
+      if(tx<W/2){la=true;inp.js.x=tx-inp.js.bx;inp.js.y=(t.clientY-rc.top)*sx-inp.js.by;
+        const d=Math.sqrt(inp.js.x**2+inp.js.y**2);if(d>50){inp.js.x=inp.js.x/d*50;inp.js.y=inp.js.y/d*50;}}
+      else ra=true;
+    }
+    if(!la){inp.js.a=false;inp.js.x=0;inp.js.y=0;}
+    inp.rightDown=ra;inp.leftDown=la;
+  },{passive:false});
+  cv.addEventListener('touchend',e=>{
+    e.preventDefault();inp.ts=Array.from(e.touches);
+    const rc=cv.getBoundingClientRect(),sx=W/rc.width;
+    if(gs==='menu'||gs==='shop'){inp.menuTap=false;return;}
+    if(gs==='level3'){
+      // swipe / tap detection
+      for(const t of e.changedTouches){
+        const tx=(t.clientX-rc.left)*sx,ty=(t.clientY-rc.top)*sx;
+        const dx=tx-inp.sx0,dy=ty-inp.sy0;
+        if(Math.abs(dx)>26||Math.abs(dy)>26){
+          const d=Math.abs(dx)>Math.abs(dy)?(dx>0?'right':'left'):(dy>0?'down':'up');
+          l3Move(d);
+        } else {
+          handleTap(tx,ty);
+        }
+      }
+      inp.js.a=false;inp.js.x=0;inp.js.y=0;
+      return;
+    }
+    if(gs==='level2'){
+      let la=false,ra=false;
+      for(const t of e.touches){const tx=(t.clientX-rc.left)*sx;if(tx<W/3)la=true;else if(tx>W*2/3)ra=true;}
+      inp.rightDown=ra;inp.leftDown=la;return;
+    }
+    inp.rightDown=false;inp.leftDown=false;
+    let la=false;
+    for(const t of e.touches){if((t.clientX-rc.left)*sx<W/2)la=true;}
+    if(!la){inp.js.a=false;inp.js.x=0;inp.js.y=0;}
+  },{passive:false});
+  cv.addEventListener('touchcancel',()=>{inp.js.a=false;inp.js.x=0;inp.js.y=0;inp.menuTap=false;inp.rightDown=false;inp.leftDown=false;});
+}
+
+// ===== PARTICLES =====
+function spP(x,y,n,col,list,vxr=6,vyr=6,life=20){
+  for(let i=0;i<n;i++)list.push({x,y,vx:(Math.random()-0.5)*vxr,vy:(Math.random()-0.5)*vyr,life,color:col});
+}
+function upP(list){return list.filter(p=>{p.x+=p.vx;p.y+=p.vy;p.life--;return p.life>0;});}
+function drP(ctx,list){for(const p of list){ctx.fillStyle=p.color;ctx.globalAlpha=Math.max(0,p.life/20);ctx.fillRect(p.x-2,p.y-2,4,4);}ctx.globalAlpha=1;}
+
+// ===== MENU =====
+function drMenu(){
+  ctx.fillStyle='#ffffff';ctx.fillRect(0,0,W,H);
+  ctx.fillStyle='#99999930';
+  for(let i=0;i<50;i++)ctx.fillRect((i*137+50)%W,(i*97+30)%(H*0.6),(i%3)+1,(i%3)+1);
+  ctx.textAlign='center';
+  ctx.fillStyle='#222';ctx.font='bold 32px "PingFang SC","Microsoft YaHei",Arial,sans-serif';
+  ctx.fillText('马马打工记',W/2,95+Math.sin(af*0.05)*4);
+  ctx.fillStyle='#f84';ctx.font='12px "PingFang SC","Microsoft YaHei",Arial,sans-serif';ctx.fillText('"拍拍马屁，来好运气"',W/2,120);
+  ds(ctx,S.pony_idle,W/2-42,135,84,84,false);
+  ctx.fillStyle='#444';ctx.font='15px "PingFang SC","Microsoft YaHei",Arial,sans-serif';ctx.fillText('给你的打工马起个名字：',W/2,250);
+  ctx.fillStyle='#a0760a';ctx.font='bold 22px "PingFang SC","Microsoft YaHei",Arial,sans-serif';ctx.fillText(ponyName||'_______',W/2,282);
+  ctx.fillStyle='#888';ctx.font='12px "PingFang SC","Microsoft YaHei",Arial,sans-serif';ctx.fillText('（点这里改名）',W/2,300);
+  // 3 game buttons (free choice, no locks)
+  const by=345,bw=146,bh=72,gap=16,x0=(W-3*bw-2*gap)/2;
+  const btns=[
+    {x:x0,c:'#4d4',t1:'办公室赛马',t2:'躲障碍 跑全程'},
+    {x:x0+bw+gap,c:'#48c',t1:'办公室大冒险',t2:'吃饼变大 踩老板'},
+    {x:x0+2*(bw+gap),c:'#f84',t1:'爱心工厂',t2:'无限合成 冲分'}
+  ];
+  for(const b of btns){
+    ctx.fillStyle=b.c;ctx.fillRect(b.x,by,bw,bh);
+    ctx.fillStyle='#000';ctx.font='bold 15px "PingFang SC","Microsoft YaHei",Arial,sans-serif';
+    ctx.fillText(b.t1,b.x+bw/2,by+28);
+    ctx.font='11px "PingFang SC","Microsoft YaHei",Arial,sans-serif';
+    ctx.fillText(b.t2,b.x+bw/2,by+54);
+  }
+  // coins + shop
+  ctx.textAlign='left';
+  ctx.fillStyle='#b4a';ctx.font='bold 16px "PingFang SC","Microsoft YaHei",Arial,sans-serif';
+  ctx.fillText('💰 '+save.coins,30,452);
+  ctx.fillStyle='#fd4';ctx.fillRect(W-150,430,120,36);
+  ctx.fillStyle='#000';ctx.font='bold 14px "PingFang SC","Microsoft YaHei",Arial,sans-serif';ctx.textAlign='center';
+  ctx.fillText('🛒 商店',W-90,454);
+  ctx.textAlign='left';ctx.fillStyle='#555';ctx.font='12px "PingFang SC","Microsoft YaHei",Arial,sans-serif';
+  ctx.fillText('等级：Lv.'+(Math.floor(save.xp/100)+1),30,496);
+  ctx.fillText('经验：'+save.xp+' XP',30,516);
+  ctx.fillText('最高分 办公室赛马:'+(save.hs.l1||0)+' 大冒险:'+(save.hs.l2||0)+' 爱心工厂:'+(save.hs.l3||0),30,536);
+  ctx.fillStyle='#888';ctx.font='12px "PingFang SC","Microsoft YaHei",Arial,sans-serif';
+  ctx.fillText('手机：摇杆/触摸移动 双击跳跃/滑动合成',W/2,585);
+  ctx.fillStyle='#f84';ctx.font='bold 12px "PingFang SC","Microsoft YaHei",Arial,sans-serif';ctx.textAlign='center';
+  if(menuTipT>0){ctx.fillStyle='#f84';ctx.font='bold 14px "PingFang SC","Microsoft YaHei",Arial,sans-serif';ctx.fillText(menuTip,W/2,618);}
+  const qs=JOKES;
+  ctx.fillText(qs[Math.floor(af/120)%qs.length],W/2,640);
+}
+
+function clMenu(mx,my){
+  if(my>240&&my<300){
+    nameEditing=true;
+    nameInput.value=ponyName;
+    nameInput.style.display='block';
+    nameOk.style.display='block';
+    nameInput.focus();
+    return;
+  }
+  const by=345,bw=146,bh=72,gap=16,x0=(W-3*bw-2*gap)/2;
+  if(mx>x0&&mx<x0+bw&&my>by&&my<by+bh){rL1();gs='level1';ia();startBGM(0);return;}
+  if(mx>x0+bw+gap&&mx<x0+2*bw+gap&&my>by&&my<by+bh){rL2();gs='level2';ia();startBGM(1);return;}
+  if(mx>x0+2*(bw+gap)&&mx<x0+3*bw+2*gap&&my>by&&my<by+bh){rL3();gs='level3';ia();startBGM(2);return;}
+  if(mx>W-150&&mx<W-30&&my>430&&my<466){gs='shop';return;}
+}
+
+// ===== SHOP =====
+function drShop(){
+  ctx.fillStyle='#1a1a2e';ctx.fillRect(0,0,W,H);
+  ctx.fillStyle='#ffffff12';
+  for(let i=0;i<40;i++)ctx.fillRect((i*173+70)%W,(i*113+40)%(H*0.6),(i%3)+1,(i%3)+1);
+  // back
+  ctx.fillStyle='#444';ctx.fillRect(20,20,84,36);
+  ctx.fillStyle='#fff';ctx.font='bold 13px "PingFang SC","Microsoft YaHei",Arial,sans-serif';ctx.textAlign='center';
+  ctx.fillText('← 返回',62,44);
+  ctx.textAlign='center';
+  ctx.fillStyle='#fd4';ctx.font='bold 26px "PingFang SC","Microsoft YaHei",Arial,sans-serif';ctx.fillText('打工杂货铺',W/2,80);
+  ctx.fillStyle='#b4a';ctx.font='bold 16px "PingFang SC","Microsoft YaHei",Arial,sans-serif';
+  ctx.fillText('💰 '+save.coins+' 金币',W/2,110);
+  // cards
+  for(let i=0;i<SHOP.length;i++){
+    const it=SHOP[i];
+    const cx=i%2?246:14, cy=122+Math.floor(i/2)*112;
+    ctx.fillStyle='#222a3a';ctx.fillRect(cx,cy,220,102);
+    ctx.fillStyle='#3a4a6a';ctx.fillRect(cx,cy,220,2);
+    ctx.textAlign='left';
+    ctx.fillStyle='#fff';ctx.font='bold 14px "PingFang SC","Microsoft YaHei",Arial,sans-serif';
+    ctx.fillText(it.name,cx+12,cy+23);
+    ctx.fillStyle='#f84';ctx.font='12px "PingFang SC","Microsoft YaHei",Arial,sans-serif';
+    ctx.fillText('['+it.lvl+']',cx+12,cy+41);
+    ctx.fillStyle='#888';ctx.font='11px "PingFang SC","Microsoft YaHei",Arial,sans-serif';
+    ctx.fillText(it.desc,cx+12,cy+58);
+    ctx.fillStyle='#fd4';ctx.font='bold 14px "PingFang SC","Microsoft YaHei",Arial,sans-serif';
+    ctx.fillText('💰'+it.price,cx+12,cy+86);
+    const own=save.items[it.id]||0;
+    ctx.fillStyle=own>0?'#4d4':'#555';ctx.font='bold 12px "PingFang SC","Microsoft YaHei",Arial,sans-serif';ctx.textAlign='right';
+    ctx.fillText('持有 ×'+own,cx+208,cy+86);
+  }
+  ctx.fillStyle='#888';ctx.font='12px "PingFang SC","Microsoft YaHei",Arial,sans-serif';ctx.textAlign='center';
+  ctx.fillText('道具开局自动生效 · 撤销和开局白马需进关后使用',W/2,H-18);
+}
+
+function clShop(mx,my){
+  if(mx>20&&mx<104&&my>20&&my<56){gs='menu';return;}
+  for(let i=0;i<SHOP.length;i++){
+    const cx=i%2?246:14, cy=122+Math.floor(i/2)*112;
+    if(mx>cx&&mx<cx+220&&my>cy&&my<cy+102){
+      const it=SHOP[i];
+      if(save.coins>=it.price){
+        save.coins-=it.price;
+        save.items[it.id]=(save.items[it.id]||0)+1;
+        sv(save);sc();
+      }else sh();
+      return;
+    }
+  }
+}
+
+// ===== LEVEL 1: OFFICE RUN (3-stage mini game) =====
+let l1={};
+const L1_BG=['#c3cfe6','#bfd0c9','#6e6e80'];
+const L2_BG=['#f5e6d3','#e3e9f2','#e6efdc'];
+const L2_WIN=['#9ad0e8','#a9c8ec','#9fd0b8'];
+const L2_SLOGAN=['硬要做也能做','好的，收到，马上安排','我再想想办法'];
+const L1_NAME=['办公室','会议室','停车场'];
+const L1_BANNER=['办公室 · 躲耳机/文件/打印机/HR!','会议室 · 躲会议桌/滑椅/笔记本/老板!','停车场 · 躲来车/路障/老板车!'];
+const L1_GOAL=[10800,12600,14400];
+const L1_LV=['第1关','第2关','第3关'];
+const L1_DESC=['躲耳机、文件堆、打印机、HR','躲会议桌、滑动座椅、笔记本、老板','躲来车、路障锥、老板车'];
+function rL1(){
+  let stBoost=false,stSlow=false,stInv=false;
+  if(save.items.coffee>0){save.items.coffee--;stBoost=true;}
+  if(save.items.headset>0){save.items.headset--;stSlow=true;}
+  if(save.items.offcard>0){save.items.offcard--;stInv=true;}
+  sv(save);
+  l1={py:H*0.65,pl:1,pvy:0,jump:false,gnd:true,inv:stInv?180:0,score:0,dist:0,cam:0,bs:2,spd:2,lives:3,obs:[],coll:[],part:[],gy:H*0.75,ly:[H*0.48,H*0.58,H*0.68],st:0,si:80,go:false,goSaved:false,boostT:stBoost?180:0,bigT:0,slowT:stSlow?180:0,coinT:0,stage:0,goal:L1_GOAL[0],win:false,winSaved:false,banner:L1_BANNER[0],bannerT:140,sel:true,cont:false,tip:'',tipT:0,heartGiven:false};
+}
+function l1Start(st){
+  l1.stage=st;
+  l1.dist=0;l1.cam=0;l1.obs=[];l1.coll=[];l1.st=0;l1.si=80;
+  l1.goal=L1_GOAL[st];l1.win=false;l1.sel=false;
+  l1.banner=L1_BANNER[st];l1.bannerT=140;
+  l1.bigT=0;l1.boostT=0;l1.inv=0;l1.slowT=0;
+  if(!l1.cont){l1.score=0;l1.lives=3;}
+  l1.cont=false;
+}
+
+function uL1(){
+  if(l1.sel){l1.tipT=Math.max(0,l1.tipT-1);return;}
+  if(l1.go||l1.win)return;
+  l1.dist+=l1.spd;l1.cam+=l1.spd;shake=Math.max(0,shake-1);l1.inv=Math.max(0,l1.inv-1);
+  l1.boostT=Math.max(0,l1.boostT-1);l1.bigT=Math.max(0,l1.bigT-1);l1.slowT=Math.max(0,l1.slowT-1);l1.bannerT=Math.max(0,l1.bannerT-1);
+  l1.bs=Math.min(4.5,2.2+l1.stage*0.25);
+  l1.spd=(l1.bs+(l1.boostT>0?1.5:0))*(l1.slowT>0?0.5:1);
+  l1.coinT++;
+  if(l1.coinT>=600){l1.coinT=0;save.coins+=10;sv(save);}
+  // Input
+  if(inp.js.a){
+    if(inp.js.y<-15&&l1.pl>0)l1.pl--;
+    if(inp.js.y>15&&l1.pl<2)l1.pl++;
+  }
+  if(inp.keys['ArrowUp']||inp.keys['w']){if(l1.pl>0){l1.pl--;inp.keys['ArrowUp']=false;}}
+  if(inp.keys['ArrowDown']||inp.keys['s']){if(l1.pl<2){l1.pl++;inp.keys['ArrowDown']=false;}}
+  l1.py+=(l1.ly[l1.pl]-l1.py)*0.15;
+  if((inp.dt||inp.keys[' '])&&l1.gnd){l1.pvy=-10;l1.jump=true;l1.gnd=false;sj();inp.dt=false;inp.keys[' ']=false;}
+  l1.pvy+=0.5;l1.py+=l1.pvy;
+  if(l1.py>=l1.ly[l1.pl]){l1.py=l1.ly[l1.pl];l1.pvy=0;l1.gnd=true;l1.jump=false;}
+  // Spawn (per-stage pools, all functional)
+  l1.st++;if(l1.st>l1.si){l1.st=0;l1.si=Math.max(26,80-l1.dist*0.006);
+    const r=Math.random();
+    if(r<0.6){
+      const pools=[
+        [{t:'headset',w:40,h:46,p:0.28},{t:'papers',w:52,h:44,p:0.28},{t:'printer',w:56,h:52,p:0.24},{t:'hr',w:44,h:60,p:0.2}],
+        [{t:'desk',w:84,h:58,p:0.28},{t:'slider',w:44,h:54,p:0.28},{t:'notebook',w:40,h:40,p:0.24},{t:'boss',w:52,h:58,p:0.2}],
+        [{t:'car',w:96,h:54,p:0.34},{t:'cone',w:34,h:44,p:0.36},{t:'boss_car',w:84,h:54,p:0.16},{t:'slider',w:44,h:54,p:0.14}]
+      ];
+      const pool=pools[l1.stage];
+      let rr=Math.random(),acc=0,sel=pool[pool.length-1];
+      for(const it of pool){acc+=it.p;if(rr<acc){sel=it;break;}}
+      const lane=Math.floor(Math.random()*3);
+      const ob={t:sel.t,w:sel.w,h:sel.h,x0:l1.dist+W+80,lane,y:l1.ly[lane],sw:0};
+      if(ob.t==='car'){ob.vspd=l1.bs*1.4;}
+      else if(ob.t==='boss_car'){ob.vspd=l1.bs*0.35;}
+      else if(ob.t==='slider'){ob.amp=55+Math.random()*50;ob.ph=Math.random()*6.28;}
+      else if(ob.t==='hr'){ob.amp=24;ob.ph=Math.random()*6.28;}
+      else if(ob.t==='boss'){ob.dir=Math.random()<0.5?1:-1;ob.spd=0.8+l1.stage*0.2;ob.origX=ob.x0;}
+      l1.obs.push(ob);
+    }
+    else if(r<0.9){
+      let type;
+      if(!l1.heartGiven&&l1.lives<5&&Math.random()<0.22){type='heart';l1.heartGiven=true;} // only 1 bonus heart per run
+      else type=l1.stage===0?'coffee':l1.stage===1?'pie':'clockout';
+      const lane=Math.floor(Math.random()*3);
+      l1.coll.push({x0:l1.dist+W+60,y:l1.ly[lane]-30,type,w:36,h:36,collected:false});
+    }
+    else{
+      const lane=Math.floor(Math.random()*3);
+      const pools2=[
+        [{t:'headset',w:40,h:46},{t:'papers',w:52,h:44}],
+        [{t:'notebook',w:40,h:40},{t:'slider',w:44,h:54}],
+        [{t:'cone',w:34,h:44},{t:'car',w:96,h:54}]
+      ];
+      const pool2=pools2[l1.stage];
+      const a=pool2[Math.floor(Math.random()*pool2.length)];
+      const b=pool2[Math.floor(Math.random()*pool2.length)];
+      l1.obs.push({t:a.t,w:a.w,h:a.h,x0:l1.dist+W+80,lane,y:l1.ly[lane],sw:0});
+      l1.obs.push({t:b.t,w:b.w,h:b.h,x0:l1.dist+W+170,lane,y:l1.ly[lane],sw:0});
+    }
+  }
+  // Update obstacles (screen x = x0 + sw - dist)
+  const px=120,py=l1.py,pw=44,ph=56;
+  for(const o of l1.obs){
+    if(o.t==='slider')o.sw=Math.sin(l1.dist*0.02+o.ph)*o.amp;
+    else if(o.t==='hr')o.sw=Math.sin(l1.dist*0.012+o.ph)*o.amp;
+    else if(o.t==='car'||o.t==='boss_car')o.sw-=o.vspd;
+    else if(o.t==='boss'){o.x0+=o.dir*o.spd;if(o.x0<o.origX-80||o.x0>o.origX+80)o.dir*=-1;}
+    const ox=o.x0+o.sw-l1.dist;
+    if(px<ox+o.w&&px+pw>ox&&py<o.y+o.h&&py+ph>o.y){
+      if(o.t==='boss_car'&&(l1.boostT>0||l1.bigT>0||l1.inv>0)){
+        o.dead=true;l1.score+=50;save.coins+=5;sv(save);sc();
+        setTimeout(()=>sc(),100);
+        spP(ox+o.w/2,o.y+o.h/2,15,'#fd4',l1.part,8,8,30);
+      }else if(l1.bigT>0){
+        o.dead=true;l1.score+=20;save.coins+=2;sv(save);sc();
+        spP(ox+o.w/2,o.y+o.h/2,10,'#fd4',l1.part,6,6,22);
+      }else if(l1.inv<=0){
+        l1.lives--;l1.inv=60;shake=15;sh();
+        spP(px+pw/2,py+ph/2,8,'#f44',l1.part);
+        if(l1.lives<=0){l1.go=true;return;}
+      }
+    }
+  }
+  l1.obs=l1.obs.filter(o=>!o.dead&&o.x0+o.sw-l1.dist>-120);
+  // Collectibles
+  for(const c of l1.coll){
+    const cx2=c.x0-l1.dist;
+    if(!c.collected&&px<cx2+c.w&&px+pw>cx2&&py<c.y+c.h&&py+ph>c.y){
+      c.collected=true;
+      if(c.type==='heart'){l1.lives=Math.min(5,l1.lives+1);sw();spP(cx2+c.w/2,c.y,8,'#f44',l1.part);}
+      else if(c.type==='coffee'){l1.score+=10;sc();spP(cx2+c.w/2,c.y,5,'#fd4',l1.part);l1.boostT=240;}
+      else if(c.type==='pie'){l1.score+=20;sg();spP(cx2+c.w/2,c.y,8,'#fd4',l1.part);l1.bigT=180;}
+      else if(c.type==='clockout'){l1.score+=15;sw();spP(cx2+c.w/2,c.y,6,'#4af',l1.part);l1.inv=300;}
+    }
+  }
+  l1.coll=l1.coll.filter(c=>!c.collected&&c.x0-l1.dist>-120);
+  l1.part=upP(l1.part);
+  // Stage clear
+  if(l1.dist>=l1.goal){
+    l1.win=true;l1.winSaved=false;
+    l1.banner=L1_NAME[l1.stage]+'通关！';
+    l1.bannerT=999;
+  }
+}
+
+function drL1(){
+  if(l1.sel){drL1Sel();return;}
+  const sx=shake>0?(Math.random()-0.5)*shake:0,sy=shake>0?(Math.random()-0.5)*shake:0;
+  ctx.save();ctx.translate(sx,sy);
+  const stg=l1.stage;
+  ctx.fillStyle=L1_BG[stg];ctx.fillRect(0,0,W,H);
+  ctx.fillStyle='#00000018';ctx.fillRect(0,0,W,H*0.4);
+  const p2=-(l1.cam*0.35);
+  if(stg<=1){
+    // far city skyline behind the office (parallax, environment only)
+    const p1=-(l1.cam*0.10);
+    const skyBot=l1.gy;
+    for(let i=Math.floor(p1/150)-1;i<Math.ceil((p1+W)/150)+1;i++){
+      const wx=i*150+p1;
+      const bw=70+((i*37)%4)*16;      // building width 70..118
+      const bh=130+((i*53)%5)*44;     // building height 130..306
+      const by=skyBot-bh;
+      ctx.fillStyle=(i%3===0)?'#5e6a8f':'#6e78a0';
+      ctx.fillRect(wx,by,bw,bh);
+      ctx.fillStyle='#ffffff45';
+      for(let wy=by+8;wy<skyBot-12;wy+=18)
+        for(let wx2=wx+7;wx2<wx+bw-10;wx2+=15)
+          if(((i*7+wx2+wy)%11)<4)ctx.fillRect(wx2,wy,7,9);
+      if(i%4===1){ctx.fillStyle='#5e6a8f';ctx.fillRect(wx+bw/2-2,by-16,4,16);}
+    }
+    // office glass reflections in upper sky (environment only)
+    for(let wx=((p2%260)+260)%260-260;wx<W+260;wx+=260){
+      ctx.fillStyle='#ffffff3c';ctx.fillRect(wx+20,26,44,52);
+      ctx.fillStyle='#0000001e';ctx.fillRect(wx+20,50,44,2);ctx.fillRect(wx+41,26,2,52);
+    }
+  }else{
+    // parking: pillars + parking lines
+    for(let wx=((p2%340)+340)%340-340;wx<W+340;wx+=340){
+      ctx.fillStyle='#767680';ctx.fillRect(wx+8,0,14,l1.gy);
+    }
+    const p3=-(l1.cam*0.55);
+    ctx.fillStyle='#ffffff45';
+    for(let wx=((p3%110)+110)%110-110;wx<W+110;wx+=110)ctx.fillRect(wx+14,l1.gy+32,4,18);
+  }
+  ctx.fillStyle='#d4a76a';ctx.fillRect(0,l1.gy+30,W,H);
+  ctx.fillStyle='#c4956a';for(let fx=-(l1.cam%60);fx<W+60;fx+=60)ctx.fillRect(fx,l1.gy+28,60,4);
+  ctx.fillStyle='#7b6b5a';ctx.fillRect(0,l1.gy,W,H*0.08);
+  ctx.strokeStyle='#ffffff30';ctx.setLineDash([10,20]);
+  for(let i=0;i<3;i++){ctx.beginPath();ctx.moveTo(0,l1.ly[i]+40);ctx.lineTo(W,l1.ly[i]+40);ctx.stroke();}
+  ctx.setLineDash([]);
+  // obstacles (all functional)
+  for(const o of l1.obs){
+    const ox=o.x0+o.sw-l1.dist;if(ox<-80||ox>W+80)continue;
+    if(o.t==='headset')ds(ctx,S.headphone,ox,o.y,o.w,o.h,false);
+    else if(o.t==='papers')ds(ctx,S.papers,ox,o.y,o.w,o.h,false);
+    else if(o.t==='printer')ds(ctx,S.printer,ox,o.y,o.w,o.h,false);
+    else if(o.t==='hr')ds(ctx,S.hr,ox,o.y,o.w,o.h,false);
+    else if(o.t==='desk')ds(ctx,S.desk,ox,o.y,o.w,o.h,false);
+    else if(o.t==='slider')ds(ctx,S.chair,ox,o.y,o.w,o.h,false);
+    else if(o.t==='notebook')ds(ctx,S.notebook,ox,o.y,o.w,o.h,false);
+    else if(o.t==='boss')ds(ctx,S.boss_suit,ox,o.y,o.w,o.h,false);
+    else if(o.t==='car')ds(ctx,S.car_side,ox,o.y,o.w,o.h,false);
+    else if(o.t==='cone')ds(ctx,S.cone,ox,o.y,o.w,o.h,false);
+    else if(o.t==='boss_car')ds(ctx,S.boss_car,ox,o.y,o.w,o.h,false);
+  }
+  // collectibles
+  for(const c of l1.coll){
+    if(c.collected)continue;
+    const cx2=c.x0-l1.dist;if(cx2<-40||cx2>W+40)continue;
+    const spr=c.type==='coffee'?S.coffee:c.type==='pie'?S.pie:c.type==='clockout'?S.clockout:S.heart;
+    ds(ctx,spr,cx2,c.y,c.w,c.h,false);
+  }
+  // pony
+  let spr=S.pony_run1;
+  if(l1.jump)spr=S.pony_jump;
+  else if(l1.gnd&&af%12<6)spr=S.pony_run2;
+  if(l1.bigT>0){spr=S.pony_chubby;}
+  if(l1.inv>0&&af%4<2)ctx.globalAlpha=0.5;
+  const pw2=l1.bigT>0?64:50,ph2=l1.bigT>0?72:60;
+  ds(ctx,spr,120-(pw2-50)/2,l1.py-10-(ph2-60)/2,pw2,ph2,false);
+  ctx.globalAlpha=1;
+  drP(ctx,l1.part);
+  // HUD
+  ctx.textAlign='left';
+  ctx.fillStyle='#000';ctx.font='bold 14px "PingFang SC","Microsoft YaHei",Arial,sans-serif';
+  ctx.fillText(L1_LV[l1.stage]+' '+L1_NAME[l1.stage],95,25);
+  ctx.fillText('距离:'+Math.floor(l1.dist/10)+'/'+Math.floor(l1.goal/10)+'m',95,48);
+  ctx.fillText('分数:'+l1.score,95,71);
+  ctx.fillText('💰'+save.coins,95,94);
+  ctx.fillStyle='#f44';ctx.font='bold 15px "PingFang SC","Microsoft YaHei",Arial,sans-serif';
+  ctx.fillText('❤'.repeat(l1.lives),W-90,25);
+  ctx.textAlign='right';
+  if(l1.bigT>0){ctx.fillStyle='#fd4';ctx.font='bold 12px "PingFang SC","Microsoft YaHei",Arial,sans-serif';ctx.fillText('🥞 吃饼变大 撞飞一切!',W-15,50);}
+  else if(l1.boostT>0){ctx.fillStyle='#fd4';ctx.font='bold 12px "PingFang SC","Microsoft YaHei",Arial,sans-serif';ctx.fillText('⚡加速冲刺! 小心别撞上!',W-15,50);}
+  else if(l1.slowT>0){ctx.fillStyle='#6ff';ctx.font='bold 12px "PingFang SC","Microsoft YaHei",Arial,sans-serif';ctx.fillText('🎧 慢动作',W-15,50);}
+  else if(l1.inv>120&&af%4<2){ctx.fillStyle='#6ff';ctx.font='bold 12px "PingFang SC","Microsoft YaHei",Arial,sans-serif';ctx.fillText('🛡️ 无敌下班中!',W-15,50);}
+  if(l1.spd>3.5){ctx.strokeStyle='#fff4';ctx.lineWidth=1;for(let i=0;i<4;i++){const s2=Math.random()*W;ctx.beginPath();ctx.moveTo(s2,Math.random()*H*0.6);ctx.lineTo(s2+15,Math.random()*H*0.6);ctx.stroke();}}
+  // banner
+  if(l1.bannerT>0&&!l1.win){ctx.fillStyle='#000a';ctx.fillRect(0,H/2-24,W,48);ctx.fillStyle='#fd4';ctx.font='bold 16px "PingFang SC","Microsoft YaHei",Arial,sans-serif';ctx.textAlign='center';ctx.fillText(l1.banner,W/2,H/2+5);}
+  ctx.restore();
+  // back to menu button
+  ctx.fillStyle='#3a3a52';ctx.fillRect(10,10,72,32);
+  ctx.fillStyle='#fff';ctx.font='bold 13px "PingFang SC","Microsoft YaHei",Arial,sans-serif';ctx.textAlign='center';
+  ctx.fillText('← 菜单',46,32);
+  if(l1.go){ctx.fillStyle='#000a';ctx.fillRect(0,0,W,H);
+    ctx.fillStyle='#f44';ctx.font='bold 30px "PingFang SC","Microsoft YaHei",Arial,sans-serif';ctx.textAlign='center';
+    ctx.fillText('你被炒了!',W/2,H/2-70);
+    ctx.fillStyle='#fff';ctx.font='18px "PingFang SC","Microsoft YaHei",Arial,sans-serif';
+    ctx.fillText('分数: '+l1.score,W/2,H/2-30);
+    ctx.fillText('进度: '+L1_LV[l1.stage]+' '+L1_NAME[l1.stage]+' '+Math.floor(l1.dist/l1.goal*100)+'%',W/2,H/2);
+    ctx.fillStyle='#f84';ctx.font='13px "PingFang SC","Microsoft YaHei",Arial,sans-serif';
+    ctx.fillText('"简历已更新，BOSS直聘见"',W/2,H/2+40);
+    if(!l1.goSaved){l1.goSaved=true;if(l1.score>(save.hs.l1||0))save.hs.l1=l1.score;sv(save);}
+    ctx.fillStyle='#fff';ctx.font='12px "PingFang SC","Microsoft YaHei",Arial,sans-serif';ctx.fillText('点击返回关卡选择',W/2,H/2+90);
+  }
+  if(l1.win){ctx.fillStyle='#000a';ctx.fillRect(0,0,W,H);
+    ctx.fillStyle='#4d4';ctx.font='bold 28px "PingFang SC","Microsoft YaHei",Arial,sans-serif';ctx.textAlign='center';
+    if(l1.stage<2){
+      ctx.fillText(L1_LV[l1.stage]+' 通关!',W/2,H/2-70);
+      ctx.fillStyle='#fff';ctx.font='16px "PingFang SC","Microsoft YaHei",Arial,sans-serif';
+      ctx.fillText('下一关 '+L1_LV[l1.stage+1]+' 已解锁!',W/2,H/2-32);
+      ctx.fillText('剩余 ❤×'+l1.lives+'  分数 '+l1.score,W/2,H/2-4);
+      ctx.fillStyle='#fd4';ctx.font='bold 15px "PingFang SC","Microsoft YaHei",Arial,sans-serif';
+      ctx.fillText('点击返回关卡选择',W/2,H/2+60);
+    }else{
+      ctx.fillText('全部通关! 🏆',W/2,H/2-80);
+      ctx.fillStyle='#fff';ctx.font='16px "PingFang SC","Microsoft YaHei",Arial,sans-serif';
+      ctx.fillText('办公室·会议室·停车场 全跑完!',W/2,H/2-42);
+      ctx.fillText('分数 '+l1.score,W/2,H/2-14);
+      ds(ctx,S.horse_coin,W/2-16,H/2+8,32,32,false);
+      ctx.fillText('+100 马币',W/2,H/2+56);
+      ctx.fillStyle='#fd4';ctx.font='bold 15px "PingFang SC","Microsoft YaHei",Arial,sans-serif';
+      ctx.fillText('三关全部解锁，可自由重玩',W/2,H/2+86);
+      ctx.fillText('点击继续',W/2,H/2+110);
+    }
+    if(!l1.winSaved){l1.winSaved=true;
+      save.l1c[l1.stage]=true;sv(save);
+      if(l1.stage>=2){save.l1done=true;save.coins+=100;sv(save);}
+      if(l1.score>(save.hs.l1||0))save.hs.l1=l1.score;sv(save);
+      boom();
+    }
+  }
+}
+function drL1Sel(){
+  ctx.fillStyle='#f2ead8';ctx.fillRect(0,0,W,H);
+  ctx.fillStyle='#c9b98f22';
+  for(let i=0;i<40;i++)ctx.fillRect((i*137+50)%W,(i*97+30)%(H*0.5),(i%3)+1,(i%3)+1);
+  // back
+  ctx.fillStyle='#3a3a52';ctx.fillRect(10,10,72,32);
+  ctx.fillStyle='#fff';ctx.font='bold 13px "PingFang SC","Microsoft YaHei",Arial,sans-serif';ctx.textAlign='center';
+  ctx.fillText('← 菜单',46,32);
+  // title
+  ctx.textAlign='center';
+  ctx.fillStyle='#222';ctx.font='bold 26px "PingFang SC","Microsoft YaHei",Arial,sans-serif';
+  ctx.fillText('🏢 办公室赛马',W/2,70);
+  ctx.fillStyle='#888';ctx.font='13px "PingFang SC","Microsoft YaHei",Arial,sans-serif';
+  ctx.fillText('三关制 · 通关解锁下一关',W/2,98);
+  // coins / best
+  ctx.textAlign='left';
+  ctx.fillStyle='#b4a';ctx.font='bold 14px "PingFang SC","Microsoft YaHei",Arial,sans-serif';
+  ctx.fillText('💰 '+save.coins,16,112);
+  ctx.textAlign='right';
+  ctx.fillStyle='#888';ctx.font='12px "PingFang SC","Microsoft YaHei",Arial,sans-serif';
+  ctx.fillText('最高分 '+ (save.hs.l1||0),W-16,112);
+  // stage cards
+  const cy=140,cw=380,ch2=96,gap2=18,x0=(W-cw)/2;
+  const cols=['#4d4','#48c','#f84'];
+  for(let i=0;i<3;i++){
+    const un=(i===0)||save.l1c[i-1];
+    const y=cy+i*(ch2+gap2);
+    ctx.fillStyle=un?cols[i]:'#9a9aa0';
+    ctx.fillRect(x0,y,cw,ch2);
+    ctx.fillStyle='#00000020';ctx.fillRect(x0,y,cw,4);
+    ctx.textAlign='left';
+    ctx.fillStyle='#000';
+    ctx.font='bold 19px "PingFang SC","Microsoft YaHei",Arial,sans-serif';
+    ctx.fillText((un?'':'🔒 ')+L1_LV[i]+' · '+L1_NAME[i],x0+22,y+38);
+    ctx.font='12px "PingFang SC","Microsoft YaHei",Arial,sans-serif';
+    ctx.fillText(un?L1_DESC[i]:'通关上一关解锁',x0+22,y+66);
+    if(save.l1c[i]){
+      ctx.textAlign='right';
+      ctx.font='bold 13px "PingFang SC","Microsoft YaHei",Arial,sans-serif';
+      ctx.fillText('✅ 已通关',x0+cw-20,y+38);
+    }
+  }
+  if(l1.tipT>0){ctx.fillStyle='#f44';ctx.font='bold 15px "PingFang SC","Microsoft YaHei",Arial,sans-serif';ctx.textAlign='center';ctx.fillText(l1.tip,W/2,cy+3*(ch2+gap2)+40);}
+}
+function l1SelTap(mx,my){
+  if(mx>10&&mx<82&&my>10&&my<42){gs='menu';stopBGM();return;}
+  const cy=140,cw=380,ch2=96,gap2=18,x0=(W-cw)/2;
+  if(mx>x0&&mx<x0+cw){
+    for(let i=0;i<3;i++){
+      const y=cy+i*(ch2+gap2);
+      if(my>y&&my<y+ch2){
+        if(i===0||save.l1c[i-1]){l1Start(i);}
+        else{l1.tip='先通关第'+i+'关解锁!';l1.tipT=70;sh();}
+        return;
+      }
+    }
+  }
+}
+
+// ===== LEVEL 2: OFFICE ADVENTURE (Mario style) =====
+let l2={};
+function rL2(){
+  let el=0,jb=1;
+  if(save.items.extralife>0){save.items.extralife--;el=1;}
+  if(save.items.jumpboot>0){save.items.jumpboot--;jb=1.3;}
+  sv(save);
+  l2={stage:0,p:{x:60,y:250,vx:0,vy:0,w:34,h:44,gnd:false,face:1},grav:0.5,jumpV:-16*jb,lives:3+el,score:0,big:false,horse:false,inv:0,go:false,won:false,cam:0,part:[],floats:[],banner:'吃饼变大 · 找隐藏马蹄印记才能踩老板!',bannerT:160,bossT:0,bossDone:false,overSaved:false,winSaved:false,heartGiven:false};
+  genL2();
+}
+function genL2(){
+  const st=l2.stage;
+  const lw=3800+st*1200;
+  l2.lw=lw; l2.gy=Math.floor(H*0.85);
+  const plats=[{x:0,y:l2.gy,w:lw,h:40,mv:null}];
+  let px=250,lastY=l2.gy-180;
+  while(px<lw-750){
+    const w=(90-st*8)+Math.random()*(108-st*8);
+    let y=lastY+(Math.random()*90-45);
+    y=Math.max(300,Math.min(470,y));
+    if(plats.length===1)y=Math.min(y,425); // first platform must be reachable from ground
+    const pl={x:px,y,w,h:14,mv:null};
+    // more floating platforms & faster motion on later stages
+    if(Math.random()<(0.35+st*0.1)){
+      pl.mv={a:Math.max(240,y-46),b:Math.min(500,y+46),dir:Math.random()<0.5?1:-1,spd:(0.5+st*0.1)+Math.random()*0.6};
+    }
+    plats.push(pl);
+    lastY=y;
+    px+=w+(215+st*12)+Math.random()*(115+st*12);
+  }
+  l2.plats=plats;
+  // boss arena: boss fights on the GROUND
+  const bp={x:lw-640,y:l2.gy,w:540,h:0};
+  l2.bp=bp;
+  l2.boss={x:lw-500,y:l2.gy-56,w:52,h:56,hp:3,dir:1,spd:1.4+st*0.5,t:0,atks:[],hit:0,active:false,dead:false};
+  // shelter elevator inside boss arena (hide from boss attacks)
+  l2.bpElev={x:bp.x+28,y:l2.gy-110,w:64,h:110,ph:0};
+  // floating platform above the arena — hidden horseshoe coin sits on it (needed to attack the boss)
+  const hp={x:bp.x+150,y:340,w:130,h:14,mv:{a:280,b:440,dir:1,spd:0.8}};
+  plats.push(hp);
+  l2.horsePlat=hp;
+  // collectibles: pies (变大) on normal platforms, only 1 red heart per whole run, hidden horseshoe above arena
+  l2.colls=[];
+  for(let i=1;i<plats.length;i++){
+    const pl=plats[i];
+    if(pl===hp)continue;
+    if(Math.random()<0.6){
+      l2.colls.push({x:pl.x+20+Math.random()*(pl.w-40),y:pl.y-34-Math.random()*30,type:'pancake',collected:false});
+    }
+    // only 1 bonus red heart for the entire L2 run, on a mid-level platform
+    if(!l2.heartGiven&&i>=2&&pl.x>lw*0.35){
+      l2.colls.push({x:pl.x+pl.w/2,y:pl.y-40,type:'redheart',collected:false});
+      l2.heartGiven=true;
+    }
+  }
+  // hidden horseshoe coin: follows the floating platform above the arena
+  l2.colls.push({x:hp.x+hp.w/2,y:hp.y-34,type:'horseshoe',collected:false,pl:hp});
+  // guaranteed pie right before the boss arena (reachable from the ground)
+  l2.colls.push({x:bp.x-210,y:540,type:'pancake',collected:false});
+  l2.colls.push({x:bp.x-105,y:470,type:'pancake',collected:false});
+  // obstacles: elevator (open to enter / closed blocks) + HR patrols
+  l2.obs=[];
+  let ox=450;
+  while(ox<lw-850){
+    const r=Math.random();
+    let ob;
+    if(r<0.55){
+      ob={x:ox,y:l2.gy-110,type:'elevator',w:64,h:110,ph:0};
+    }else{
+      ob={x:ox,y:l2.gy-58,type:'hr',w:46,h:58,ph:0,bx:ox,dir:Math.random()<0.5?1:-1,spd:1.2+st*0.5};
+    }
+    l2.obs.push(ob);
+    ox+=(300-st*35)+Math.random()*(220-st*30);
+  }
+  l2.p.x=60;l2.p.y=250;l2.p.vx=0;l2.p.vy=0;
+}
+function l2UpdPlats(){
+  for(const pl of l2.plats){
+    if(!pl.mv)continue;
+    pl.y+=pl.mv.dir*pl.mv.spd;
+    if(pl.y<=pl.mv.a){pl.y=pl.mv.a;pl.mv.dir=1;}
+    if(pl.y>=pl.mv.b){pl.y=pl.mv.b;pl.mv.dir=-1;}
+  }
+}
+function l2Collect(c){
+  c.collected=true;
+  if(c.type==='pancake'){
+    if(l2.big){l2.score+=30;sc();spP(c.x,c.y,6,'#fd4',l2.part);l2.floats.push({x:c.x,y:c.y-6,txt:'+30',t:36});}
+    else{l2.big=true;l2.score+=20;sc();spP(c.x,c.y,8,'#fd4',l2.part);l2.floats.push({x:c.x,y:c.y-6,txt:'吃饼变大! 🥞',t:46});}
+  }
+  else if(c.type==='horseshoe'){
+    l2.horse=true;l2.score+=50;sg();
+    spP(c.x,c.y,10,'#fd4',l2.part,6,6,30);
+    l2.floats.push({x:c.x,y:c.y-6,txt:'马蹄印记! 🐴 可以踩老板了!',t:56});
+  }
+  else if(c.type==='redheart'){
+    l2.lives=Math.min(5,l2.lives+1);sw();
+    spP(c.x,c.y,8,'#f44',l2.part);
+    l2.floats.push({x:c.x,y:c.y-6,txt:'❤ +1命!',t:42});
+  }
+}
+function l2Stomp(b){
+  if(!l2.horse){
+    l2.p.vy=-8;l2.p.gnd=false;l2Hurt();
+    l2.floats.push({x:b.x+b.w/2,y:b.y-20,txt:'需要马蹄印记! 🐴',t:46});
+    return;
+  }
+  b.hp--;b.hit=26;l2.p.vy=-9;l2.p.gnd=false;l2.score+=20;sh();
+  spP(b.x+b.w/2,b.y,10,'#f84',l2.part,7,7,22);
+  l2.floats.push({x:b.x+b.w/2,y:b.y-12,txt:'踩! +20',t:34});
+  if(b.hp<=0){
+    b.dead=true;l2.bossT=0;boom();
+    spP(b.x+b.w/2,b.y+b.h/2,25,'#fd4',l2.part,10,10,36);
+    spP(b.x+b.w/2,b.y+b.h/2,15,'#f44',l2.part,8,8,30);
+    l2.score+=50;l2.banner='老板被踩扁了！';l2.bannerT=90;
+  }
+}
+function l2Hurt(){
+  if(l2.inv>0)return;
+  if(l2.big){l2.big=false;l2.inv=80;shake=12;sh();
+    spP(l2.p.x+17,l2.p.y+22,8,'#fd4',l2.part);
+    l2.floats.push({x:l2.p.x+17,y:l2.p.y-10,txt:'饼碎了...变小',t:42});
+    return;
+  }
+  l2.lives--;l2.inv=90;shake=15;sh();
+  spP(l2.p.x+17,l2.p.y+22,8,'#f44',l2.part);
+  if(l2.lives<=0)l2.go=true;
+}
+
+function uL2(){
+  if(l2.go||l2.won)return;
+  l2.inv=Math.max(0,l2.inv-1);shake=Math.max(0,shake-1);
+  l2.bannerT=Math.max(0,l2.bannerT-1);
+  for(const f of l2.floats){f.y-=0.8;f.t--;}
+  l2.floats=l2.floats.filter(f=>f.t>0);
+  // Input
+  if(inp.keys['ArrowLeft']||inp.keys['a']){l2.p.vx=-4.5;l2.p.face=-1;}
+  else if(inp.keys['ArrowRight']||inp.keys['d']){l2.p.vx=4.5;l2.p.face=1;}
+  else l2.p.vx*=0.8;
+  if(inp.rightDown){l2.p.vx=4.5;l2.p.face=1;}
+  if(inp.leftDown){l2.p.vx=-4.5;l2.p.face=-1;}
+  if((inp.keys[' ']||inp.keys['ArrowUp']||inp.keys['w']||inp.dt)&&l2.p.gnd){l2.p.vy=l2.jumpV;l2.p.gnd=false;sj();inp.dt=false;inp.keys[' ']=false;inp.keys['ArrowUp']=false;inp.keys['w']=false;}
+  // Physics
+  l2.p.vy+=l2.grav;l2.p.x+=l2.p.vx;l2.p.y+=l2.p.vy;l2.p.gnd=false;
+  l2UpdPlats();
+  for(const pl of l2.plats){
+    if(l2.p.x+l2.p.w>pl.x&&l2.p.x<pl.x+pl.w&&l2.p.y+l2.p.h>pl.y&&l2.p.y+l2.p.h<pl.y+24&&l2.p.vy>=0){
+      l2.p.y=pl.y-l2.p.h;l2.p.vy=0;l2.p.gnd=true;
+    }
+  }
+  if(l2.p.x<0)l2.p.x=0;if(l2.p.x>l2.lw-l2.p.w)l2.p.x=l2.lw-l2.p.w;
+  if(l2.p.y>H+120){l2Hurt();if(!l2.go){l2.p.x=60;l2.p.y=250;l2.p.vy=0;}}
+  l2.cam=l2.p.x-W/3;l2.cam=Math.max(0,Math.min(l2.cam,l2.lw-W));
+  // Collectibles
+  for(const c of l2.colls){
+    if(c.collected)continue;
+    if(c.pl)c.y=c.pl.y-34; // horseshoe coin rides its floating platform
+    if(l2.p.x+l2.p.w>c.x-12&&l2.p.x<c.x+12&&l2.p.y+l2.p.h>c.y-12&&l2.p.y<c.y+12){
+      l2Collect(c);
+    }
+  }
+  // Obstacles: elevator (open=enter/hide, closed=block) + HR patrols (untouchable)
+  for(const ob of l2.obs){
+    ob.ph++;
+    if(ob.type==='hr'){
+      ob.x+=ob.dir*ob.spd;
+      if(ob.x<ob.bx-60||ob.x>ob.bx+60)ob.dir*=-1;
+      if(l2.inv<=0&&l2.p.x+l2.p.w>ob.x+4&&l2.p.x<ob.x+ob.w-4&&l2.p.y+l2.p.h>ob.y+4&&l2.p.y<ob.y+ob.h-4){
+        l2Hurt();
+        if(l2.go)break;
+      }
+      continue;
+    }
+    if(ob.type==='elevator'){
+      // faster open/close cycle on later stages
+      const ph=ob.ph%(195-st*32);
+      const open=ph<(110-st*18);
+      ob.open=open;
+      ob.gap=open?56:8;
+      if(open)continue; // open door: walk in / hide
+      // closed door: getting caught in it costs a life (then push out)
+      if(l2.p.x+l2.p.w>ob.x+2&&l2.p.x<ob.x+ob.w-2&&l2.p.y+l2.p.h>ob.y+2&&l2.p.y<ob.y+ob.h-2){
+        l2Hurt();
+        if(l2.go)break;
+        if(l2.p.x+l2.p.w/2<ob.x+ob.w/2)l2.p.x=ob.x-l2.p.w-1;
+        else l2.p.x=ob.x+ob.w+1;
+        l2.p.vx=0;
+      }
+      continue;
+    }
+  }
+  // boss arena shelter elevator
+  const ev=l2.bpElev;
+  if(ev){
+    ev.ph++;
+    const eph=ev.ph%190;
+    ev.open=eph<110;
+    ev.gap=ev.open?56:8;
+    if(!ev.open&&l2.p.x+l2.p.w>ev.x+2&&l2.p.x<ev.x+ev.w-2&&l2.p.y+l2.p.h>ev.y+2&&l2.p.y<ev.y+ev.h-2){
+      l2Hurt();
+      if(!l2.go){
+        if(l2.p.x+l2.p.w/2<ev.x+ev.w/2)l2.p.x=ev.x-l2.p.w-1;
+        else l2.p.x=ev.x+ev.w+1;
+        l2.p.vx=0;
+      }
+    }
+  }
+  // Boss
+  const b=l2.boss;
+  if(l2.p.x>l2.bp.x-80&&!b.active&&!b.dead){b.active=true;l2.banner=l2.horse?'⚠️ 老板驾到！跳起来踩他 3 下!':'⚠️ 老板驾到！先跳上浮动平台找马蹄印记🐴!';l2.bannerT=160;}
+  if(b.active&&!b.dead){
+    b.hit=Math.max(0,b.hit-1);
+    b.x+=b.dir*b.spd;
+    if(b.x<l2.bp.x+10||b.x>l2.bp.x+l2.bp.w-b.w)b.dir*=-1;
+    b.t++;
+    if(b.t>95&&!l2.go){
+      b.t=0;
+      b.atks.push({x:b.x+b.w/2-6,y:b.y+20,vx:(l2.p.x>b.x?1:-1)*2.3,vy:-4});
+    }
+    for(const a of b.atks){
+      a.x+=a.vx;a.y+=a.vy;a.vy+=0.32;
+      // shelter elevator absorbs projectiles
+      if(ev&&a.x>ev.x-6&&a.x<ev.x+ev.w+6&&a.y>ev.y&&a.y<ev.y+ev.h){a.hit=true;spP(a.x,a.y,4,'#fff',l2.part);continue;}
+      if(l2.inv<=0&&l2.p.x+l2.p.w>a.x&&l2.p.x<a.x+12&&l2.p.y+l2.p.h>a.y&&l2.p.y<a.y+12){l2Hurt();a.hit=true;}
+      if(a.y>l2.gy)a.hit=true;
+    }
+    b.atks=b.atks.filter(a=>!a.hit);
+    // stomp (no energy needed: jump on boss 3 times to win)
+    if(l2.p.vy>0&&l2.p.x+l2.p.w>b.x+6&&l2.p.x<b.x+b.w-6&&l2.p.y+l2.p.h>b.y&&l2.p.y+l2.p.h<b.y+18){
+      l2Stomp(b);
+    } else if(l2.inv<=0&&l2.p.x+l2.p.w>b.x+4&&l2.p.x<b.x+b.w-4&&l2.p.y+l2.p.h>b.y+14){
+      l2Hurt();
+    }
+  }
+  if(b.dead){
+    l2.bossT++;
+    if(l2.bossT>110){
+      l2.stage++;
+      if(l2.stage>=3){
+        l2.won=true;save.coins+=50;save.l2done=true;sv(save);
+        if(l2.score>(save.hs.l2||0))save.hs.l2=l2.score;sv(save);
+      }else{
+        genL2();
+        l2.banner='第 '+(l2.stage+1)+' 关 · '+L2_SLOGAN[l2.stage];
+        l2.bannerT=120;
+      }
+    }
+  }
+  l2.part=upP(l2.part);
+}
+
+function drL2(){
+  const bx=l2.cam,sx=shake>0?(Math.random()-0.5)*shake:0,sy=shake>0?(Math.random()-0.5)*shake:0;
+  ctx.save();ctx.translate(sx,sy);
+  // BG office (stage-tinted)
+  const bg=L2_BG[l2.stage],win=L2_WIN[l2.stage];
+  ctx.fillStyle=bg;ctx.fillRect(0,0,W,H);
+  ctx.fillStyle='rgba(120,90,50,0.07)';for(let wy=0;wy<H;wy+=40)ctx.fillRect(0,wy,W,20);
+  // windows
+  for(let wx=-(bx%260);wx<W+260;wx+=260){
+    ctx.fillStyle='#bfe6f5';ctx.fillRect(wx,70,120,110);
+    ctx.fillStyle=win;ctx.fillRect(wx,70,120,8);ctx.fillRect(wx,70,8,110);ctx.fillRect(wx+112,70,8,110);
+    ctx.fillStyle='#fff';ctx.fillRect(wx+20,95,30,30);
+  }
+  // poster (stage slogan: things you'd never say to the boss, mildly)
+  ctx.fillStyle='#fff';ctx.fillRect(400-bx%300,190,100,60);
+  ctx.fillStyle='#f84';ctx.font='bold 10px "PingFang SC","Microsoft YaHei",Arial,sans-serif';ctx.textAlign='center';
+  ctx.fillText('职场语录',450-bx%300,204);
+  ctx.fillStyle='#555';ctx.font='bold 12px "PingFang SC","Microsoft YaHei",Arial,sans-serif';
+  const sl=L2_SLOGAN[l2.stage];
+  const sln=Math.ceil(sl.length/6);
+  for(let i=0;i<sln;i++)ctx.fillText(sl.substring(i*6,i*6+6),450-bx%300,220+i*15);
+  // platforms
+  for(const pl of l2.plats){
+    const px=pl.x-bx;if(px+pl.w<0||px>W)continue;
+    ctx.fillStyle='#8b7355';ctx.fillRect(px,pl.y,pl.w,pl.h);
+    ctx.fillStyle=pl.mv?'#7fc9c9':'#a08568';ctx.fillRect(px,pl.y,pl.w,4);
+    for(let dx=px;dx<px+pl.w;dx+=20){ctx.fillStyle='#7a6348';ctx.fillRect(dx,pl.y+pl.h-3,18,3);}
+  }
+  // collectibles
+  for(const c of l2.colls){
+    if(c.collected)continue;const vx=c.x-bx;
+    if(vx<-20||vx>W+20)continue;
+    const spr=c.type==='pancake'?S.pancake:c.type==='horseshoe'?S.horseshoe:c.type==='redheart'?S.heart:S.coin;
+    ds(ctx,spr,vx-16,c.y-16,32,32,false);
+    if(c.type==='pancake'){ctx.fillStyle='#0002';ctx.fillRect(vx-9,c.y+15,18,3);}
+    else if(c.type==='horseshoe'){
+      ctx.fillStyle='rgba(255,215,74,'+(0.28+0.22*Math.sin(af*0.15))+')';
+      ctx.beginPath();ctx.arc(vx,c.y,22,0,Math.PI*2);ctx.fill();
+    }
+    else if(c.type==='redheart'){
+      ctx.fillStyle='rgba(255,70,70,'+(0.22+0.16*Math.sin(af*0.12))+')';
+      ctx.beginPath();ctx.arc(vx,c.y,18,0,Math.PI*2);ctx.fill();
+    }
+  }
+  // obstacles
+  for(const ob of l2.obs){
+    const ox=ob.x-bx;if(ox<-80||ox>W+80)continue;
+    if(ob.type==='hr'){
+      // HR patrol (untouchable)
+      let spr=S.hr;
+      if(ob.dir>0&&af%10<5)spr=S.hr;
+      ds(ctx,spr,ox,ob.y-4,ob.w,ob.h+4,ob.dir<0);
+      ctx.fillStyle='#f44';ctx.font='bold 10px "PingFang SC","Microsoft YaHei",Arial,sans-serif';ctx.textAlign='center';
+      ctx.fillText('HR',ox+ob.w/2,ob.y-8);
+    }
+    else if(ob.type==='elevator'){
+      const half=Math.max(0,(ob.w-ob.gap)/2);
+      const open=ob.open!==false&&ob.gap>24;
+      // door frame
+      ctx.fillStyle='#7a7a90';ctx.fillRect(ox-2,ob.y-2,ob.w+4,ob.h+2);
+      ctx.fillStyle='#666';ctx.fillRect(ox-2,ob.y-2,ob.w+4,6);
+      // shaft interior (visible when open)
+      ctx.fillStyle='#2e2e3a';ctx.fillRect(ox,ob.y+4,ob.w,ob.h-8);
+      ctx.fillStyle='#3f3f52';ctx.fillRect(ox+4,ob.y+ob.h-18,ob.w-8,12);
+      // sliding doors
+      ctx.fillStyle='#c4c4d8';
+      ctx.fillRect(ox+2,ob.y+4,Math.max(0,half-2),ob.h-8);
+      ctx.fillRect(ox+ob.w-Math.max(0,half-2)-2,ob.y+4,Math.max(0,half-2),ob.h-8);
+      ctx.fillStyle='#9a9ab0';
+      ctx.fillRect(ox+Math.max(2,half-4),ob.y+4,2,ob.h-8);
+      ctx.fillRect(ox+ob.w-Math.max(2,half-4)-2,ob.y+4,2,ob.h-8);
+      // status light
+      ctx.fillStyle=open?'#4d4':'#f44';
+      ctx.fillRect(ox+ob.w/2-4,ob.y+8,8,8);
+      ctx.fillStyle='#fff';ctx.fillRect(ox+ob.w/2-2,ob.y+10,4,4);
+      ctx.fillStyle=open?'#2a4':'#f44';ctx.font='bold 11px "PingFang SC","Microsoft YaHei",Arial,sans-serif';ctx.textAlign='center';
+      ctx.fillText(open?'OPEN':'CLOSED',ox+ob.w/2,ob.y+ob.h-6);
+    }
+  }
+  // boss arena shelter elevator
+  if(l2.bpElev){
+    const ev=l2.bpElev,ox=ev.x-bx;
+    if(ox>-80&&ox<W+80){
+      const half=Math.max(0,(ev.w-ev.gap)/2);
+      const open=ev.open!==false&&ev.gap>24;
+      ctx.fillStyle='#7a7a90';ctx.fillRect(ox-2,ev.y-2,ev.w+4,ev.h+2);
+      ctx.fillStyle='#666';ctx.fillRect(ox-2,ev.y-2,ev.w+4,6);
+      ctx.fillStyle='#2e2e3a';ctx.fillRect(ox,ev.y+4,ev.w,ev.h-8);
+      ctx.fillStyle='#3f3f52';ctx.fillRect(ox+4,ev.y+ev.h-18,ev.w-8,12);
+      ctx.fillStyle='#4dd';ctx.fillRect(ox+2,ev.y+4,Math.max(0,half-2),ev.h-8);
+      ctx.fillRect(ox+ev.w-Math.max(0,half-2)-2,ev.y+4,Math.max(0,half-2),ev.h-8);
+      ctx.fillStyle=open?'#4d4':'#f44';ctx.fillRect(ox+ev.w/2-4,ev.y+8,8,8);
+      ctx.fillStyle='#fff';ctx.fillRect(ox+ev.w/2-2,ev.y+10,4,4);
+      ctx.fillStyle=open?'#2a4':'#f44';ctx.font='bold 11px "PingFang SC","Microsoft YaHei",Arial,sans-serif';ctx.textAlign='center';
+      ctx.fillText(open?'OPEN':'CLOSED',ox+ev.w/2,ev.y+ev.h-6);
+      ctx.fillStyle='#07a';ctx.font='bold 10px "PingFang SC","Microsoft YaHei",Arial,sans-serif';
+      ctx.fillText('避难电梯',ox+ev.w/2,ev.y+28);
+    }
+  }
+  // boss arena ground warning tape
+  const b=l2.boss;
+  if(b.active&&!b.dead){
+    const bx0=l2.bp.x-bx;
+    if(bx0<W&&bx0+l2.bp.w>0){
+      ctx.save();
+      for(let wx=bx0;wx<bx0+l2.bp.w;wx+=16){
+        ctx.fillStyle=(Math.floor((wx-bx0)/16)%2===0)?'#fc4':'#333';
+        ctx.beginPath();ctx.moveTo(wx,l2.gy-8);ctx.lineTo(wx+16,l2.gy);ctx.lineTo(wx+16,l2.gy-8);ctx.lineTo(wx,l2.gy);ctx.closePath();ctx.fill();
+      }
+      ctx.fillStyle='#c00';ctx.font='bold 11px "PingFang SC","Microsoft YaHei",Arial,sans-serif';ctx.textAlign='center';
+      ctx.fillText('⚔ BOSS战区',bx0+l2.bp.w/2,l2.gy-14);
+      ctx.restore();
+    }
+  }
+  // boss
+  if(b.active&&!b.dead){
+    const bx2=b.x-bx;
+    if(b.hit>0&&af%3<2)ctx.globalAlpha=0.5;
+    ds(ctx,S.boss_suit,bx2,b.y,b.w,b.h,false);
+    ctx.globalAlpha=1;
+    // hp hearts
+    for(let i=0;i<3;i++){
+      ctx.fillStyle=i<b.hp?'#f44':'#444';
+      ctx.fillRect(bx2+6+i*14,b.y-14,10,9);
+    }
+  }
+  // boss attacks
+  for(const a of b.atks){
+    const ax=a.x-bx;
+    ctx.fillStyle='#f44';ctx.fillRect(ax-5,a.y-5,10,10);
+    ctx.fillStyle='#fff';ctx.fillRect(ax-3,a.y-3,4,4);
+  }
+  // pony
+  let spr=S.pony_flat;
+  if(!l2.p.gnd)spr=S.pony_jump;
+  else if(l2.p.vx!==0&&af%10<5)spr=S.pony_run1;
+  if(l2.big)spr=S.pony_chubby;
+  if(l2.inv>0&&af%4<2)ctx.globalAlpha=0.5;
+  const pw=l2.big?l2.p.w+22:l2.p.w+8;
+  const ph2=l2.big?l2.p.h+20:l2.p.h+8;
+  ds(ctx,spr,l2.p.x-bx,l2.p.y-8,pw,ph2,l2.p.face<0);
+  if(l2.big){ctx.fillStyle='#fd4';ctx.font='bold 11px "PingFang SC","Microsoft YaHei",Arial,sans-serif';ctx.textAlign='center';ctx.fillText('🥞大马',l2.p.x-bx+pw/2,l2.p.y-14);}
+  if(l2.horse){ctx.fillStyle='#fd4';ctx.font='bold 13px "PingFang SC","Microsoft YaHei",Arial,sans-serif';ctx.textAlign='center';ctx.fillText('🐴',l2.p.x-bx+pw/2,l2.p.y-26);}
+  ctx.globalAlpha=1;
+  // score floats
+  for(const f of l2.floats){
+    ctx.fillStyle='rgba(140,90,40,'+Math.min(1,f.t/18)+')';
+    ctx.font='bold 14px "PingFang SC","Microsoft YaHei",Arial,sans-serif';ctx.textAlign='center';
+    ctx.fillText(f.txt,f.x-bx,f.y);
+  }
+  drP(ctx,l2.part);
+  // HUD
+  ctx.textAlign='left';
+  ctx.fillStyle='#000';ctx.font='bold 14px "PingFang SC","Microsoft YaHei",Arial,sans-serif';
+  ctx.fillText('第'+(l2.stage+1)+'关',95,25);
+  ctx.fillText('分数:'+l2.score,95,48);
+  ctx.fillText('💰'+save.coins,95,71);
+  ctx.fillStyle='#a0704a';ctx.font='bold 13px "PingFang SC","Microsoft YaHei",Arial,sans-serif';
+  ctx.fillText((l2.big?'🥞大马':'')+(l2.horse?' 🐴马蹄印记':' 🔍找马蹄印记'),95,94);
+  ctx.fillStyle='#f44';ctx.font='bold 15px "PingFang SC","Microsoft YaHei",Arial,sans-serif';
+  ctx.fillText('❤'.repeat(l2.lives),W-90,25);
+  // progress
+  ctx.textAlign='right';ctx.fillStyle='#888';ctx.font='12px "PingFang SC","Microsoft YaHei",Arial,sans-serif';
+  ctx.fillText('进度 '+Math.floor(l2.p.x/l2.lw*100)+'%',W-15,48);
+  // banner
+  if(l2.bannerT>0){ctx.fillStyle='#000a';ctx.fillRect(0,H/2-24,W,48);ctx.fillStyle='#fd4';ctx.font='bold 15px "PingFang SC","Microsoft YaHei",Arial,sans-serif';ctx.textAlign='center';ctx.fillText(l2.banner,W/2,H/2+5);}
+  // control hint
+  ctx.fillStyle='#888';ctx.font='12px "PingFang SC","Microsoft YaHei",Arial,sans-serif';ctx.textAlign='center';
+  ctx.fillText('左右移动 · 双击跳跃 · 吃饼变大 · 找马蹄🐴踩老板 · 电梯关门别进',W/2,H-10);
+  ctx.restore();
+  if(l2.go||l2.won){ctx.fillStyle='#000a';ctx.fillRect(0,0,W,H);
+    ctx.fillStyle=l2.won?'#fd4':'#f44';ctx.font='bold 30px "PingFang SC","Microsoft YaHei",Arial,sans-serif';ctx.textAlign='center';
+    ctx.fillText(l2.won?'全部老板被踩扁!':'被老板抓了...',W/2,H/2-50);
+    ctx.fillStyle='#fff';ctx.font='18px "PingFang SC","Microsoft YaHei",Arial,sans-serif';
+    ctx.fillText('分数: '+l2.score,W/2,H/2);
+    ctx.fillStyle='#f84';ctx.font='13px "PingFang SC","Microsoft YaHei",Arial,sans-serif';
+    ctx.fillText(l2.won?'"明天又是新的一关…"':'"HR 说下周还有团建"',W/2,H/2+50);
+    if(l2.won&&!l2.winSaved){l2.winSaved=true;const xpGain=200+l2.score;save.xp+=xpGain;sv(save);}
+    ctx.fillStyle='#fff';ctx.font='12px "PingFang SC","Microsoft YaHei",Arial,sans-serif';ctx.fillText('点击返回菜单',W/2,H/2+100);
+  }
+  // back to menu button
+  ctx.fillStyle='#3a3a52';ctx.fillRect(10,10,72,32);
+  ctx.fillStyle='#fff';ctx.font='bold 13px "PingFang SC","Microsoft YaHei",Arial,sans-serif';ctx.textAlign='center';
+  ctx.fillText('← 菜单',46,32);
+}
+
+// ===== LEVEL 3: PONY MERGE (2048 style) =====
+let l3={};
+const PTS=[0,6,12,24,48,96,192,384,768,1536,3072,6144]; // points gained by merging INTO tier n (1..12)
+const TIER_NAMES=['','白心','黄心','粉心','金心','玫心','橙心','绿心','青心','蓝心','红心','紫心','黑心'];
+function rL3(){
+  let undo=0,white=false;
+  if(save.items.undo>0){undo=save.items.undo;save.items.undo=0;}
+  if(save.items.whitehorse>0){save.items.whitehorse--;white=true;}
+  sv(save);
+  l3={grid:[[0,0,0,0],[0,0,0,0],[0,0,0,0],[0,0,0,0]],score:0,undo,undoStack:[],boom:false,boomT:0,joke:'',part:[],stuck:false,msg:'',msgT:0,best:save.hs.l3||0,flash:[],floats:[],help:false};
+  addRand();addRand();
+  if(white){
+    const es=[];
+    for(let r=0;r<4;r++)for(let c=0;c<4;c++)if(l3.grid[r][c]===0)es.push([r,c]);
+    if(es.length){const p=es[Math.floor(Math.random()*es.length)];l3.grid[p[0]][p[1]]=2;}
+  }
+}
+function l3Empty(){
+  const es=[];
+  for(let r=0;r<4;r++)for(let c=0;c<4;c++)if(l3.grid[r][c]===0)es.push([r,c]);
+  return es;
+}
+function addRand(){
+  const es=l3Empty();
+  if(!es.length)return;
+  const p=es[Math.floor(Math.random()*es.length)];
+  l3.grid[p[0]][p[1]]=Math.random()<0.15?2:1;
+}
+function l3OverCheck(){
+  for(let r=0;r<4;r++)for(let c=0;c<4;c++){
+    const v=l3.grid[r][c];
+    if(v===0)return false;
+    if(v===12)return false;
+    if(c<3&&v===l3.grid[r][c+1]&&v<12)return false;
+    if(r<3&&v===l3.grid[r+1][c]&&v<12)return false;
+  }
+  return true;
+}
+function l3Move(dir){
+  if(l3.boom)return;
+  l3.undoStack.push({grid:JSON.parse(JSON.stringify(l3.grid)),score:l3.score});
+  if(l3.undoStack.length>10)l3.undoStack.shift();
+  const old=JSON.stringify(l3.grid);
+  let mergedAny=false;
+  for(let i=0;i<4;i++){
+    let line=[];
+    for(let j=0;j<4;j++){
+      const [r,c]=dir==='left'?[i,j]:dir==='right'?[i,3-j]:dir==='up'?[j,i]:[3-j,i];
+      if(l3.grid[r][c])line.push(l3.grid[r][c]);
+    }
+    const res=[];
+    for(let j=0;j<line.length;j++){
+      if(j+1<line.length&&line[j]===line[j+1]&&line[j]<12){
+        const nv=line[j]+1;
+        res.push(nv);
+        const pts=PTS[nv-1];
+        l3.score+=pts;
+        save.coins+=2;sv(save);
+        mergedAny=true;
+        j++;
+        const [mr,mc]=dir==='left'?[i,res.length-1]:dir==='right'?[i,3-(res.length-1)]:dir==='up'?[res.length-1,i]:[3-(res.length-1),i];
+        const gs3=82,gap3=8,off=Math.floor((W-(4*gs3+3*gap3))/2),gy3=120;
+        const mx=off+mc*(gs3+gap3)+gs3/2,my=gy3+mr*(gs3+gap3)+gs3/2;
+        spP(mx,my,8,'#fd4',l3.part,7,7,20);
+        l3.flash.push({r:mr,c:mc,t:12});
+        l3.floats.push({x:mx,y:my-20,txt:'+'+pts+' '+TIER_NAMES[nv],t:48});
+        // merge sound climbs the C-major scale to match L3 music key
+        bp([523,587,659,698,784,880,988,1047,1175,1319,1397,1568][nv-1],0.1,'triangle',0.06);
+      }else res.push(line[j]);
+    }
+    while(res.length<4)res.push(0);
+    for(let j=0;j<4;j++){
+      const [r,c]=dir==='left'?[i,j]:dir==='right'?[i,3-j]:dir==='up'?[j,i]:[3-j,i];
+      l3.grid[r][c]=res[j];
+    }
+  }
+  const moved=old!==JSON.stringify(l3.grid);
+  if(moved){
+    addRand();
+    bp(659,0.05,'triangle',0.04); // soft slide tick in key (E5)
+    l3.msg='';
+  }else{
+    l3.undoStack.pop();
+    l3.msg='走不动啦';
+    l3.msgT=40;
+    bp(330,0.12,'triangle',0.05); // gentle "nope" instead of hurt sound
+  }
+  if(l3OverCheck())l3.stuck=true;
+  if(l3.score>l3.best){l3.best=l3.score;save.hs.l3=l3.score;sv(save);}
+}
+function l3Undo(){
+  if(l3.undo<=0||l3.boom)return;
+  if(!l3.undoStack.length){l3.msg='没有可撤销的';l3.msgT=40;return;}
+  const st=l3.undoStack.pop();
+  l3.grid=st.grid;l3.score=st.score;l3.undo--;
+  bp(784,0.07,'triangle',0.05);setTimeout(()=>bp(1047,0.09,'triangle',0.05),60);
+}
+function l3Bank(){
+  let blacks=0;
+  for(let r=0;r<4;r++)for(let c=0;c<4;c++)if(l3.grid[r][c]===12)blacks++;
+  if(blacks===0){l3.msg='没有黑心可兑换，继续合成黑心!';l3.msgT=50;bp(392,0.1,'triangle',0.05);setTimeout(()=>bp(330,0.12,'triangle',0.05),90);return;}
+  const gs3=82,gap3=8,off=Math.floor((W-(4*gs3+3*gap3))/2),gy3=120;
+  const perBlack=PTS[11];
+  for(let r=0;r<4;r++)for(let c=0;c<4;c++){
+    if(l3.grid[r][c]===12){
+      const mx=off+c*(gs3+gap3)+gs3/2,my=gy3+r*(gs3+gap3)+gs3/2;
+      spP(mx,my,12,'#fd4',l3.part,9,9,28);
+      spP(mx,my,6,'#fff',l3.part,6,6,22);
+      l3.floats.push({x:mx,y:my-20,txt:'+'+perBlack+' 黑心兑换!',t:52});
+      l3.grid[r][c]=0;
+    }
+  }
+  const total=perBlack*blacks;
+  l3.score+=total;
+  l3.floats.push({x:W/2,y:H/2+70,txt:'双击兑换 +'+total+'分!',t:64});
+  save.coins+=blacks*5;sv(save);
+  if(l3.score>l3.best){l3.best=l3.score;save.hs.l3=l3.score;sv(save);}
+  l3.stuck=false;
+  addRand();if(blacks>1)addRand();
+  l3.boom=true;l3.boomT=70;
+  l3.joke=JOKES[Math.floor(Math.random()*JOKES.length)];
+  boom();shake=10;
+}
+
+function uL3(){
+  l3.boomT=Math.max(0,l3.boomT-1);
+  l3.msgT=Math.max(0,l3.msgT-1);
+  shake=Math.max(0,shake-1);
+  for(const f of l3.flash)f.t--;
+  l3.flash=l3.flash.filter(f=>f.t>0);
+  for(const f of l3.floats){f.y-=0.8;f.t--;}
+  l3.floats=l3.floats.filter(f=>f.t>0);
+  if(inp.dt){inp.dt=false;
+    if(l3.stuck){rL3();l3.msg='重新开始!';l3.msgT=40;return;}
+    l3Bank();
+  }
+  l3.part=upP(l3.part);
+}
+
+// symbol sprite extracted from user reference (own mark, not a heart)
+const HEART_COLS={1:'#ffffff',2:'#ffd54a',3:'#fe9ecb',4:'#f8b500',5:'#f083ce',6:'#fe9a4e',7:'#7ed957',8:'#3ec9c9',9:'#4d8aff',10:'#fe4d5c',11:'#b84dfe',12:'#111111'};
+function drHeart(ctx,cx,cy,s,tier){
+  const col=HEART_COLS[tier];
+  const w=s*0.55, h=s*0.40;
+  ctx.save();
+  ctx.lineJoin='round';ctx.lineCap='round';
+  symPath(ctx,cx,cy,w,h);
+  ctx.fillStyle=col;ctx.fill();
+  // subtle outline so light tiers stay visible on white cells
+  ctx.lineWidth=Math.max(1.2,s*0.028);
+  ctx.strokeStyle='rgba(35,35,50,0.55)';
+  ctx.stroke();
+  ctx.restore();
+}
+function symPath(ctx,cx,cy,w,h){
+  ctx.beginPath();
+  ctx.moveTo(cx, cy - h*0.20);
+  ctx.bezierCurveTo(cx - w*0.22, cy - h*0.68, cx - w*0.94, cy - h*0.45, cx - w*0.80, cy + h*0.08);
+  ctx.bezierCurveTo(cx - w*0.62, cy + h*0.60, cx - w*0.32, cy + h*0.90, cx, cy + h*0.92);
+  ctx.bezierCurveTo(cx + w*0.32, cy + h*0.90, cx + w*0.62, cy + h*0.60, cx + w*0.80, cy + h*0.08);
+  ctx.bezierCurveTo(cx + w*0.94, cy - h*0.45, cx + w*0.22, cy - h*0.68, cx, cy - h*0.20);
+  ctx.closePath();
+}
+
+function drL3(){
+  const sx=shake>0?(Math.random()-0.5)*shake:0,sy=shake>0?(Math.random()-0.5)*shake:0;
+  ctx.save();ctx.translate(sx,sy);
+  ctx.fillStyle='#b7bac2';ctx.fillRect(0,0,W,H);
+  // bg dots
+  ctx.fillStyle='#00000010';
+  for(let i=0;i<40;i++)ctx.fillRect((i*89+33)%W,(i*67+40)%(H*0.5),(i%3)+1,(i%3)+1);
+  ctx.textAlign='center';
+  ctx.fillStyle='#fd4';ctx.font='bold 22px "PingFang SC","Microsoft YaHei",Arial,sans-serif';
+  ctx.fillText('爱心工厂',W/2,34);
+  // help button (top-right)
+  const hx=W-34,hy=34,hr=18;
+  ctx.fillStyle=l3.help?'#fd4':'#3a3a52';
+  ctx.beginPath();ctx.arc(hx,hy,hr,0,Math.PI*2);ctx.fill();
+  ctx.strokeStyle='#fd4';ctx.lineWidth=2;
+  ctx.beginPath();ctx.arc(hx,hy,hr,0,Math.PI*2);ctx.stroke();
+  ctx.fillStyle=l3.help?'#000':'#fd4';
+  ctx.font='bold 22px "PingFang SC","Microsoft YaHei",Arial,sans-serif';
+  ctx.fillText('?',hx,hy+8);
+  ctx.fillStyle='#2b2b35';ctx.font='bold 13px "PingFang SC","Microsoft YaHei",Arial,sans-serif';
+  ctx.fillText('分数 '+l3.score,30,58);
+  ctx.fillStyle='#6d2f86';ctx.font='bold 13px "PingFang SC","Microsoft YaHei",Arial,sans-serif';
+  ctx.fillText('💰'+save.coins,150,58);
+  ctx.fillStyle='#5a5a62';ctx.font='12px "PingFang SC","Microsoft YaHei",Arial,sans-serif';
+  ctx.fillText('最佳 '+l3.best,330,58);
+  // grid
+  const gs3=82,gap3=8,off=Math.floor((W-(4*gs3+3*gap3))/2),gy=120;
+  ctx.fillStyle='#9aa0aa';ctx.fillRect(off-8,gy-8,4*gs3+3*gap3+16,4*gs3+3*gap3+16);
+  for(let r=0;r<4;r++)for(let c=0;c<4;c++){
+    const x=off+c*(gs3+gap3),y=gy+r*(gs3+gap3);
+    ctx.fillStyle='#fafafc';ctx.fillRect(x,y,gs3,gs3);
+    ctx.fillStyle='#0000000a';ctx.fillRect(x,y,gs3,4);
+    const v=l3.grid[r][c];
+    if(v>0){
+      if(l3.boom&&af%4<2)ctx.globalAlpha=0.5;
+      drHeart(ctx,x+gs3/2,y+gs3/2,gs3*0.66,v);
+      ctx.globalAlpha=1;
+    }
+    // merge flash
+    for(const f of l3.flash){
+      if(f.r===r&&f.c===c){
+        ctx.fillStyle='rgba(80,120,200,'+(f.t/12*0.5)+')';
+        ctx.fillRect(x,y,gs3,gs3);
+      }
+    }
+  }
+  // merge score floats
+  for(const f of l3.floats){
+    ctx.fillStyle='rgba(255,220,80,'+Math.min(1,f.t/20)+')';
+    ctx.font='bold 15px "PingFang SC","Microsoft YaHei",Arial,sans-serif';ctx.textAlign='center';
+    ctx.fillText(f.txt,f.x,f.y);
+  }
+  // undo button (centered)
+  const ubW=90,ubX=(W-ubW)/2;
+  ctx.fillStyle=l3.undo>0?'#48c':'#333';
+  ctx.fillRect(ubX,496,ubW,36);
+  ctx.fillStyle=l3.undo>0?'#fff':'#666';
+  ctx.font='bold 13px "PingFang SC","Microsoft YaHei",Arial,sans-serif';ctx.textAlign='center';
+  ctx.fillText('↩ 撤销 ×'+l3.undo,W/2,519);
+  // stuck hint
+  if(l3.stuck){ctx.fillStyle='#f44';ctx.font='bold 14px "PingFang SC","Microsoft YaHei",Arial,sans-serif';ctx.fillText('无路可走! 双击重新开始',W/2,568);}
+  // control hint
+  ctx.fillStyle='#555';ctx.font='12px "PingFang SC","Microsoft YaHei",Arial,sans-serif';
+  ctx.fillText('滑动移动合成 · 合成黑心后双击兑换分数',W/2,594);
+  // msg
+  if(l3.msgT>0){ctx.fillStyle='#f84';ctx.font='bold 14px "PingFang SC","Microsoft YaHei",Arial,sans-serif';ctx.fillText(l3.msg,W/2,626);}
+  drP(ctx,l3.part);
+  ctx.restore();
+  // boom effect
+  if(l3.boom){
+    ctx.fillStyle='rgba(255,220,80,'+(l3.boomT/70*0.3)+')';
+    ctx.fillRect(0,0,W,H);
+    ctx.fillStyle='#3a2a00';ctx.font='bold 26px "PingFang SC","Microsoft YaHei",Arial,sans-serif';ctx.textAlign='center';
+    ctx.fillText('💰 黑心兑分!',W/2,H/2-30);
+    ctx.fillStyle='#fd4';ctx.font='bold 15px "PingFang SC","Microsoft YaHei",Arial,sans-serif';
+    ctx.fillText(l3.joke,W/2,H/2+12);
+    ctx.fillStyle='#f84';ctx.font='12px "PingFang SC","Microsoft YaHei",Arial,sans-serif';
+    ctx.fillText('继续合成黑心，冲最高分!',W/2,H/2+44);
+    if(l3.boomT<=0)l3.boom=false;
+  }
+  // back to menu button
+  ctx.fillStyle='#3a3a52';ctx.fillRect(10,10,72,32);
+  ctx.fillStyle='#fff';ctx.font='bold 13px "PingFang SC","Microsoft YaHei",Arial,sans-serif';ctx.textAlign='center';
+  ctx.fillText('← 菜单',46,32);
+  // help overlay
+  if(l3.help){
+    ctx.fillStyle='rgba(0,0,0,0.78)';
+    ctx.fillRect(0,0,W,H);
+    const pw=420,ph=520,px=(W-pw)/2,py=(H-ph)/2;
+    ctx.fillStyle='#2a2a45';
+    ctx.fillRect(px,py,pw,ph);
+    ctx.strokeStyle='#fd4';ctx.lineWidth=2;
+    ctx.strokeRect(px,py,pw,ph);
+    ctx.textAlign='center';
+    ctx.fillStyle='#fd4';ctx.font='bold 20px "PingFang SC","Microsoft YaHei",Arial,sans-serif';
+    ctx.fillText('爱心工厂 规则',W/2,py+36);
+    ctx.textAlign='left';
+    ctx.fillStyle='#fff';ctx.font='14px "PingFang SC","Microsoft YaHei",Arial,sans-serif';
+    const lines=[
+      '合成链（由低到高）：',
+      '白心 → 黄心 → 粉心 → 金心 → 玫心',
+      ' → 橙心 → 绿心 → 青心 → 蓝心',
+      ' → 红心 → 紫心 → 黑心',
+      '',
+      '滑动屏幕 / 方向键移动爱心。',
+      '两个相同爱心相撞会合成下一级。',
+      '',
+      '合成得分：',
+      '黄+6  粉+12  金+24  玫+48  橙+96',
+      '绿+192  青+384  蓝+768  红+1536',
+      '紫+3072  黑心+6144',
+      '',
+      '黑心规则：',
+      '最高级黑心可双击兑换成分数。',
+      '每颗黑心 +6144 分，可无限累加。',
+      '其他爱心无法直接兑换，只能继续合成。',
+      '',
+      '无路可走且无黑心时，双击重新开始。'
+    ];
+    let ly=py+68;
+    for(const ln of lines){ctx.fillText(ln,px+22,ly);ly+=23;}
+    ctx.textAlign='center';
+    ctx.fillStyle='#888';ctx.font='12px "PingFang SC","Microsoft YaHei",Arial,sans-serif';
+    ctx.fillText('点击问号或空白处关闭',W/2,py+ph-18);
+  }
+}
+
+// ===== MAIN LOOP =====
+function loop(){
+  af++;
+  ctx.clearRect(0,0,W,H);
+  if(inp.dtimer>0)inp.dtimer--;
+  else inp.dt=false;
+  if(menuTipT>0)menuTipT--;
+
+  if(gs==='menu'){
+    drMenu();
+    if(inp.menuTap){clMenu(inp.menuX,inp.menuY);inp.menuTap=false;}
+  }
+  else if(gs==='shop'){
+    drShop();
+    if(inp.menuTap){clShop(inp.menuX,inp.menuY);inp.menuTap=false;}
+  }
+  else if(gs==='level1'){uL1();drL1();}
+  else if(gs==='level2'){uL2();drL2();}
+  else if(gs==='level3'){uL3();drL3();}
+
+  if(gs==='level1'&&inp.js.a){
+    ctx.fillStyle='#fff3';ctx.beginPath();ctx.arc(inp.js.bx,inp.js.by,50,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#fff6';ctx.beginPath();ctx.arc(inp.js.bx+inp.js.x,inp.js.by+inp.js.y,25,0,Math.PI*2);ctx.fill();
+  }
+
+  requestAnimationFrame(loop);
+}
+
+// ===== BOOT =====
+canvas=document.getElementById('game');
+canvas.width=W;canvas.height=H;
+ctx=canvas.getContext('2d');
+si(canvas);
+resizeGame();
+
+function handleTap(mx,my){
+  if(gs==='menu'){clMenu(mx,my);return;}
+  if(gs==='shop'){clShop(mx,my);return;}
+  if(gs==='level1'){
+    if(mx>10&&mx<82&&my>10&&my<42){gs='menu';stopBGM();return;}
+    if(l1.sel){l1SelTap(mx,my);return;}
+    if(l1.go){l1.go=false;l1.sel=true;l1.cont=false;return;}
+    if(l1.win){l1.win=false;l1.sel=true;l1.cont=true;return;}
+    return;
+  }
+  if(gs==='level2'){
+    if(mx>10&&mx<82&&my>10&&my<42){gs='menu';stopBGM();l2.go=false;l2.won=false;return;}
+    if(l2.go||l2.won){gs='menu';stopBGM();l2.go=false;l2.won=false;return;}
+    return;
+  }
+  if(gs==='level3'){
+    // help button (top-right circle)
+    const hx=W-34,hy=34,hr=18;
+    if(Math.hypot(mx-hx,my-hy)<hr){l3.help=!l3.help;return;}
+    // tap outside closes help overlay
+    if(l3.help){l3.help=false;return;}
+    // back-to-menu button
+    if(mx>10&&mx<82&&my>10&&my<42){gs='menu';stopBGM();return;}
+    // undo button (centered)
+    const ubW=90,ubX=(W-ubW)/2;
+    if(mx>ubX&&mx<ubX+ubW&&my>496&&my<532){l3Undo();return;}
+  }
+}
+canvas.addEventListener('click',e=>{
+  const rc=canvas.getBoundingClientRect();
+  const mx=(e.clientX-rc.left)*(W/rc.width);
+  const my=(e.clientY-rc.top)*(W/rc.width);
+  handleTap(mx,my);
+});
+canvas.addEventListener('touchend',e=>{
+  if(gs==='menu'||gs==='shop')return;
+  inp.menuTap=false;
+  const t=e.changedTouches[0];
+  if(!t)return;
+  const rc=canvas.getBoundingClientRect();
+  const mx=(t.clientX-rc.left)*(W/rc.width);
+  const my=(t.clientY-rc.top)*(W/rc.width);
+  handleTap(mx,my);
+});
+
+window.addEventListener('keydown',e=>{
+  if(e.key==='Escape'){gs='menu';stopBGM();}
+  if(e.key==='Enter'&&nameEditing)nameOk.click();
+  if(gs==='level3'&&(e.key==='ArrowLeft'||e.key==='ArrowRight'||e.key==='ArrowUp'||e.key==='ArrowDown')){
+    e.preventDefault();
+    l3Move(e.key.replace('Arrow','').toLowerCase());
+  }
+  if(gs==='level3'&&!nameEditing&&e.key==='Enter'){e.preventDefault();l3Bank();}
+  if(gs==='level3'&&!nameEditing&&(e.key==='h'||e.key==='H'||e.key==='?')){l3.help=!l3.help;}
+});
+
+loop();
+</script>
+</body>
+</html>
