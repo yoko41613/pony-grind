@@ -200,7 +200,7 @@ let menuTip='',menuTipT=0;
 let shake=0;
 
 const SHOP=[
-  {id:'coffee',name:'咖啡补给',lvl:'办公室赛马',price:30,desc:'开局自带咖啡加速，可踩老板'},
+  {id:'coffee',name:'咖啡补给',lvl:'办公室赛马',price:30,desc:'开局自带咖啡加速，可踩BOSS'},
   {id:'headset',name:'耳机',lvl:'办公室赛马',price:20,desc:'开局3秒慢动作，全场减速50%'},
   {id:'offcard',name:'下班卡',lvl:'办公室赛马',price:40,desc:'开局3秒无敌，穿过一切障碍'},
   {id:'extralife',name:'额外命',lvl:'办公室大冒险',price:25,desc:'开局+1条命'},
@@ -331,7 +331,7 @@ function drMenu(){
   const by=345,bw=146,bh=72,gap=16,x0=(W-3*bw-2*gap)/2;
   const btns=[
     {x:x0,c:'#4d4',t1:'办公室赛马',t2:'躲障碍 跑全程'},
-    {x:x0+bw+gap,c:'#48c',t1:'办公室大冒险',t2:'吃饼变大 踩老板'},
+    {x:x0+bw+gap,c:'#48c',t1:'办公室大冒险',t2:'吃饼变大 踩BOSS'},
     {x:x0+2*(bw+gap),c:'#f84',t1:'爱心工厂',t2:'无限合成 冲分'}
   ];
   for(const b of btns){
@@ -441,7 +441,7 @@ let l1={};
 const L1_BG=['#c3cfe6','#bfd0c9','#6e6e80'];
 const L2_BG=['#f5e6d3','#e3e9f2','#e6efdc'];
 const L2_WIN=['#9ad0e8','#a9c8ec','#9fd0b8'];
-// 反驳老板的话池（含蓄版）：每一关/每一次都从池里随机抽，横幅与海报持续换句
+// 反驳BOSS的话池（含蓄版）：每一关/每一次都从池里随机抽，横幅与海报持续换句
 const L2_SLOGANS=['硬要做也能做','好的，收到，马上安排','我再想想办法','没问题，我尽量','行，我先记下来','这个需求很清晰（吧）','我尽快给您反馈','嗯……我努力一下','马上就好，快了','您说得对，我消化一下','收到，我拉个排期','我这边协调一下'];
 function randSlogan(avoid){
   let s;
@@ -488,8 +488,14 @@ function l1Start(st){
 
 function uL1(){
   if(l1.sel){l1.tipT=Math.max(0,l1.tipT-1);return;}
-  if(l1.go||l1.win)return;
-  l1.dist+=l1.spd;l1.cam+=l1.spd;shake=Math.max(0,shake-1);l1.inv=Math.max(0,l1.inv-1);
+  if(l1.go)return;
+  const raceOver=l1.win;
+  if(!raceOver){
+    l1.dist+=l1.spd;l1.cam+=l1.spd;
+  }else{
+    l1.dist+=l1.bs*0.45;l1.cam+=l1.bs*0.45;
+  }
+  shake=Math.max(0,shake-1);l1.inv=Math.max(0,l1.inv-1);
   l1.boostT=Math.max(0,l1.boostT-1);l1.bigT=Math.max(0,l1.bigT-1);l1.slowT=Math.max(0,l1.slowT-1);l1.bannerT=Math.max(0,l1.bannerT-1);
   l1.bs=Math.min(4.2,1.9+l1.stage*0.2); // 更温和的速度曲线
   l1.spd=(l1.bs+(l1.boostT>0?1.5:0))*(l1.slowT>0?0.5:1);
@@ -506,8 +512,8 @@ function uL1(){
   if((inp.dt||inp.keys[' '])&&l1.gnd){l1.pvy=-10;l1.jump=true;l1.gnd=false;sj();inp.dt=false;inp.keys[' ']=false;}
   l1.pvy+=0.5;l1.py+=l1.pvy;
   if(l1.py>=l1.ly[l1.pl]){l1.py=l1.ly[l1.pl];l1.pvy=0;l1.gnd=true;l1.jump=false;}
-  // Spawn (per-stage pools, all functional)
-  l1.st++;if(l1.st>l1.si){l1.st=0;l1.si=Math.max(46,118-l1.dist*0.004); // 障碍间隔更宽，道具更稀有
+  // Spawn (per-stage pools, only while race is active)
+  if(!raceOver){l1.st++;if(l1.st>l1.si){l1.st=0;l1.si=Math.max(52,128-l1.dist*0.0032); // 更宽松的生成节奏，后期也不过密
     const r=Math.random();
     if(r<0.62){
       const pools=[
@@ -527,12 +533,12 @@ function uL1(){
       else if(ob.t==='boss'){ob.dir=Math.random()<0.5?1:-1;ob.spd=0.8+l1.stage*0.2;ob.origX=ob.x0;}
       l1.obs.push(ob);
     }
-    else if(r<0.74){
+    else if(r<0.86){ // 道具池占比提升：24% -> 35%
       let type;
-      if(!l1.heartGiven&&l1.lives<5&&Math.random()<0.12){type='heart';l1.heartGiven=true;} // only 1 bonus heart per run
-      else if(l1.stage===0)type=Math.random()<0.5?'coffee':'headset';   // 咖啡加速 / 耳机减速
-      else if(l1.stage===1)type=Math.random()<0.5?'fish':'pie';          // 鱼减速 / 饼变大
-      else type='clockout';
+      if(!l1.heartGiven&&l1.lives<5&&Math.random()<0.18){type='heart';l1.heartGiven=true;} // 残血时更容易出回血
+      else if(l1.stage===0)type=Math.random()<0.65?'coffee':'headset';   // 咖啡加速为主，耳机减速为辅
+      else if(l1.stage===1)type=Math.random()<0.70?'pie':'fish';          // 吃饼变大为主，鱼减速为辅
+      else type='clockout'; // 停车场只有下班卡无敌
       const lane=Math.floor(Math.random()*3);
       l1.coll.push({x0:l1.dist+W+60,y:l1.ly[lane]-30,type,w:36,h:36,collected:false});
     }
@@ -549,10 +555,10 @@ function uL1(){
       l1.obs.push({t:a.t,w:a.w,h:a.h,x0:l1.dist+W+80,lane,y:l1.ly[lane],sw:0});
       l1.obs.push({t:b.t,w:b.w,h:b.h,x0:l1.dist+W+170,lane,y:l1.ly[lane],sw:0});
     }
-  }
+  }}
   // Update obstacles (screen x = x0 + sw - dist)
-  const px=120,py=l1.py,pw=44,ph=56;
-  for(const o of l1.obs){
+  const px=120,pw=44,ph=56;let py=l1.py;
+  if(!raceOver){for(const o of l1.obs){
     if(o.t==='slider')o.sw=Math.sin(l1.dist*0.02+o.ph)*o.amp;
     else if(o.t==='hr')o.sw=Math.sin(l1.dist*0.012+o.ph)*o.amp;
     else if(o.t==='car'||o.t==='boss_car')o.sw-=o.vspd;
@@ -573,9 +579,10 @@ function uL1(){
       }
     }
   }
+  }
   l1.obs=l1.obs.filter(o=>!o.dead&&o.x0+o.sw-l1.dist>-120);
   // Collectibles
-  for(const c of l1.coll){
+  if(!raceOver){for(const c of l1.coll){
     const cx2=c.x0-l1.dist;
     if(!c.collected&&px<cx2+c.w&&px+pw>cx2&&py<c.y+c.h&&py+ph>c.y){
       c.collected=true;
@@ -586,10 +593,11 @@ function uL1(){
       else if(c.type==='clockout'){l1.score+=15;sw();spP(cx2+c.w/2,c.y,6,'#4af',l1.part);l1.inv=300;}
     }
   }
+  }
   l1.coll=l1.coll.filter(c=>!c.collected&&c.x0-l1.dist>-120);
   l1.part=upP(l1.part);
-  // Stage clear: reach the EXIT door (positioned ~40 units before goal)
-  if(l1.dist>=l1.goal-40){
+  // Stage clear: cross the FINISH line (game ends, visuals keep scrolling)
+  if(!l1.win&&l1.dist>=l1.goal-20){
     l1.win=true;l1.winSaved=false;
     l1.luckLine=pickL1LuckLine(l1.score,l1.lives);
     l1.banner=L1_NAME[l1.stage]+'下班！';
@@ -613,16 +621,22 @@ function drL1(){
   }else{
     ctx.fillStyle=L1_BG[stg];ctx.fillRect(0,0,W,H);
   }
-  // EXIT door appears near the goal
-  const doorX=l1.goal-l1.dist-60;
-  if(doorX<W+100){
-    const doorY=l1.ly[0]-20, doorH=l1.ly[2]-l1.ly[0]+80, doorW=70;
-    ctx.fillStyle='#2e7d32';ctx.fillRect(doorX,doorY,doorW,doorH);
-    ctx.fillStyle='#fff';ctx.fillRect(doorX+6,doorY+6,doorW-12,doorH-12);
-    ctx.fillStyle='#2e7d32';ctx.font='bold 16px "PingFang SC","Microsoft YaHei",Arial,sans-serif';ctx.textAlign='center';
-    ctx.fillText('EXIT',doorX+doorW/2,doorY+doorH/2+6);
-    ctx.strokeStyle='#1b5e20';ctx.lineWidth=4;ctx.strokeRect(doorX,doorY,doorW,doorH);
-    ctx.fillStyle='#4caf50';ctx.beginPath();ctx.arc(doorX+doorW-14,doorY+14,5,0,Math.PI*2);ctx.fill();
+  // Finish line: checkered flag banner across all lanes
+  const finX=l1.goal-l1.dist-20;
+  if(finX<W+100){
+    const finY=l1.ly[0]-30, finH=l1.ly[2]-l1.ly[0]+100, finW=26, sq=18;
+    ctx.fillStyle='#222';ctx.fillRect(finX,finY,finW,finH);
+    ctx.strokeStyle='#fff';ctx.lineWidth=2;
+    for(let yy=finY;yy<finY+finH;yy+=sq){
+      const dark=((yy-finY)/sq)%2<1;
+      ctx.fillStyle=dark?'#111':'#fff';
+      ctx.fillRect(finX+2,yy,finW-4,sq);
+    }
+    ctx.strokeRect(finX,finY,finW,finH);
+    ctx.fillStyle='#e22';ctx.font='bold 14px "PingFang SC","Microsoft YaHei",Arial,sans-serif';ctx.textAlign='center';
+    ctx.save();ctx.translate(finX+finW/2,finY+finH/2);ctx.rotate(-Math.PI/2);
+    ctx.fillText('FINISH',0,5);
+    ctx.restore();
   }
   // obstacles (all functional)
   for(const o of l1.obs){
@@ -656,7 +670,7 @@ function drL1(){
   if(l1.jump)spr=S.pony_jump;
   else if(l1.gnd&&af%12<6)spr=S.pony_run2;
   if(l1.bigT>0){spr=S.pony_chubby;}
-  if(l1.inv>0&&af%4<2)ctx.globalAlpha=0.5;
+  if(!l1.win&&l1.inv>0&&af%4<2)ctx.globalAlpha=0.5;
   const pw2=l1.bigT>0?64:50,ph2=l1.bigT>0?72:60;
   ds(ctx,spr,120-(pw2-50)/2,l1.py-10-(ph2-60)/2,pw2,ph2,false);
   ctx.globalAlpha=1;
@@ -675,7 +689,7 @@ function drL1(){
   else if(l1.boostT>0){ctx.fillStyle='#fd4';ctx.font='bold 12px "PingFang SC","Microsoft YaHei",Arial,sans-serif';ctx.fillText('⚡加速冲刺! 小心别撞上!',W-15,50);}
   else if(l1.slowT>0){ctx.fillStyle='#6ff';ctx.font='bold 12px "PingFang SC","Microsoft YaHei",Arial,sans-serif';ctx.fillText('🎧 慢动作',W-15,50);}
   else if(l1.inv>120&&af%4<2){ctx.fillStyle='#6ff';ctx.font='bold 12px "PingFang SC","Microsoft YaHei",Arial,sans-serif';ctx.fillText('🛡️ 无敌下班中!',W-15,50);}
-  if(l1.spd>3.5){ctx.strokeStyle='#fff4';ctx.lineWidth=1;for(let i=0;i<4;i++){const s2=Math.random()*W;ctx.beginPath();ctx.moveTo(s2,Math.random()*H*0.6);ctx.lineTo(s2+15,Math.random()*H*0.6);ctx.stroke();}}
+  if(!l1.win&&l1.spd>3.5){ctx.strokeStyle='#fff4';ctx.lineWidth=1;for(let i=0;i<4;i++){const s2=Math.random()*W;ctx.beginPath();ctx.moveTo(s2,Math.random()*H*0.6);ctx.lineTo(s2+15,Math.random()*H*0.6);ctx.stroke();}}
   // banner
   if(l1.bannerT>0&&!l1.win){ctx.fillStyle='#000a';ctx.fillRect(0,H/2-24,W,48);ctx.fillStyle='#fd4';ctx.font='bold 16px "PingFang SC","Microsoft YaHei",Arial,sans-serif';ctx.textAlign='center';ctx.fillText(l1.banner,W/2,H/2+5);}
   ctx.restore();
@@ -683,7 +697,7 @@ function drL1(){
   // back to menu button
   ctx.fillStyle='#3a3a52';ctx.fillRect(10,10,72,32);
   ctx.fillStyle='#fff';ctx.font='bold 13px "PingFang SC","Microsoft YaHei",Arial,sans-serif';ctx.textAlign='center';
-  ctx.fillText('← 菜单',46,32);
+  ctx.fillText('← 菜单',46,29);
   if(l1.go){ctx.fillStyle='#000a';ctx.fillRect(0,0,W,H);
     ctx.fillStyle='#f44';ctx.font='bold 30px "PingFang SC","Microsoft YaHei",Arial,sans-serif';ctx.textAlign='center';
     ctx.fillText('你被炒了!',W/2,H/2-70);
@@ -735,7 +749,7 @@ function drL1Sel(){
   // back
   ctx.fillStyle='#3a3a52';ctx.fillRect(10,10,72,32);
   ctx.fillStyle='#fff';ctx.font='bold 13px "PingFang SC","Microsoft YaHei",Arial,sans-serif';ctx.textAlign='center';
-  ctx.fillText('← 菜单',46,32);
+  ctx.fillText('← 菜单',46,29);
   // title
   ctx.textAlign='center';
   ctx.fillStyle='#222';ctx.font='bold 26px "PingFang SC","Microsoft YaHei",Arial,sans-serif';
@@ -798,7 +812,7 @@ function rL2(){
   // 每一关都随机：三关背景色调顺序洗牌；标语每关/每次随机；地图布局由 genL2 随机生成
   const bgOrder=[0,1,2];
   for(let i=2;i>0;i--){const j=Math.floor(Math.random()*(i+1));const t=bgOrder[i];bgOrder[i]=bgOrder[j];bgOrder[j]=t;}
-  l2={stage:0,bgOrder:bgOrder,poster:randSlogan(''),p:{x:60,y:250,vx:0,vy:0,w:34,h:44,gnd:false,face:1},grav:0.5,jumpV:-16*jb,lives:3+el,score:0,big:false,horse:false,inv:0,go:false,won:false,cam:0,part:[],floats:[],banner:'吃饼变大 · 吃马蹄印记🐴才能踩老板!',bannerT:160,bossT:0,bossDone:false,overSaved:false,winSaved:false,heartGiven:false,piesEaten:0,piesTotal:0};
+  l2={stage:0,bgOrder:bgOrder,poster:randSlogan(''),p:{x:60,y:250,vx:0,vy:0,w:34,h:44,gnd:false,face:1},grav:0.5,jumpV:-16*jb,lives:3+el,score:0,big:false,horse:false,inv:0,go:false,won:false,cam:0,part:[],floats:[],banner:'吃饼变大 · 吃马蹄印记🐴才能踩BOSS!',bannerT:160,bossT:0,bossDone:false,overSaved:false,winSaved:false,heartGiven:false,piesEaten:0,piesTotal:0};
   genL2();
 }
 function genL2(){
@@ -891,7 +905,7 @@ function l2Collect(c){
   else if(c.type==='horseshoe'){
     l2.horse=true;l2.score+=50;sg();
     spP(c.x,c.y,10,'#fd4',l2.part,6,6,30);
-    l2.floats.push({x:c.x,y:c.y-6,txt:'马蹄印记! 🐴 可以踩老板了!',t:56});
+    l2.floats.push({x:c.x,y:c.y-6,txt:'马蹄印记! 🐴 可以踩BOSS了!',t:56});
   }
   else if(c.type==='redheart'){
     l2.lives=Math.min(5,l2.lives+1);sw();
@@ -915,7 +929,7 @@ function l2Stomp(b){
     b.dead=true;l2.bossT=0;boom();
     spP(b.x+b.w/2,b.y+b.h/2,25,'#fd4',l2.part,10,10,36);
     spP(b.x+b.w/2,b.y+b.h/2,15,'#f44',l2.part,8,8,30);
-    l2.score+=50;l2.banner='老板被踩扁了！';l2.bannerT=90;
+    l2.score+=50;l2.banner='BOSS被踩扁了！';l2.bannerT=90;
   }else{
     l2.banner='马蹄用掉了！回去浮动平台再吃一个🐴';l2.bannerT=120;
     l2.floats.push({x:l2.p.x+17,y:l2.p.y-14,txt:'马蹄用掉了！回去再吃🐴',t:70});
@@ -1018,7 +1032,7 @@ function uL2(){
   }
   // Boss
   const b=l2.boss;
-  if(l2.p.x>l2.bp.x-80&&!b.active&&!b.dead){b.active=true;l2.banner=l2.horse?'⚠️ 老板驾到！踩 '+b.hp+' 下！马蹄一次就没了，用完回去再吃🐴':'⚠️ 老板驾到！先跳上浮动平台吃马蹄🐴再踩！';l2.bannerT=170;}
+  if(l2.p.x>l2.bp.x-80&&!b.active&&!b.dead){b.active=true;l2.banner=l2.horse?'⚠️ BOSS驾到！踩 '+b.hp+' 下！马蹄一次就没了，用完回去再吃🐴':'⚠️ BOSS驾到！先跳上浮动平台吃马蹄🐴再踩！';l2.bannerT=170;}
   if(b.active&&!b.dead){
     b.hit=Math.max(0,b.hit-1);
     b.x+=b.dir*b.spd;
@@ -1243,11 +1257,11 @@ function drL2(){
   if(l2.bannerT>0){ctx.fillStyle='#000a';ctx.fillRect(0,H/2-24,W,48);ctx.fillStyle='#fd4';ctx.font='bold 15px "PingFang SC","Microsoft YaHei",Arial,sans-serif';ctx.textAlign='center';ctx.fillText(l2.banner,W/2,H/2+5);}
   // control hint
   ctx.fillStyle='#888';ctx.font='12px "PingFang SC","Microsoft YaHei",Arial,sans-serif';ctx.textAlign='center';
-  ctx.fillText('左右移动 · 双击跳跃 · 吃饼变大 · 吃马蹄🐴才能踩老板 · 用完再吃',W/2,H-10);
+  ctx.fillText('左右移动 · 双击跳跃 · 吃饼变大 · 吃马蹄🐴才能踩BOSS · 用完再吃',W/2,H-10);
   ctx.restore();
   if(l2.go||l2.won){ctx.fillStyle='#000a';ctx.fillRect(0,0,W,H);
     ctx.fillStyle=l2.won?'#fd4':'#f44';ctx.font='bold 30px "PingFang SC","Microsoft YaHei",Arial,sans-serif';ctx.textAlign='center';
-    ctx.fillText(l2.won?'全部老板被踩扁!':'被老板抓了...',W/2,H/2-50);
+    ctx.fillText(l2.won?'全部BOSS被踩扁!':'被BOSS抓了...',W/2,H/2-50);
     ctx.fillStyle='#fff';ctx.font='18px "PingFang SC","Microsoft YaHei",Arial,sans-serif';
     ctx.fillText('分数: '+l2.score,W/2,H/2);
     ctx.fillStyle='#f84';ctx.font='13px "PingFang SC","Microsoft YaHei",Arial,sans-serif';
@@ -1263,7 +1277,7 @@ function drL2(){
   // back to menu button
   ctx.fillStyle='#3a3a52';ctx.fillRect(10,10,72,32);
   ctx.fillStyle='#fff';ctx.font='bold 13px "PingFang SC","Microsoft YaHei",Arial,sans-serif';ctx.textAlign='center';
-  ctx.fillText('← 菜单',46,32);
+  ctx.fillText('← 菜单',46,29);
 }
 
 // ===== LEVEL 3: PONY MERGE (2048 style) =====
@@ -1515,7 +1529,7 @@ function drL3(){
   // back to menu button
   ctx.fillStyle='#3a3a52';ctx.fillRect(10,10,72,32);
   ctx.fillStyle='#fff';ctx.font='bold 13px "PingFang SC","Microsoft YaHei",Arial,sans-serif';ctx.textAlign='center';
-  ctx.fillText('← 菜单',46,32);
+  ctx.fillText('← 菜单',46,29);
   // help overlay
   if(l3.help){
     ctx.fillStyle='rgba(0,0,0,0.78)';
