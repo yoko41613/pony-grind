@@ -84,10 +84,10 @@ function ds(ctx,spr,x,y,w,h,flip){
 
 // ===== AUDIO =====
 let ac=null;
-function ia(){if(!ac){try{ac=new(window.AudioContext||window.webkitAudioContext)();}catch(e){}}if(ac&&ac.state==='suspended'){ac.resume();}}
-function ua(){ia();if(!ac)return;try{const o=ac.createOscillator(),g=ac.createGain();g.gain.value=0.001;o.connect(g);g.connect(ac.destination);o.start();o.stop(ac.currentTime+0.01);}catch(e){}}
+function ia(){if(!ac){try{ac=new(window.AudioContext||window.webkitAudioContext)();}catch(e){}}if(ac&&ac.state==='suspended'){return ac.resume();}return Promise.resolve();}
+function ua(){ia();if(!ac||muted)return;try{const o=ac.createOscillator(),g=ac.createGain();g.gain.value=0.001;o.connect(g);g.connect(ac.destination);o.start();o.stop(ac.currentTime+0.01);}catch(e){}}
 function bp(f,d,t='square',v=0.08){
-  if(!ac)return;try{const o=ac.createOscillator(),g=ac.createGain();
+  if(!ac||muted)return;try{const o=ac.createOscillator(),g=ac.createGain();
   o.type=t;o.frequency.value=f;
   g.gain.setValueAtTime(v,ac.currentTime);
   g.gain.exponentialRampToValueAtTime(0.001,ac.currentTime+d);
@@ -127,23 +127,37 @@ const BGMS=[
   ]}
 ];
 function startBGM(st){
-  ia();ua();
   bgmStyle=(st===0||st===1||st===2)?st:0;
   if(bgmOn)return;
   bgmOn=true;bgmNoteIdx=0;
-  playNextBGMNote();
+  ia().then(()=>{if(muted)return;ua();playNextBGMNote();}).catch(()=>{bgmOn=false;});
 }
 function stopBGM(){bgmOn=false;if(bgmTO){clearTimeout(bgmTO);bgmTO=null;}}
+function toggleMute(){
+  muted=!muted?1:0;
+  save.muted=muted;sv(save);
+  if(muted&&ac&&ac.state==='running'){try{ac.suspend();}catch(e){}}
+  else if(!muted){
+    ia().then(()=>{if(bgmOn)playNextBGMNote();}).catch(()=>{});
+  }
+}
+function drawMuteBtn(ctx,x,y,r=18){
+  ctx.fillStyle='rgba(0,0,0,0.35)';ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.fill();
+  ctx.strokeStyle='rgba(255,255,255,0.9)';ctx.lineWidth=2;ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.stroke();
+  ctx.fillStyle='#fff';ctx.font='bold 16px Arial,sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';
+  ctx.fillText(muted?'🔇':'🔊',x,y+1);
+}
+function isMuteTap(mx,my){const r=18;return Math.hypot(mx-(W-34),my-34)<r;}
 function playNextBGMNote(){
   if(!bgmOn||!ac){bgmOn=false;return;}
   const seq=BGMS[bgmStyle];
   const n=seq.notes[bgmNoteIdx][0];
   const dur=seq.notes[bgmNoteIdx][1];
   bgmNoteIdx=(bgmNoteIdx+1)%seq.notes.length;
-  if(n>0){
+  if(n>0&&!muted){
     try{
       const o=ac.createOscillator();o.type=seq.wave;o.frequency.value=n;
-      const g=ac.createGain();g.gain.setValueAtTime(seq.wave==='triangle'?0.04:0.05,ac.currentTime);
+      const g=ac.createGain();g.gain.setValueAtTime(seq.wave==='triangle'?0.10:0.12,ac.currentTime);
       g.gain.exponentialRampToValueAtTime(0.001,ac.currentTime+dur*0.8);
       o.connect(g);g.connect(ac.destination);o.start();o.stop(ac.currentTime+dur*0.8+0.01);
     }catch(e){}
@@ -178,6 +192,7 @@ function ld(){
 }
 function sv(d){try{localStorage.setItem('pg_save',JSON.stringify(d));}catch(e){}}
 let save=ld(), ponyName=save.name||'';
+let muted=(typeof save.muted!=='undefined')?save.muted:0;
 let af=0, gs='menu';
 let enterLock=0; // 防止从菜单进入后双击/合成click穿透到关卡选择
 let menuTip='',menuTipT=0;
@@ -341,6 +356,7 @@ function drMenu(){
   if(menuTipT>0){ctx.fillStyle='#f84';ctx.font='bold 14px "PingFang SC","Microsoft YaHei",Arial,sans-serif';ctx.fillText(menuTip,W/2,618);}
   const qs=JOKES;
   ctx.fillText(qs[Math.floor(af/120)%qs.length],W/2,640);
+  drawMuteBtn(ctx,W-34,34);
 }
 
 function clMenu(mx,my){
@@ -595,12 +611,6 @@ function drL1(){
   }else{
     ctx.fillStyle=L1_BG[stg];ctx.fillRect(0,0,W,H);
   }
-  // parallax decor: soft drifting bands that scroll slower (depth cue)
-  const po=(l1.cam*0.35)%W;
-  ctx.fillStyle='rgba(255,255,255,0.06)';
-  for(let i=-1;i<3;i++){const px2=po+i*W;ctx.fillRect(px2,0,26,H*0.45);}
-  ctx.fillStyle='rgba(0,0,0,0.05)';
-  for(let i=-1;i<3;i++){const px2=W-po*1.7+i*W;ctx.fillRect(px2,H*0.5,H*0.04,H*0.5);}
   // EXIT door appears near the goal
   const doorX=l1.goal-l1.dist-60;
   if(doorX<W+100){
@@ -667,6 +677,7 @@ function drL1(){
   // banner
   if(l1.bannerT>0&&!l1.win){ctx.fillStyle='#000a';ctx.fillRect(0,H/2-24,W,48);ctx.fillStyle='#fd4';ctx.font='bold 16px "PingFang SC","Microsoft YaHei",Arial,sans-serif';ctx.textAlign='center';ctx.fillText(l1.banner,W/2,H/2+5);}
   ctx.restore();
+  drawMuteBtn(ctx,W-34,34);
   // back to menu button
   ctx.fillStyle='#3a3a52';ctx.fillRect(10,10,72,32);
   ctx.fillStyle='#fff';ctx.font='bold 13px "PingFang SC","Microsoft YaHei",Arial,sans-serif';ctx.textAlign='center';
@@ -1246,6 +1257,7 @@ function drL2(){
     if(l2.won&&!l2.winSaved){l2.winSaved=true;const xpGain=200+l2.score;save.xp+=xpGain;sv(save);}
     ctx.fillStyle='#fff';ctx.font='12px "PingFang SC","Microsoft YaHei",Arial,sans-serif';ctx.fillText('点击返回菜单',W/2,H/2+100);
   }
+  drawMuteBtn(ctx,W-34,34);
   // back to menu button
   ctx.fillStyle='#3a3a52';ctx.fillRect(10,10,72,32);
   ctx.fillStyle='#fff';ctx.font='bold 13px "PingFang SC","Microsoft YaHei",Arial,sans-serif';ctx.textAlign='center';
@@ -1392,7 +1404,7 @@ function uL3(){
 }
 
 // symbol sprite extracted from user reference (own mark, not a heart)
-const HEART_COLS={1:'#ffffff',2:'#ffd54a',3:'#fe9ecb',4:'#f8b500',5:'#f083ce',6:'#fe9a4e',7:'#7ed957',8:'#3ec9c9',9:'#4d8aff',10:'#fe4d5c',11:'#b84dfe',12:'#111111'};
+const HEART_COLS={1:'#e8e8ee',2:'#ffcc00',3:'#ff4081',4:'#ff9100',5:'#e91e63',6:'#ff5722',7:'#4caf50',8:'#00bcd4',9:'#2196f3',10:'#f44336',11:'#9c27b0',12:'#111111'};
 function drHeart(ctx,cx,cy,s,tier){
   const col=HEART_COLS[tier];
   const w=s*0.55, h=s*0.40;
@@ -1427,7 +1439,7 @@ function drL3(){
   ctx.fillStyle='#fd4';ctx.font='bold 22px "PingFang SC","Microsoft YaHei",Arial,sans-serif';
   ctx.fillText('爱心工厂',W/2,34);
   // help button (top-right)
-  const hx=W-34,hy=34,hr=18;
+  const hx=W-68,hy=34,hr=18;
   ctx.fillStyle=l3.help?'#fd4':'#3a3a52';
   ctx.beginPath();ctx.arc(hx,hy,hr,0,Math.PI*2);ctx.fill();
   ctx.strokeStyle='#fd4';ctx.lineWidth=2;
@@ -1541,6 +1553,7 @@ function drL3(){
     ctx.fillStyle='#888';ctx.font='12px "PingFang SC","Microsoft YaHei",Arial,sans-serif';
     ctx.fillText('点击问号或空白处关闭',W/2,py+ph-18);
   }
+  drawMuteBtn(ctx,W-34,34);
 }
 
 // ===== MAIN LOOP =====
@@ -1581,6 +1594,7 @@ resizeGame();
 
 function handleTap(mx,my){
   if(enterLock>0)return; // 刚进入关卡时的防穿透保护
+  if(isMuteTap(mx,my)){toggleMute();return;}
   if(gs==='menu'){clMenu(mx,my);return;}
   if(gs==='shop'){clShop(mx,my);return;}
   if(gs==='level1'){
@@ -1597,7 +1611,7 @@ function handleTap(mx,my){
   }
   if(gs==='level3'){
     // help button (top-right circle)
-    const hx=W-34,hy=34,hr=18;
+    const hx=W-68,hy=34,hr=18;
     if(Math.hypot(mx-hx,my-hy)<hr){l3.help=!l3.help;return;}
     // tap outside closes help overlay
     if(l3.help){l3.help=false;return;}
@@ -1614,6 +1628,10 @@ canvas.addEventListener('click',e=>{
   const my=(e.clientY-rc.top)*(W/rc.width);
   handleTap(mx,my);
 });
+canvas.addEventListener('touchstart',e=>{
+  // iOS requires AudioContext resume inside a touchstart gesture
+  ia().catch(()=>{});
+},{passive:true});
 canvas.addEventListener('touchend',e=>{
   if(gs==='menu'||gs==='shop')return;
   inp.menuTap=false;
