@@ -669,9 +669,9 @@ function drL1(){
   // plus a slower parallax layer on top so depth is felt
   const bgImg=stg===0?IMG_L1P1:stg===1?IMG_L1P2:IMG_L1P3;
   if(bgImg&&bgImg.complete){
-    const off=(l1.cam*1)%W;
+    const off=Math.floor(l1.cam)%W; // v2.14: 整数偏移避免子像素接缝
     ctx.drawImage(bgImg,-off,0,W,H);
-    ctx.drawImage(bgImg,W-off,0,W,H);
+    ctx.drawImage(bgImg,W-off-1,0,W,H); // v2.14: 与上一张重叠1px，消除拼接线
   }else{
     ctx.fillStyle=L1_BG[stg];ctx.fillRect(0,0,W,H);
   }
