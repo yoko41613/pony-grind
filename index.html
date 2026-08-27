@@ -497,7 +497,7 @@ function uL1(){
   }
   shake=Math.max(0,shake-1);l1.inv=Math.max(0,l1.inv-1);
   l1.boostT=Math.max(0,l1.boostT-1);l1.bigT=Math.max(0,l1.bigT-1);l1.slowT=Math.max(0,l1.slowT-1);l1.bannerT=Math.max(0,l1.bannerT-1);
-  l1.bs=Math.min(4.2,1.9+l1.stage*0.2); // 更温和的速度曲线
+  l1.bs=Math.min(4.4,1.75+l1.stage*0.35+l1.dist*0.00011); // v2.12: 关内随进度提速，越跑越快
   l1.spd=(l1.bs+(l1.boostT>0?1.5:0))*(l1.slowT>0?0.5:1);
   l1.coinT++;
   if(l1.coinT>=600){l1.coinT=0;save.coins+=10;sv(save);}
@@ -513,9 +513,43 @@ function uL1(){
   l1.pvy+=0.5;l1.py+=l1.pvy;
   if(l1.py>=l1.ly[l1.pl]){l1.py=l1.ly[l1.pl];l1.pvy=0;l1.gnd=true;l1.jump=false;}
   // Spawn (per-stage pools, only while race is active)
-  if(!raceOver){l1.st++;if(l1.st>l1.si){l1.st=0;l1.si=Math.max(52,128-l1.dist*0.0032); // 更宽松的生成节奏，后期也不过密
+  if(!raceOver){l1.st++;if(l1.st>l1.si){l1.st=0;l1.si=Math.max(26,66-l1.dist*0.0028); // v2.12: 更紧凑的生成节奏，配合车道间距检查
     const r=Math.random();
-    if(r<0.62){
+    // v2.12: 同车道最小间距检查——新障碍须与已有障碍保持可反应间距，杜绝贴脸/重叠
+    const laneBlocked=(lane,sx,nt,w)=>{
+      for(const o of l1.obs){
+        if(o.lane!==lane)continue;
+        const orr=o.x0+o.sw+o.w;
+        let g=140+w*0.25;
+        if(nt==='car')g=Math.max(g,440);        // 车会追上前方案碍，需要整段净空
+        if(nt==='boss_car')g=Math.max(g,340);   // 老板车慢速前移，也会逐渐贴上前方案碍
+        if(nt==='boss'||o.t==='boss')g+=170;    // boss 左右游走±80
+        if(nt==='slider'||o.t==='slider')g+=70; // 滑椅摆动±62
+        if(nt==='hr'||o.t==='hr')g+=26;
+        if(sx<orr+g)return true;
+      }
+      return false;
+    };
+    // v2.12: 三车道对齐检查——避免同一时刻三条道全被堵死
+    const wallBlock=(lane,sx,w)=>{
+      let cnt=0;
+      for(const o of l1.obs){
+        if(o.lane===lane)continue;
+        const ol=o.x0+o.sw,orr=ol+o.w;
+        if(orr>sx-55&&ol<sx+w+55)cnt++;
+      }
+      return cnt>=2;
+    };
+    const mkObs=(t,w,h,lane,sx)=>{
+      const ob={t,w,h,x0:sx,lane,y:l1.ly[lane],sw:0};
+      if(t==='car')ob.vspd=l1.bs*1.4;
+      else if(t==='boss_car')ob.vspd=l1.bs*0.35;
+      else if(t==='slider'){ob.amp=32+Math.random()*30;ob.ph=Math.random()*6.28;}
+      else if(t==='hr'){ob.amp=16;ob.ph=Math.random()*6.28;}
+      else if(t==='boss'){ob.dir=Math.random()<0.5?1:-1;ob.spd=0.8+l1.stage*0.2;ob.origX=sx;}
+      l1.obs.push(ob);
+    };
+    if(r<0.72){ // v2.12: 障碍占比 62% -> 72%
       const pools=[
         [{t:'papers',w:52,h:44,p:0.35},{t:'printer',w:56,h:52,p:0.30},{t:'hr',w:44,h:60,p:0.35}],
         [{t:'desk',w:84,h:58,p:0.28},{t:'slider',w:44,h:54,p:0.28},{t:'notebook',w:40,h:40,p:0.24},{t:'boss',w:52,h:58,p:0.2}],
@@ -524,26 +558,26 @@ function uL1(){
       const pool=pools[l1.stage];
       let rr=Math.random(),acc=0,sel=pool[pool.length-1];
       for(const it of pool){acc+=it.p;if(rr<acc){sel=it;break;}}
-      const lane=Math.floor(Math.random()*3);
-      const ob={t:sel.t,w:sel.w,h:sel.h,x0:l1.dist+W+80,lane,y:l1.ly[lane],sw:0};
-      if(ob.t==='car'){ob.vspd=l1.bs*1.4;}
-      else if(ob.t==='boss_car'){ob.vspd=l1.bs*0.35;}
-      else if(ob.t==='slider'){ob.amp=32+Math.random()*30;ob.ph=Math.random()*6.28;}
-      else if(ob.t==='hr'){ob.amp=16;ob.ph=Math.random()*6.28;}
-      else if(ob.t==='boss'){ob.dir=Math.random()<0.5?1:-1;ob.spd=0.8+l1.stage*0.2;ob.origX=ob.x0;}
-      l1.obs.push(ob);
+      const sx=l1.dist+W+80;
+      const lanes=[0,1,2].sort(()=>Math.random()-0.5);
+      for(const lane of lanes){
+        if(!laneBlocked(lane,sx,sel.t,sel.w)&&!wallBlock(lane,sx,sel.w)){mkObs(sel.t,sel.w,sel.h,lane,sx);break;}
+      }
     }
-    else if(r<0.86){ // 道具池占比提升：24% -> 35%
+    else if(r<0.90){ // v2.12: 道具 20%（生成频率提高后绝对数量与原先相当）
       let type;
-      if(!l1.heartGiven&&l1.lives<5&&Math.random()<0.18){type='heart';l1.heartGiven=true;} // 残血时更容易出回血
-      else if(l1.stage===0)type=Math.random()<0.65?'coffee':'headset';   // 咖啡加速为主，耳机减速为辅
-      else if(l1.stage===1)type=Math.random()<0.70?'pie':'fish';          // 吃饼变大为主，鱼减速为辅
-      else type='clockout'; // 停车场只有下班卡无敌
-      const lane=Math.floor(Math.random()*3);
-      l1.coll.push({x0:l1.dist+W+60,y:l1.ly[lane]-30,type,w:36,h:36,collected:false});
+      if(!l1.heartGiven&&l1.lives<5&&Math.random()<0.18){type='heart';l1.heartGiven=true;}
+      else if(l1.stage===0)type=Math.random()<0.65?'coffee':'headset';
+      else if(l1.stage===1)type=Math.random()<0.70?'pie':'fish';
+      else type='clockout';
+      let ilane=Math.floor(Math.random()*3);
+      const ix=l1.dist+W+60;
+      for(const o of l1.obs){ // 道具尽量不塞进障碍身上
+        if(o.lane===ilane&&Math.abs(o.x0+o.sw+o.w/2-ix)<70){ilane=(ilane+1)%3;break;}
+      }
+      l1.coll.push({x0:ix,y:l1.ly[ilane]-30,type,w:36,h:36,collected:false});
     }
-    else{
-      const lane=Math.floor(Math.random()*3);
+    else{ // v2.12: 双障碍改为两条不同车道错位生成，杜绝同车道贴脸
       const pools2=[
         [{t:'papers',w:52,h:44},{t:'printer',w:56,h:52}],
         [{t:'notebook',w:40,h:40},{t:'slider',w:44,h:54}],
@@ -552,11 +586,14 @@ function uL1(){
       const pool2=pools2[l1.stage];
       const a=pool2[Math.floor(Math.random()*pool2.length)];
       const b=pool2[Math.floor(Math.random()*pool2.length)];
-      l1.obs.push({t:a.t,w:a.w,h:a.h,x0:l1.dist+W+80,lane,y:l1.ly[lane],sw:0});
-      l1.obs.push({t:b.t,w:b.w,h:b.h,x0:l1.dist+W+170,lane,y:l1.ly[lane],sw:0});
+      const sx1=l1.dist+W+80,sx2=sx1+90;
+      const lanes=[0,1,2].sort(()=>Math.random()-0.5);
+      if(!laneBlocked(lanes[0],sx1,a.t,a.w)&&!wallBlock(lanes[0],sx1,a.w))mkObs(a.t,a.w,a.h,lanes[0],sx1);
+      if(!laneBlocked(lanes[1],sx2,b.t,b.w)&&!wallBlock(lanes[1],sx2,b.w))mkObs(b.t,b.w,b.h,lanes[1],sx2);
     }
   }}
-  // Update obstacles (screen x = x0 + sw - dist)
+  
+// Update obstacles (screen x = x0 + sw - dist)
   const px=120,pw=44,ph=56;let py=l1.py;
   if(!raceOver){for(const o of l1.obs){
     if(o.t==='slider')o.sw=Math.sin(l1.dist*0.02+o.ph)*o.amp;
