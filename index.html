@@ -68,7 +68,8 @@ broccoli:["tt88tt","t8888t","888888","t8tt8t","t8tt8t","t8888t"],
 corn:["8b8b","b8b8","tt8t","tt8t","tt8t","tt8t"],
 tomato:["tttt","t77t","7777","t77t","tttt"],
 guy:["t6t6t6tt","tttttttt","ttxxxxxt","txxxxxxt","txxxxxxt","txxxxxxt","tx7777xt","txxxxxxt","txxxxxxt","ttxxxxxt","t4t44t4t","t4t44t4t"],
-offcard:["taaaaaa","a5555a","a55a5a","a5555a","a5555a","taaaaaat"]
+offcard:["taaaaaa","a5555a","a55a5a","a5555a","a5555a","taaaaaat"],
+fish:["ttttttiiiiittt","ttttiiiiiiiiit","ttiiiiiiiiiiit","tiiiiiiiiiiiii","tiiiii55iiiiii","ttiiiiiiiiiiit","tttttttttttttt"]
 };
 
 function ds(ctx,spr,x,y,w,h,flip){
@@ -488,9 +489,9 @@ function uL1(){
   l1.pvy+=0.5;l1.py+=l1.pvy;
   if(l1.py>=l1.ly[l1.pl]){l1.py=l1.ly[l1.pl];l1.pvy=0;l1.gnd=true;l1.jump=false;}
   // Spawn (per-stage pools, all functional)
-  l1.st++;if(l1.st>l1.si){l1.st=0;l1.si=Math.max(34,95-l1.dist*0.005); // 障碍间隔更大
+  l1.st++;if(l1.st>l1.si){l1.st=0;l1.si=Math.max(46,118-l1.dist*0.004); // 障碍间隔更宽，道具更稀有
     const r=Math.random();
-    if(r<0.5){
+    if(r<0.62){
       const pools=[
         [{t:'headset',w:40,h:46,p:0.28},{t:'papers',w:52,h:44,p:0.28},{t:'printer',w:56,h:52,p:0.24},{t:'hr',w:44,h:60,p:0.2}],
         [{t:'desk',w:84,h:58,p:0.28},{t:'slider',w:44,h:54,p:0.28},{t:'notebook',w:40,h:40,p:0.24},{t:'boss',w:52,h:58,p:0.2}],
@@ -508,10 +509,12 @@ function uL1(){
       else if(ob.t==='boss'){ob.dir=Math.random()<0.5?1:-1;ob.spd=0.8+l1.stage*0.2;ob.origX=ob.x0;}
       l1.obs.push(ob);
     }
-    else if(r<0.9){
+    else if(r<0.74){
       let type;
-      if(!l1.heartGiven&&l1.lives<5&&Math.random()<0.22){type='heart';l1.heartGiven=true;} // only 1 bonus heart per run
-      else type=l1.stage===0?'coffee':l1.stage===1?'pie':'clockout';
+      if(!l1.heartGiven&&l1.lives<5&&Math.random()<0.12){type='heart';l1.heartGiven=true;} // only 1 bonus heart per run
+      else if(l1.stage===0)type=Math.random()<0.5?'coffee':'headset';   // 咖啡加速 / 耳机减速
+      else if(l1.stage===1)type=Math.random()<0.5?'fish':'pie';          // 鱼减速 / 饼变大
+      else type='clockout';
       const lane=Math.floor(Math.random()*3);
       l1.coll.push({x0:l1.dist+W+60,y:l1.ly[lane]-30,type,w:36,h:36,collected:false});
     }
@@ -560,6 +563,7 @@ function uL1(){
       c.collected=true;
       if(c.type==='heart'){l1.lives=Math.min(5,l1.lives+1);sw();spP(cx2+c.w/2,c.y,8,'#f44',l1.part);}
       else if(c.type==='coffee'){l1.score+=10;sc();spP(cx2+c.w/2,c.y,5,'#fd4',l1.part);l1.boostT=240;}
+      else if(c.type==='headset'||c.type==='fish'){l1.score+=10;sc();spP(cx2+c.w/2,c.y,5,'#6ff',l1.part);l1.slowT=240;}
       else if(c.type==='pie'){l1.score+=20;sg();spP(cx2+c.w/2,c.y,8,'#fd4',l1.part);l1.bigT=180;}
       else if(c.type==='clockout'){l1.score+=15;sw();spP(cx2+c.w/2,c.y,6,'#4af',l1.part);l1.inv=300;}
     }
@@ -581,14 +585,22 @@ function drL1(){
   ctx.save();ctx.translate(sx,sy);
   const stg=l1.stage;
   ctx.fillStyle=L1_BG[stg];ctx.fillRect(0,0,W,H);
-  // stage background images with lane lines baked in
-  if(stg===0){
-    if(IMG_L1P1&&IMG_L1P1.complete)ctx.drawImage(IMG_L1P1,0,0,W,H);
-  }else if(stg===1){
-    if(IMG_L1P2&&IMG_L1P2.complete)ctx.drawImage(IMG_L1P2,0,0,W,H);
+  // stage background images: scroll horizontally for motion (1:1 with the track),
+  // plus a slower parallax layer on top so depth is felt
+  const bgImg=stg===0?IMG_L1P1:stg===1?IMG_L1P2:IMG_L1P3;
+  if(bgImg&&bgImg.complete){
+    const off=(l1.cam*1)%W;
+    ctx.drawImage(bgImg,-off,0,W,H);
+    ctx.drawImage(bgImg,W-off,0,W,H);
   }else{
-    if(IMG_L1P3&&IMG_L1P3.complete)ctx.drawImage(IMG_L1P3,0,0,W,H);
+    ctx.fillStyle=L1_BG[stg];ctx.fillRect(0,0,W,H);
   }
+  // parallax decor: soft drifting bands that scroll slower (depth cue)
+  const po=(l1.cam*0.35)%W;
+  ctx.fillStyle='rgba(255,255,255,0.06)';
+  for(let i=-1;i<3;i++){const px2=po+i*W;ctx.fillRect(px2,0,26,H*0.45);}
+  ctx.fillStyle='rgba(0,0,0,0.05)';
+  for(let i=-1;i<3;i++){const px2=W-po*1.7+i*W;ctx.fillRect(px2,H*0.5,H*0.04,H*0.5);}
   // EXIT door appears near the goal
   const doorX=l1.goal-l1.dist-60;
   if(doorX<W+100){
@@ -619,7 +631,12 @@ function drL1(){
   for(const c of l1.coll){
     if(c.collected)continue;
     const cx2=c.x0-l1.dist;if(cx2<-40||cx2>W+40)continue;
-    const spr=c.type==='coffee'?S.coffee:c.type==='pie'?S.pie:c.type==='clockout'?S.clockout:S.heart;
+    let spr=S.heart;
+    if(c.type==='coffee')spr=S.coffee;
+    else if(c.type==='pie')spr=S.pie;
+    else if(c.type==='fish')spr=S.fish;
+    else if(c.type==='headset')spr=S.headphone;
+    else if(c.type==='clockout')spr=S.clockout;
     ds(ctx,spr,cx2,c.y,c.w,c.h,false);
   }
   // pony
@@ -836,7 +853,7 @@ function genL2(){
     if(r<0.55){
       ob={x:ox,y:l2.gy-110,type:'elevator',w:64,h:110,ph:0};
     }else{
-      ob={x:ox,y:l2.gy-58,type:'hr',w:46,h:58,ph:0,bx:ox,dir:Math.random()<0.5?1:-1,spd:1.2+st*0.5};
+      ob={x:ox,y:l2.gy-58,type:'hr',w:46,h:58,ph:0,bx:ox,dir:Math.random()<0.5?1:-1,spd:1.2+st*0.5,bubbleT:0};
     }
     l2.obs.push(ob);
     ox+=(300-st*35)+Math.random()*(220-st*30);
@@ -946,6 +963,7 @@ function uL2(){
       ob.x+=ob.dir*ob.spd;
       if(ob.x<ob.bx-60||ob.x>ob.bx+60)ob.dir*=-1;
       if(l2.inv<=0&&l2.p.x+l2.p.w>ob.x+4&&l2.p.x<ob.x+ob.w-4&&l2.p.y+l2.p.h>ob.y+4&&l2.p.y<ob.y+ob.h-4){
+        ob.bubbleT=110; // HR被撞到：头顶弹「HR也是人」并掉一条命
         l2Hurt();
         if(l2.go)break;
       }
@@ -1077,12 +1095,27 @@ function drL2(){
   for(const ob of l2.obs){
     const ox=ob.x-bx;if(ox<-80||ox>W+80)continue;
     if(ob.type==='hr'){
-      // HR patrol (untouchable)
+      // HR patrol: bumping into HR = 1 life lost, HR pops a speech bubble
       let spr=S.hr;
       if(ob.dir>0&&af%10<5)spr=S.hr;
       ds(ctx,spr,ox,ob.y-4,ob.w,ob.h+4,ob.dir<0);
       ctx.fillStyle='#f44';ctx.font='bold 10px "PingFang SC","Microsoft YaHei",Arial,sans-serif';ctx.textAlign='center';
       ctx.fillText('HR',ox+ob.w/2,ob.y-8);
+      if(ob.bubbleT>0){
+        ob.bubbleT--;
+        const bx=ox+ob.w/2,by=ob.y-34,bw=118,bh=26;
+        ctx.fillStyle='#fff';ctx.strokeStyle='#333';ctx.lineWidth=2;
+        ctx.beginPath();
+        if(ctx.roundRect)ctx.roundRect(bx-bw/2,by-bh,bw,bh,10);
+        else ctx.rect(bx-bw/2,by-bh,bw,bh);
+        ctx.fill();ctx.stroke();
+        ctx.beginPath();ctx.moveTo(bx-7,by);ctx.lineTo(bx,by+9);ctx.lineTo(bx+7,by);ctx.closePath();
+        ctx.fillStyle='#fff';ctx.fill();ctx.stroke();
+        ctx.fillStyle='#d33';ctx.font='bold 14px "PingFang SC","Microsoft YaHei",Arial,sans-serif';
+        ctx.fillText('HR也是人',bx,by-9);
+        ctx.fillStyle='#333';ctx.font='bold 11px "PingFang SC","Microsoft YaHei",Arial,sans-serif';
+        ctx.fillText('-1 ❤',bx,by+14);
+      }
     }
     else if(ob.type==='elevator'){
       const half=Math.max(0,(ob.w-ob.gap)/2);
