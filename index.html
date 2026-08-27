@@ -872,6 +872,7 @@ function l2Hurt(){
 }
 
 function uL2(){
+  const st=l2.stage; // stage-based difficulty (elevator cycle, etc.)
   if(l2.go||l2.won)return;
   l2.inv=Math.max(0,l2.inv-1);shake=Math.max(0,shake-1);
   l2.bannerT=Math.max(0,l2.bannerT-1);
