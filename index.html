@@ -102,7 +102,7 @@ function boom(){for(let i=0;i<6;i++)setTimeout(()=>bp(200+i*60,0.15,'sawtooth',0
 
 // ===== BACKGROUND MUSIC =====
 // Original procedural music: 3 different loops, one per level (L1 race / L2 pie-run / L3 heart factory)
-let bgmOn=false, bgmNoteIdx=0, bgmTO=null, bgmStyle=0;
+let bgmOn=false, bgmNoteIdx=0, bgmTO=null, bgmStyle=0,bgmStarting=false; // v2.15: bgmStarting 防止移动端挂起的 resume() 回调堆积出多条并行音轨
 const BGMS=[
   // [0] L1 办公室赛马: fast C-major run, square wave
   {wave:'square',notes:[
@@ -128,18 +128,18 @@ const BGMS=[
 ];
 function startBGM(st){
   bgmStyle=(st===0||st===1||st===2)?st:0;
-  if(bgmOn&&bgmTO){return;}
+  if(bgmOn&&(bgmTO||bgmStarting)){return;} // v2.15: 已在播或已在启动中，直接返回，杜绝并行音轨
   bgmOn=true;bgmNoteIdx=0;
   if(bgmTO){clearTimeout(bgmTO);bgmTO=null;}
-  ia().then(()=>{if(muted)return;ua();playNextBGMNote();}).catch(()=>{bgmOn=false;});
+  bgmStarting=true;
+  ia().then(()=>{bgmStarting=false;if(muted||!bgmOn)return;ua();if(!bgmTO)playNextBGMNote();}).catch(()=>{bgmStarting=false;bgmOn=false;});
 }
 function stopBGM(){bgmOn=false;if(bgmTO){clearTimeout(bgmTO);bgmTO=null;}}
 function toggleMute(){
-  muted=!muted?1:0;
-  save.muted=muted;sv(save);
+  muted=!muted?1:0; // v2.15: 静音不再持久化——每次进入游戏默认开音乐
   if(muted&&ac&&ac.state==='running'){try{ac.suspend();}catch(e){}}
   else if(!muted){
-    ia().then(()=>{if(bgmOn)playNextBGMNote();}).catch(()=>{});
+    ia().then(()=>{if(bgmOn&&!bgmTO&&!bgmStarting)playNextBGMNote();}).catch(()=>{}); // v2.15: 已在播就不再叠链
   }
 }
 function drawMuteBtn(ctx,x,y,r=18){
@@ -193,7 +193,7 @@ function ld(){
 }
 function sv(d){try{localStorage.setItem('pg_save',JSON.stringify(d));}catch(e){}}
 let save=ld(), ponyName=save.name||'';
-let muted=(typeof save.muted!=='undefined')?save.muted:0;
+let muted=0; // v2.15: 默认开音乐，静音仅本次会话有效
 let af=0, gs='menu';
 let enterLock=0; // 防止从菜单进入后双击/合成click穿透到关卡选择
 let menuTip='',menuTipT=0;
@@ -1695,6 +1695,9 @@ function handleTap(mx,my){
   }
 }
 canvas.addEventListener('click',e=>{
+  ia().then(()=>{ // v2.15: 桌面端同样在手势内接管 BGM 启动
+    if(!muted&&bgmOn){bgmStarting=false;if(!bgmTO){bgmNoteIdx=0;playNextBGMNote();}}
+  }).catch(()=>{});
   const rc=canvas.getBoundingClientRect();
   const mx=(e.clientX-rc.left)*(W/rc.width);
   const my=(e.clientY-rc.top)*(W/rc.width);
@@ -1702,7 +1705,11 @@ canvas.addEventListener('click',e=>{
 });
 canvas.addEventListener('touchstart',e=>{
   // iOS requires AudioContext resume inside a touchstart gesture
-  ia().catch(()=>{});
+  ia().then(()=>{
+    if(muted||!bgmOn)return;
+    bgmStarting=false; // v2.15: 手势内直接接管启动，被挂起的旧链醒来后发现 bgmTO 已设会自动让位
+    if(!bgmTO){bgmNoteIdx=0;playNextBGMNote();}
+  }).catch(()=>{});
 },{passive:true});
 canvas.addEventListener('touchend',e=>{
   if(gs==='menu'||gs==='shop')return;
