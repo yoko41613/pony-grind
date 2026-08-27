@@ -178,6 +178,7 @@ function ld(){
 function sv(d){try{localStorage.setItem('pg_save',JSON.stringify(d));}catch(e){}}
 let save=ld(), ponyName=save.name||'';
 let af=0, gs='menu';
+let enterLock=0; // 防止从菜单进入后双击/合成click穿透到关卡选择
 let menuTip='',menuTipT=0;
 let shake=0;
 
@@ -351,9 +352,9 @@ function clMenu(mx,my){
     return;
   }
   const by=345,bw=146,bh=72,gap=16,x0=(W-3*bw-2*gap)/2;
-  if(mx>x0&&mx<x0+bw&&my>by&&my<by+bh){rL1();gs='level1';ia();startBGM(0);return;}
-  if(mx>x0+bw+gap&&mx<x0+2*bw+gap&&my>by&&my<by+bh){rL2();gs='level2';ia();startBGM(1);return;}
-  if(mx>x0+2*(bw+gap)&&mx<x0+3*bw+2*gap&&my>by&&my<by+bh){rL3();gs='level3';ia();startBGM(2);return;}
+  if(mx>x0&&mx<x0+bw&&my>by&&my<by+bh){rL1();gs='level1';enterLock=18;ia();startBGM(0);return;}
+  if(mx>x0+bw+gap&&mx<x0+2*bw+gap&&my>by&&my<by+bh){rL2();gs='level2';enterLock=18;ia();startBGM(1);return;}
+  if(mx>x0+2*(bw+gap)&&mx<x0+3*bw+2*gap&&my>by&&my<by+bh){rL3();gs='level3';enterLock=18;ia();startBGM(2);return;}
   if(mx>W-150&&mx<W-30&&my>430&&my<466){gs='shop';return;}
 }
 
@@ -417,7 +418,7 @@ let l1={};
 const L1_BG=['#c3cfe6','#bfd0c9','#6e6e80'];
 const L2_BG=['#f5e6d3','#e3e9f2','#e6efdc'];
 const L2_WIN=['#9ad0e8','#a9c8ec','#9fd0b8'];
-// 反驳老板的话池（含蓄版）：每次开局随机抽 3 句，三关各一句不重复
+// 反驳老板的话池（含蓄版）：开局抽 3 句，游戏过程中横幅/海报持续随机换句
 const L2_SLOGANS=['硬要做也能做','好的，收到，马上安排','我再想想办法','没问题，我尽量','行，我先记下来','这个需求很清晰（吧）','我尽快给您反馈','嗯……我努力一下','马上就好，快了','您说得对，我消化一下','收到，我拉个排期','我这边协调一下'];
 function pickL2Slogans(){
   const pool=L2_SLOGANS.slice(),out=[];
@@ -426,6 +427,12 @@ function pickL2Slogans(){
     out.push(pool.splice(j,1)[0]);
   }
   return out;
+}
+function randSlogan(avoid){
+  let s;
+  do{s=L2_SLOGANS[Math.floor(Math.random()*L2_SLOGANS.length)];}
+  while(s===avoid);
+  return s;
 }
 const L1_NAME=['办公室','会议室','停车场'];
 const L1_BANNER=['办公室 · 躲耳机/文件/打印机/HR!','会议室 · 躲会议桌/滑椅/笔记本/老板!','停车场 · 躲来车/路障/老板车!'];
@@ -455,7 +462,7 @@ function uL1(){
   if(l1.go||l1.win)return;
   l1.dist+=l1.spd;l1.cam+=l1.spd;shake=Math.max(0,shake-1);l1.inv=Math.max(0,l1.inv-1);
   l1.boostT=Math.max(0,l1.boostT-1);l1.bigT=Math.max(0,l1.bigT-1);l1.slowT=Math.max(0,l1.slowT-1);l1.bannerT=Math.max(0,l1.bannerT-1);
-  l1.bs=Math.min(4.5,2.2+l1.stage*0.25);
+  l1.bs=Math.min(4.2,1.9+l1.stage*0.2); // 更温和的速度曲线
   l1.spd=(l1.bs+(l1.boostT>0?1.5:0))*(l1.slowT>0?0.5:1);
   l1.coinT++;
   if(l1.coinT>=600){l1.coinT=0;save.coins+=10;sv(save);}
@@ -471,9 +478,9 @@ function uL1(){
   l1.pvy+=0.5;l1.py+=l1.pvy;
   if(l1.py>=l1.ly[l1.pl]){l1.py=l1.ly[l1.pl];l1.pvy=0;l1.gnd=true;l1.jump=false;}
   // Spawn (per-stage pools, all functional)
-  l1.st++;if(l1.st>l1.si){l1.st=0;l1.si=Math.max(26,80-l1.dist*0.006);
+  l1.st++;if(l1.st>l1.si){l1.st=0;l1.si=Math.max(34,95-l1.dist*0.005); // 障碍间隔更大
     const r=Math.random();
-    if(r<0.6){
+    if(r<0.5){
       const pools=[
         [{t:'headset',w:40,h:46,p:0.28},{t:'papers',w:52,h:44,p:0.28},{t:'printer',w:56,h:52,p:0.24},{t:'hr',w:44,h:60,p:0.2}],
         [{t:'desk',w:84,h:58,p:0.28},{t:'slider',w:44,h:54,p:0.28},{t:'notebook',w:40,h:40,p:0.24},{t:'boss',w:52,h:58,p:0.2}],
@@ -486,8 +493,8 @@ function uL1(){
       const ob={t:sel.t,w:sel.w,h:sel.h,x0:l1.dist+W+80,lane,y:l1.ly[lane],sw:0};
       if(ob.t==='car'){ob.vspd=l1.bs*1.4;}
       else if(ob.t==='boss_car'){ob.vspd=l1.bs*0.35;}
-      else if(ob.t==='slider'){ob.amp=55+Math.random()*50;ob.ph=Math.random()*6.28;}
-      else if(ob.t==='hr'){ob.amp=24;ob.ph=Math.random()*6.28;}
+      else if(ob.t==='slider'){ob.amp=32+Math.random()*30;ob.ph=Math.random()*6.28;}
+      else if(ob.t==='hr'){ob.amp=16;ob.ph=Math.random()*6.28;}
       else if(ob.t==='boss'){ob.dir=Math.random()<0.5?1:-1;ob.spd=0.8+l1.stage*0.2;ob.origX=ob.x0;}
       l1.obs.push(ob);
     }
@@ -741,6 +748,8 @@ function drL1Sel(){
       ctx.fillText('✅ 已通关',x0+cw-20,y+38);
     }
   }
+  ctx.fillStyle='#888';ctx.font='12px "PingFang SC","Microsoft YaHei",Arial,sans-serif';ctx.textAlign='center';
+  ctx.fillText('👆 点击卡片进入对应关卡',W/2,cy+3*(ch2+gap2)+22);
   if(l1.tipT>0){ctx.fillStyle='#f44';ctx.font='bold 15px "PingFang SC","Microsoft YaHei",Arial,sans-serif';ctx.textAlign='center';ctx.fillText(l1.tip,W/2,cy+3*(ch2+gap2)+40);}
 }
 function l1SelTap(mx,my){
@@ -764,7 +773,8 @@ function rL2(){
   if(save.items.extralife>0){save.items.extralife--;el=1;}
   if(save.items.jumpboot>0){save.items.jumpboot--;jb=1.3;}
   sv(save);
-  l2={stage:0,slogans:pickL2Slogans(),p:{x:60,y:250,vx:0,vy:0,w:34,h:44,gnd:false,face:1},grav:0.5,jumpV:-16*jb,lives:3+el,score:0,big:false,horse:false,inv:0,go:false,won:false,cam:0,part:[],floats:[],banner:'吃饼变大 · 找隐藏马蹄印记才能踩老板!',bannerT:160,bossT:0,bossDone:false,overSaved:false,winSaved:false,heartGiven:false};
+  const sls=pickL2Slogans();
+  l2={stage:0,slogans:sls,poster:sls[0],p:{x:60,y:250,vx:0,vy:0,w:34,h:44,gnd:false,face:1},grav:0.5,jumpV:-16*jb,lives:3+el,score:0,big:false,horse:false,inv:0,go:false,won:false,cam:0,part:[],floats:[],banner:'吃饼变大 · 找隐藏马蹄印记才能踩老板!',bannerT:160,bossT:0,bossDone:false,overSaved:false,winSaved:false,heartGiven:false};
   genL2();
 }
 function genL2(){
@@ -890,7 +900,10 @@ function uL2(){
   const st=l2.stage; // stage-based difficulty (elevator cycle, etc.)
   if(l2.go||l2.won)return;
   l2.inv=Math.max(0,l2.inv-1);shake=Math.max(0,shake-1);
-  l2.bannerT=Math.max(0,l2.bannerT-1);
+  // 横幅/海报持续随机换句：上一句显示完后自动换新语录
+  if(l2.bannerT>0){l2.bannerT--;
+    if(l2.bannerT===0&&!l2.bossT){l2.banner=randSlogan(l2.banner);l2.poster=l2.banner;l2.bannerT=150+Math.floor(Math.random()*100);}
+  }
   for(const f of l2.floats){f.y-=0.8;f.t--;}
   l2.floats=l2.floats.filter(f=>f.t>0);
   // Input
@@ -1002,6 +1015,7 @@ function uL2(){
       }else{
         genL2();
         l2.banner='第 '+(l2.stage+1)+' 关 · '+(l2.slogans[l2.stage]||'硬要做也能做');
+        l2.poster=l2.slogans[l2.stage]||'硬要做也能做';
         l2.bannerT=120;
       }
     }
@@ -1027,7 +1041,7 @@ function drL2(){
   ctx.fillStyle='#f84';ctx.font='bold 10px "PingFang SC","Microsoft YaHei",Arial,sans-serif';ctx.textAlign='center';
   ctx.fillText('职场语录',450-bx%300,204);
   ctx.fillStyle='#555';ctx.font='bold 12px "PingFang SC","Microsoft YaHei",Arial,sans-serif';
-  const sl=l2.slogans[l2.stage]||'硬要做也能做';
+  const sl=l2.poster||l2.slogans[l2.stage]||'硬要做也能做';
   const sln=Math.ceil(sl.length/6);
   for(let i=0;i<sln;i++)ctx.fillText(sl.substring(i*6,i*6+6),450-bx%300,220+i*15);
   // platforms
@@ -1489,6 +1503,7 @@ function drL3(){
 // ===== MAIN LOOP =====
 function loop(){
   af++;
+  if(enterLock>0)enterLock--;
   ctx.clearRect(0,0,W,H);
   if(inp.dtimer>0)inp.dtimer--;
   else inp.dt=false;
@@ -1522,6 +1537,7 @@ si(canvas);
 resizeGame();
 
 function handleTap(mx,my){
+  if(enterLock>0)return; // 刚进入关卡时的防穿透保护
   if(gs==='menu'){clMenu(mx,my);return;}
   if(gs==='shop'){clShop(mx,my);return;}
   if(gs==='level1'){
