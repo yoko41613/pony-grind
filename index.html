@@ -418,16 +418,8 @@ let l1={};
 const L1_BG=['#c3cfe6','#bfd0c9','#6e6e80'];
 const L2_BG=['#f5e6d3','#e3e9f2','#e6efdc'];
 const L2_WIN=['#9ad0e8','#a9c8ec','#9fd0b8'];
-// 反驳老板的话池（含蓄版）：开局抽 3 句，游戏过程中横幅/海报持续随机换句
+// 反驳老板的话池（含蓄版）：每一关/每一次都从池里随机抽，横幅与海报持续换句
 const L2_SLOGANS=['硬要做也能做','好的，收到，马上安排','我再想想办法','没问题，我尽量','行，我先记下来','这个需求很清晰（吧）','我尽快给您反馈','嗯……我努力一下','马上就好，快了','您说得对，我消化一下','收到，我拉个排期','我这边协调一下'];
-function pickL2Slogans(){
-  const pool=L2_SLOGANS.slice(),out=[];
-  for(let i=0;i<3&&pool.length>0;i++){
-    const j=Math.floor(Math.random()*pool.length);
-    out.push(pool.splice(j,1)[0]);
-  }
-  return out;
-}
 function randSlogan(avoid){
   let s;
   do{s=L2_SLOGANS[Math.floor(Math.random()*L2_SLOGANS.length)];}
@@ -773,12 +765,15 @@ function rL2(){
   if(save.items.extralife>0){save.items.extralife--;el=1;}
   if(save.items.jumpboot>0){save.items.jumpboot--;jb=1.3;}
   sv(save);
-  const sls=pickL2Slogans();
-  l2={stage:0,slogans:sls,poster:sls[0],p:{x:60,y:250,vx:0,vy:0,w:34,h:44,gnd:false,face:1},grav:0.5,jumpV:-16*jb,lives:3+el,score:0,big:false,horse:false,inv:0,go:false,won:false,cam:0,part:[],floats:[],banner:'吃饼变大 · 找隐藏马蹄印记才能踩老板!',bannerT:160,bossT:0,bossDone:false,overSaved:false,winSaved:false,heartGiven:false};
+  // 每一关都随机：三关背景色调顺序洗牌；标语每关/每次随机；地图布局由 genL2 随机生成
+  const bgOrder=[0,1,2];
+  for(let i=2;i>0;i--){const j=Math.floor(Math.random()*(i+1));const t=bgOrder[i];bgOrder[i]=bgOrder[j];bgOrder[j]=t;}
+  l2={stage:0,bgOrder:bgOrder,poster:randSlogan(''),p:{x:60,y:250,vx:0,vy:0,w:34,h:44,gnd:false,face:1},grav:0.5,jumpV:-16*jb,lives:3+el,score:0,big:false,horse:false,inv:0,go:false,won:false,cam:0,part:[],floats:[],banner:'吃饼变大 · 吃马蹄印记🐴才能踩老板!',bannerT:160,bossT:0,bossDone:false,overSaved:false,winSaved:false,heartGiven:false};
   genL2();
 }
 function genL2(){
   const st=l2.stage;
+  l2.horse=false; // 每关开局没有马蹄：必须先吃浮动平台上的马蹄印记才能踩 boss
   const lw=3800+st*1200;
   l2.lw=lw; l2.gy=Math.floor(H*0.85);
   const plats=[{x:0,y:l2.gy,w:lw,h:40,mv:null}];
@@ -801,7 +796,7 @@ function genL2(){
   // boss arena: boss fights on the GROUND
   const bp={x:lw-640,y:l2.gy,w:540,h:0};
   l2.bp=bp;
-  l2.boss={x:lw-500,y:l2.gy-56,w:52,h:56,hp:3,dir:1,spd:1.4+st*0.5,t:0,atks:[],hit:0,active:false,dead:false};
+  l2.boss={x:lw-500,y:l2.gy-56,w:52,h:56,hp:2+Math.floor(Math.random()*2),dir:1,spd:1.4+st*0.5,t:0,atks:[],hit:0,active:false,dead:false};
   // shelter elevator inside boss arena (hide from boss attacks)
   l2.bpElev={x:bp.x+28,y:l2.gy-110,w:64,h:110,ph:0};
   // floating platform above the arena — hidden horseshoe coin sits on it (needed to attack the boss)
@@ -875,6 +870,9 @@ function l2Stomp(b){
     return;
   }
   b.hp--;b.hit=26;l2.p.vy=-9;l2.p.gnd=false;l2.score+=20;sh();
+  // 马蹄每次踩完即消耗：没踩死 boss 就要回去浮动平台再吃一次
+  l2.horse=false;
+  for(const c of l2.colls){if(c.type==='horseshoe')c.collected=false;}
   spP(b.x+b.w/2,b.y,10,'#f84',l2.part,7,7,22);
   l2.floats.push({x:b.x+b.w/2,y:b.y-12,txt:'踩! +20',t:34});
   if(b.hp<=0){
@@ -882,6 +880,9 @@ function l2Stomp(b){
     spP(b.x+b.w/2,b.y+b.h/2,25,'#fd4',l2.part,10,10,36);
     spP(b.x+b.w/2,b.y+b.h/2,15,'#f44',l2.part,8,8,30);
     l2.score+=50;l2.banner='老板被踩扁了！';l2.bannerT=90;
+  }else{
+    l2.banner='马蹄用掉了！回去浮动平台再吃一个🐴';l2.bannerT=120;
+    l2.floats.push({x:l2.p.x+17,y:l2.p.y-14,txt:'马蹄用掉了！回去再吃🐴',t:70});
   }
 }
 function l2Hurt(){
@@ -980,7 +981,7 @@ function uL2(){
   }
   // Boss
   const b=l2.boss;
-  if(l2.p.x>l2.bp.x-80&&!b.active&&!b.dead){b.active=true;l2.banner=l2.horse?'⚠️ 老板驾到！跳起来踩他 3 下!':'⚠️ 老板驾到！先跳上浮动平台找马蹄印记🐴!';l2.bannerT=160;}
+  if(l2.p.x>l2.bp.x-80&&!b.active&&!b.dead){b.active=true;l2.banner=l2.horse?'⚠️ 老板驾到！踩 '+b.hp+' 下！马蹄一次就没了，用完回去再吃🐴':'⚠️ 老板驾到！先跳上浮动平台吃马蹄🐴再踩！';l2.bannerT=170;}
   if(b.active&&!b.dead){
     b.hit=Math.max(0,b.hit-1);
     b.x+=b.dir*b.spd;
@@ -1014,8 +1015,8 @@ function uL2(){
         if(l2.score>(save.hs.l2||0))save.hs.l2=l2.score;sv(save);
       }else{
         genL2();
-        l2.banner='第 '+(l2.stage+1)+' 关 · '+(l2.slogans[l2.stage]||'硬要做也能做');
-        l2.poster=l2.slogans[l2.stage]||'硬要做也能做';
+        l2.poster=randSlogan(l2.poster);
+        l2.banner='第 '+(l2.stage+1)+' 关 · '+l2.poster;
         l2.bannerT=120;
       }
     }
@@ -1026,8 +1027,8 @@ function uL2(){
 function drL2(){
   const bx=l2.cam,sx=shake>0?(Math.random()-0.5)*shake:0,sy=shake>0?(Math.random()-0.5)*shake:0;
   ctx.save();ctx.translate(sx,sy);
-  // BG office (stage-tinted)
-  const bg=L2_BG[l2.stage],win=L2_WIN[l2.stage];
+  // BG office (stage-tinted, tint order shuffled per run so every stage looks random)
+  const bg=L2_BG[l2.bgOrder[l2.stage]],win=L2_WIN[l2.bgOrder[l2.stage]];
   ctx.fillStyle=bg;ctx.fillRect(0,0,W,H);
   ctx.fillStyle='rgba(120,90,50,0.07)';for(let wy=0;wy<H;wy+=40)ctx.fillRect(0,wy,W,20);
   // windows
@@ -1036,14 +1037,13 @@ function drL2(){
     ctx.fillStyle=win;ctx.fillRect(wx,70,120,8);ctx.fillRect(wx,70,8,110);ctx.fillRect(wx+112,70,8,110);
     ctx.fillStyle='#fff';ctx.fillRect(wx+20,95,30,30);
   }
-  // poster (stage slogan: things you'd never say to the boss, mildly)
+  // poster (random slogan on the wall — no title, slogan only)
   ctx.fillStyle='#fff';ctx.fillRect(400-bx%300,190,100,60);
-  ctx.fillStyle='#f84';ctx.font='bold 10px "PingFang SC","Microsoft YaHei",Arial,sans-serif';ctx.textAlign='center';
-  ctx.fillText('职场语录',450-bx%300,204);
-  ctx.fillStyle='#555';ctx.font='bold 12px "PingFang SC","Microsoft YaHei",Arial,sans-serif';
-  const sl=l2.poster||l2.slogans[l2.stage]||'硬要做也能做';
+  ctx.fillStyle='#555';ctx.font='bold 12px "PingFang SC","Microsoft YaHei",Arial,sans-serif';ctx.textAlign='center';
+  const sl=l2.poster||'硬要做也能做';
   const sln=Math.ceil(sl.length/6);
-  for(let i=0;i<sln;i++)ctx.fillText(sl.substring(i*6,i*6+6),450-bx%300,220+i*15);
+  const py=212+(sln-1)*7;
+  for(let i=0;i<sln;i++)ctx.fillText(sl.substring(i*6,i*6+6),450-bx%300,py+i*15);
   // platforms
   for(const pl of l2.plats){
     const px=pl.x-bx;if(px+pl.w<0||px>W)continue;
@@ -1191,7 +1191,7 @@ function drL2(){
   if(l2.bannerT>0){ctx.fillStyle='#000a';ctx.fillRect(0,H/2-24,W,48);ctx.fillStyle='#fd4';ctx.font='bold 15px "PingFang SC","Microsoft YaHei",Arial,sans-serif';ctx.textAlign='center';ctx.fillText(l2.banner,W/2,H/2+5);}
   // control hint
   ctx.fillStyle='#888';ctx.font='12px "PingFang SC","Microsoft YaHei",Arial,sans-serif';ctx.textAlign='center';
-  ctx.fillText('左右移动 · 双击跳跃 · 吃饼变大 · 找马蹄🐴踩老板 · 电梯关门别进',W/2,H-10);
+  ctx.fillText('左右移动 · 双击跳跃 · 吃饼变大 · 吃马蹄🐴才能踩老板 · 用完再吃',W/2,H-10);
   ctx.restore();
   if(l2.go||l2.won){ctx.fillStyle='#000a';ctx.fillRect(0,0,W,H);
     ctx.fillStyle=l2.won?'#fd4':'#f44';ctx.font='bold 30px "PingFang SC","Microsoft YaHei",Arial,sans-serif';ctx.textAlign='center';
