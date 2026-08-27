@@ -1268,7 +1268,7 @@ function drL2(){
 // ===== LEVEL 3: PONY MERGE (2048 style) =====
 let l3={};
 const PTS=[0,6,12,24,48,96,192,384,768,1536,3072,6144]; // points gained by merging INTO tier n (1..12)
-const TIER_NAMES=['','黑心','紫心','红心','蓝心','青心','玫心','绿心','橙心','金心','粉心','黄心','白心'];
+const TIER_NAMES=['','白心','黄心','粉心','金心','橙心','绿心','玫心','青心','蓝心','红心','紫心','黑心'];
 function rL3(){
   let undo=0,white=false;
   if(save.items.undo>0){undo=save.items.undo;save.items.undo=0;}
@@ -1365,7 +1365,7 @@ function l3Undo(){
 function l3Bank(){
   let blacks=0;
   for(let r=0;r<4;r++)for(let c=0;c<4;c++)if(l3.grid[r][c]===12)blacks++;
-  if(blacks===0){l3.msg='没有白心可兑换，继续合成白心!';l3.msgT=50;bp(392,0.1,'triangle',0.05);setTimeout(()=>bp(330,0.12,'triangle',0.05),90);return;}
+  if(blacks===0){l3.msg='没有黑心可兑换，继续合成黑心!';l3.msgT=50;bp(392,0.1,'triangle',0.05);setTimeout(()=>bp(330,0.12,'triangle',0.05),90);return;}
   const gs3=82,gap3=8,off=Math.floor((W-(4*gs3+3*gap3))/2),gy3=120;
   const perBlack=PTS[11];
   for(let r=0;r<4;r++)for(let c=0;c<4;c++){
@@ -1373,7 +1373,7 @@ function l3Bank(){
       const mx=off+c*(gs3+gap3)+gs3/2,my=gy3+r*(gs3+gap3)+gs3/2;
       spP(mx,my,12,'#fd4',l3.part,9,9,28);
       spP(mx,my,6,'#fff',l3.part,6,6,22);
-      l3.floats.push({x:mx,y:my-20,txt:'+'+perBlack+' 白心兑换!',t:52});
+      l3.floats.push({x:mx,y:my-20,txt:'+'+perBlack+' 黑心兑换!',t:52});
       l3.grid[r][c]=0;
     }
   }
@@ -1405,7 +1405,7 @@ function uL3(){
 }
 
 // symbol sprite extracted from user reference (own mark, not a heart)
-const HEART_COLS={1:'#111111',2:'#bc4df4',3:'#fe4e5d',4:'#4f8bfd',5:'#41c8c7',6:'#e789c5',7:'#7dd656',8:'#fe9a4d',9:'#f7b501',10:'#ffbacb',11:'#fed572',12:'#ffffff'}; // screenshot palette sorted by brightness (darker = lower tier/score)
+const HEART_COLS={1:'#ffffff',2:'#fed572',3:'#ffbacb',4:'#f7b501',5:'#fe9a4d',6:'#7dd656',7:'#e789c5',8:'#41c8c7',9:'#4f8bfd',10:'#fe4e5d',11:'#bc4df4',12:'#111111'}; // screenshot palette sorted by brightness (darker = lower tier/score)
 function drHeart(ctx,cx,cy,s,tier){
   const col=HEART_COLS[tier];
   const w=s*0.55, h=s*0.40;
@@ -1494,7 +1494,7 @@ function drL3(){
   if(l3.stuck){ctx.fillStyle='#f44';ctx.font='bold 14px "PingFang SC","Microsoft YaHei",Arial,sans-serif';ctx.fillText('无路可走! 双击重新开始',W/2,568);}
   // control hint
   ctx.fillStyle='#555';ctx.font='12px "PingFang SC","Microsoft YaHei",Arial,sans-serif';
-  ctx.fillText('滑动移动合成 · 合成白心后双击兑换分数',W/2,594);
+  ctx.fillText('滑动移动合成 · 合成黑心后双击兑换分数',W/2,594);
   // msg
   if(l3.msgT>0){ctx.fillStyle='#f84';ctx.font='bold 14px "PingFang SC","Microsoft YaHei",Arial,sans-serif';ctx.fillText(l3.msg,W/2,626);}
   drP(ctx,l3.part);
@@ -1504,11 +1504,11 @@ function drL3(){
     ctx.fillStyle='rgba(255,220,80,'+(l3.boomT/70*0.3)+')';
     ctx.fillRect(0,0,W,H);
     ctx.fillStyle='#3a2a00';ctx.font='bold 26px "PingFang SC","Microsoft YaHei",Arial,sans-serif';ctx.textAlign='center';
-    ctx.fillText('💰 白心兑分!',W/2,H/2-30);
+    ctx.fillText('💰 黑心兑分!',W/2,H/2-30);
     ctx.fillStyle='#fd4';ctx.font='bold 15px "PingFang SC","Microsoft YaHei",Arial,sans-serif';
     ctx.fillText(l3.joke,W/2,H/2+12);
     ctx.fillStyle='#f84';ctx.font='12px "PingFang SC","Microsoft YaHei",Arial,sans-serif';
-    ctx.fillText('继续合成白心，冲最高分!',W/2,H/2+44);
+    ctx.fillText('继续合成黑心，冲最高分!',W/2,H/2+44);
     if(l3.boomT<=0)l3.boom=false;
   }
   // back to menu button
@@ -1531,24 +1531,24 @@ function drL3(){
     ctx.fillStyle='#fff';ctx.font='14px "PingFang SC","Microsoft YaHei",Arial,sans-serif';
     const lines=[
       '合成链（由低到高）：',
-      '黑心 → 紫心 → 红心 → 蓝心 → 青心',
-      ' → 玫心 → 绿心 → 橙心 → 金心',
-      ' → 粉心 → 黄心 → 白心',
+      '白心 → 黄心 → 粉心 → 金心 → 橙心',
+      ' → 绿心 → 玫心 → 青心 → 蓝心',
+      ' → 红心 → 紫心 → 黑心',
       '',
       '滑动屏幕 / 方向键移动爱心。',
       '两个相同爱心相撞会合成下一级。',
       '',
       '合成得分：',
-      '紫+6  红+12  蓝+24  青+48  玫+96',
-      '绿+192  橙+384  金+768  粉+1536',
-      '黄+3072  白心+6144',
+      '黄+6  粉+12  金+24  橙+48  绿+96',
+      '玫+192  青+384  蓝+768  红+1536',
+      '紫+3072  黑心+6144',
       '',
-      '白心规则：',
-      '最高级白心可双击兑换成分数。',
-      '每颗白心 +6144 分，可无限累加。',
+      '黑心规则：',
+      '最高级黑心可双击兑换成分数。',
+      '每颗黑心 +6144 分，可无限累加。',
       '其他爱心无法直接兑换，只能继续合成。',
       '',
-      '无路可走且无白心时，双击重新开始。'
+      '无路可走且无黑心时，双击重新开始。'
     ];
     let ly=py+68;
     for(const ln of lines){ctx.fillText(ln,px+22,ly);ly+=23;}
