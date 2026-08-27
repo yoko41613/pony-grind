@@ -417,7 +417,16 @@ let l1={};
 const L1_BG=['#c3cfe6','#bfd0c9','#6e6e80'];
 const L2_BG=['#f5e6d3','#e3e9f2','#e6efdc'];
 const L2_WIN=['#9ad0e8','#a9c8ec','#9fd0b8'];
-const L2_SLOGAN=['硬要做也能做','好的，收到，马上安排','我再想想办法'];
+// 反驳老板的话池（含蓄版）：每次开局随机抽 3 句，三关各一句不重复
+const L2_SLOGANS=['硬要做也能做','好的，收到，马上安排','我再想想办法','没问题，我尽量','行，我先记下来','这个需求很清晰（吧）','我尽快给您反馈','嗯……我努力一下','马上就好，快了','您说得对，我消化一下','收到，我拉个排期','我这边协调一下'];
+function pickL2Slogans(){
+  const pool=L2_SLOGANS.slice(),out=[];
+  for(let i=0;i<3&&pool.length>0;i++){
+    const j=Math.floor(Math.random()*pool.length);
+    out.push(pool.splice(j,1)[0]);
+  }
+  return out;
+}
 const L1_NAME=['办公室','会议室','停车场'];
 const L1_BANNER=['办公室 · 躲耳机/文件/打印机/HR!','会议室 · 躲会议桌/滑椅/笔记本/老板!','停车场 · 躲来车/路障/老板车!'];
 const L1_GOAL=[10800,12600,14400];
@@ -703,7 +712,7 @@ function drL1Sel(){
   ctx.fillStyle='#222';ctx.font='bold 26px "PingFang SC","Microsoft YaHei",Arial,sans-serif';
   ctx.fillText('🏢 办公室赛马',W/2,70);
   ctx.fillStyle='#888';ctx.font='13px "PingFang SC","Microsoft YaHei",Arial,sans-serif';
-  ctx.fillText('三关制 · 通关解锁下一关',W/2,98);
+  ctx.fillText('三关制 · 测试版全部解锁',W/2,98);
   // coins / best
   ctx.textAlign='left';
   ctx.fillStyle='#b4a';ctx.font='bold 14px "PingFang SC","Microsoft YaHei",Arial,sans-serif';
@@ -715,7 +724,7 @@ function drL1Sel(){
   const cy=140,cw=380,ch2=96,gap2=18,x0=(W-cw)/2;
   const cols=['#4d4','#48c','#f84'];
   for(let i=0;i<3;i++){
-    const un=(i===0)||save.l1c[i-1];
+    const un=true; // 测试版：全部解锁
     const y=cy+i*(ch2+gap2);
     ctx.fillStyle=un?cols[i]:'#9a9aa0';
     ctx.fillRect(x0,y,cw,ch2);
@@ -741,8 +750,7 @@ function l1SelTap(mx,my){
     for(let i=0;i<3;i++){
       const y=cy+i*(ch2+gap2);
       if(my>y&&my<y+ch2){
-        if(i===0||save.l1c[i-1]){l1Start(i);}
-        else{l1.tip='先通关第'+i+'关解锁!';l1.tipT=70;sh();}
+        l1Start(i);
         return;
       }
     }
@@ -756,7 +764,7 @@ function rL2(){
   if(save.items.extralife>0){save.items.extralife--;el=1;}
   if(save.items.jumpboot>0){save.items.jumpboot--;jb=1.3;}
   sv(save);
-  l2={stage:0,p:{x:60,y:250,vx:0,vy:0,w:34,h:44,gnd:false,face:1},grav:0.5,jumpV:-16*jb,lives:3+el,score:0,big:false,horse:false,inv:0,go:false,won:false,cam:0,part:[],floats:[],banner:'吃饼变大 · 找隐藏马蹄印记才能踩老板!',bannerT:160,bossT:0,bossDone:false,overSaved:false,winSaved:false,heartGiven:false};
+  l2={stage:0,slogans:pickL2Slogans(),p:{x:60,y:250,vx:0,vy:0,w:34,h:44,gnd:false,face:1},grav:0.5,jumpV:-16*jb,lives:3+el,score:0,big:false,horse:false,inv:0,go:false,won:false,cam:0,part:[],floats:[],banner:'吃饼变大 · 找隐藏马蹄印记才能踩老板!',bannerT:160,bossT:0,bossDone:false,overSaved:false,winSaved:false,heartGiven:false};
   genL2();
 }
 function genL2(){
@@ -993,7 +1001,7 @@ function uL2(){
         if(l2.score>(save.hs.l2||0))save.hs.l2=l2.score;sv(save);
       }else{
         genL2();
-        l2.banner='第 '+(l2.stage+1)+' 关 · '+L2_SLOGAN[l2.stage];
+        l2.banner='第 '+(l2.stage+1)+' 关 · '+(l2.slogans[l2.stage]||'硬要做也能做');
         l2.bannerT=120;
       }
     }
@@ -1019,7 +1027,7 @@ function drL2(){
   ctx.fillStyle='#f84';ctx.font='bold 10px "PingFang SC","Microsoft YaHei",Arial,sans-serif';ctx.textAlign='center';
   ctx.fillText('职场语录',450-bx%300,204);
   ctx.fillStyle='#555';ctx.font='bold 12px "PingFang SC","Microsoft YaHei",Arial,sans-serif';
-  const sl=L2_SLOGAN[l2.stage];
+  const sl=l2.slogans[l2.stage]||'硬要做也能做';
   const sln=Math.ceil(sl.length/6);
   for(let i=0;i<sln;i++)ctx.fillText(sl.substring(i*6,i*6+6),450-bx%300,220+i*15);
   // platforms
