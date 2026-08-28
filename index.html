@@ -102,7 +102,7 @@ function boom(){for(let i=0;i<6;i++)setTimeout(()=>bp(200+i*60,0.15,'sawtooth',0
 
 // ===== BACKGROUND MUSIC =====
 // Original procedural music: 3 different loops, one per level (L1 race / L2 pie-run / L3 heart factory)
-let bgmOn=false, bgmNoteIdx=0, bgmTO=null, bgmStyle=0,bgmStarting=false; // v2.15: bgmStarting 防止移动端挂起的 resume() 回调堆积出多条并行音轨
+let bgmOn=false, bgmNoteIdx=0, bgmTO=null, bgmStyle=0, bgmStarting=false, bgmNextT=0; // v2.18: bgmNextT=音频时钟前瞻调度，暂停/恢复不丢音乐不延迟
 const BGMS=[
   // [0] L1 办公室赛马: fast C-major run, square wave
   {wave:'square',notes:[
@@ -127,19 +127,19 @@ const BGMS=[
   ]}
 ];
 function startBGM(st){
-  bgmStyle=(st===0||st===1||st===2)?st:0;
-  if(bgmOn&&(bgmTO||bgmStarting)){return;} // v2.15: 已在播或已在启动中，直接返回，杜绝并行音轨
-  bgmOn=true;bgmNoteIdx=0;
+  st=(st===0||st===1||st===2)?st:0;
+  if(st===bgmStyle&&bgmOn&&(bgmTO||bgmStarting))return; // v2.18: 同风格且链存活才跳过（菜单每帧调用不打断）；切风格=进关卡，强制重建立即响
+  bgmStyle=st;bgmOn=true;bgmNoteIdx=0;
   if(bgmTO){clearTimeout(bgmTO);bgmTO=null;}
   bgmStarting=true;
-  ia().then(()=>{bgmStarting=false;if(muted||!bgmOn)return;ua();if(!bgmTO)playNextBGMNote();}).catch(()=>{bgmStarting=false;bgmOn=false;});
+  ia().then(()=>{bgmStarting=false;if(muted||!bgmOn)return;ua();if(!bgmTO){if(ac)bgmNextT=Math.max(bgmNextT,ac.currentTime);playNextBGMNote();}}).catch(()=>{bgmStarting=false;bgmOn=false;});
 }
 function stopBGM(){bgmOn=false;if(bgmTO){clearTimeout(bgmTO);bgmTO=null;}}
 function toggleMute(){
   muted=!muted?1:0; // v2.15: 静音不再持久化——每次进入游戏默认开音乐
   if(muted&&ac&&ac.state==='running'){try{ac.suspend();}catch(e){}}
   else if(!muted){
-    ia().then(()=>{if(bgmOn&&!bgmTO&&!bgmStarting)playNextBGMNote();}).catch(()=>{}); // v2.15: 已在播就不再叠链
+    ia().then(()=>{if(bgmOn&&!bgmTO&&!bgmStarting){if(ac)bgmNextT=ac.currentTime;playNextBGMNote();}}).catch(()=>{}); // v2.15: 已在播就不再叠链
   }
 }
 function drawMuteBtn(ctx,x,y,r=18){
@@ -155,13 +155,16 @@ function playNextBGMNote(){
   const n=seq.notes[bgmNoteIdx][0];
   const dur=seq.notes[bgmNoteIdx][1];
   bgmNoteIdx=(bgmNoteIdx+1)%seq.notes.length;
-  if(n>0&&!muted){
+  if(n>0&&!muted&&ac.state==='running'){
     try{
+      // v2.18: 以音频时钟为准调度——落后(暂停/切歌)立即对齐，超前(挂起时堆积)拉回当下，杜绝延迟与音轨堆积
+      if(bgmNextT<ac.currentTime-0.06||bgmNextT>ac.currentTime+0.15)bgmNextT=ac.currentTime;
       const o=ac.createOscillator();o.type=seq.wave;o.frequency.value=n;
-      const g=ac.createGain();g.gain.setValueAtTime(seq.wave==='triangle'?0.10:0.12,ac.currentTime);
-      g.gain.exponentialRampToValueAtTime(0.001,ac.currentTime+dur*0.8);
-      o.connect(g);g.connect(ac.destination);o.start();o.stop(ac.currentTime+dur*0.8+0.01);
-    }catch(e){}
+      const g=ac.createGain();g.gain.setValueAtTime(seq.wave==='triangle'?0.10:0.12,bgmNextT);
+      g.gain.exponentialRampToValueAtTime(0.001,bgmNextT+dur*0.8);
+      o.connect(g);g.connect(ac.destination);o.start(bgmNextT);o.stop(bgmNextT+dur*0.8+0.01);
+      bgmNextT+=dur;
+    }catch(e){bgmNextT+=dur;}
   }
   bgmTO=setTimeout(playNextBGMNote,dur*1000);
 }
@@ -439,6 +442,11 @@ function randSlogan(avoid){
   while(s===avoid);
   return s;
 }
+function shuffledPosters(){ // v2.18: 12 句标语整池打乱——每张墙上海报各取一个，同关内不重复
+  const a=L2_SLOGANS.slice();
+  for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));const t=a[i];a[i]=a[j];a[j]=t;}
+  return a;
+}
 const L1_NAME=['办公室','会议室','停车场'];
 const L1_BANNER=['办公室 · 躲耳机/文件/打印机/HR!','会议室 · 躲会议桌/滑椅/笔记本/老板!','停车场 · 躲来车/路障/老板车!'];
 const L1_GOAL=[10800,12600,14400];
@@ -558,7 +566,7 @@ function uL1(){
       if(!ok)l1.obs.pop();
       return ok;
     };
-    if(r<0.72){ // v2.12: 障碍占比 72%
+    if(r<0.80){ // v2.18: 单障碍 72%→80%（道具让出的比例补到普通障碍，难度基本不变）
       const pools=[
         [{t:'papers',w:52,h:44,p:0.35},{t:'printer',w:56,h:52,p:0.30},{t:'hr',w:44,h:60,p:0.35}],
         [{t:'desk',w:84,h:58,p:0.28},{t:'slider',w:44,h:54,p:0.28},{t:'notebook',w:40,h:40,p:0.24},{t:'boss',w:52,h:58,p:0.2}],
@@ -573,7 +581,7 @@ function uL1(){
         if(!laneBlocked(lane,sx,sel.t,sel.w)&&tryPlace(sel.t,sel.w,sel.h,lane,sx))break;
       }
     }
-    else if(r<0.90){ // v2.12: 道具 20%（生成频率提高后绝对数量与原先相当）
+    else if(r<0.90){ // v2.18: 正面道具 20%→10%，出现频率减半（喝咖啡/戴耳机/吃饼/摸鱼卡都少一半）
       let type;
       if(!l1.heartGiven&&l1.lives<5&&Math.random()<0.18){type='heart';l1.heartGiven=true;}
       else if(l1.stage===0)type=Math.random()<0.65?'coffee':'headset';
@@ -864,11 +872,12 @@ function rL2(){
   // 每一关都随机：三关背景色调顺序洗牌；标语每关/每次随机；地图布局由 genL2 随机生成
   const bgOrder=[0,1,2];
   for(let i=2;i>0;i--){const j=Math.floor(Math.random()*(i+1));const t=bgOrder[i];bgOrder[i]=bgOrder[j];bgOrder[j]=t;}
-  l2={stage:0,bgOrder:bgOrder,poster:randSlogan(''),p:{x:60,y:250,vx:0,vy:0,w:34,h:44,gnd:false,face:1},grav:0.5,jumpV:-16*jb,lives:3+el,score:0,big:false,horse:false,inv:0,go:false,won:false,cam:0,part:[],floats:[],banner:'',bannerT:30,bossT:0,bossDone:false,overSaved:false,winSaved:false,heartGiven:false,piesEaten:0,piesTotal:0}; // v2.17: banner 字段保留但不绘制（屏幕中间黑框横幅已移除）
+  l2={stage:0,bgOrder:bgOrder,posters:shuffledPosters(),p:{x:60,y:250,vx:0,vy:0,w:34,h:44,gnd:false,face:1},grav:0.5,jumpV:-16*jb,lives:3+el,score:0,big:false,horse:false,inv:0,go:false,won:false,cam:0,part:[],floats:[],banner:'',bannerT:30,bossT:0,bossDone:false,overSaved:false,winSaved:false,heartGiven:false,piesEaten:0,piesTotal:0}; // v2.18: posters=整池打乱的标语数组（每张海报各自不同）；banner 字段保留但不绘制
   genL2();
 }
 function genL2(){
   const st=l2.stage;
+  l2.posters=shuffledPosters(); // v2.18: 每关重新打乱——这一关墙上的每张海报都不同，下一关又是新的一轮
   l2.horse=false; // 每关开局没有马蹄：必须先吃浮动平台上的马蹄印记才能踩 boss
   const lw=3800+st*1200;
   l2.lw=lw; l2.gy=Math.floor(H*0.85);
@@ -953,6 +962,12 @@ function l2Collect(c){
     l2.piesEaten++;
     if(l2.big){l2.score+=30;sc();spP(c.x,c.y,6,'#fd4',l2.part);l2.floats.push({x:c.x,y:c.y-6,txt:'+30',t:36});}
     else{l2.big=true;l2.score+=20;sc();spP(c.x,c.y,8,'#fd4',l2.part);l2.floats.push({x:c.x,y:c.y-6,txt:'吃饼变大! 🥞',t:46});}
+    // v2.18: 彩蛋——本关全部饼都吃完时触发
+    if(l2.piesEaten>=l2.piesTotal&&l2.piesTotal>0){
+      boom();sg();
+      spP(l2.p.x+17,l2.p.y-26,18,'#fd4',l2.part,9,9,50);
+      l2.floats.push({x:l2.p.x+17,y:l2.p.y-46,txt:'"这个饼太大了我吃不下"',t:120});
+    }
   }
   else if(c.type==='horseshoe'){
     l2.horse=true;l2.score+=50;sg();
@@ -998,7 +1013,7 @@ function uL2(){
   const st=l2.stage; // stage-based difficulty (elevator cycle, etc.)
   if(l2.go||l2.won)return;
   l2.inv=Math.max(0,l2.inv-1);shake=Math.max(0,shake-1);
-  // v2.17: 屏幕中间不再弹黑色横幅/随机标语（墙上海报 l2.poster 保留）
+  // v2.18: 屏幕中间不再弹黑色横幅/随机标语；墙上每张海报(l2.posters 数组)各自不同标语
   for(const f of l2.floats){f.y-=0.8;f.t--;}
   l2.floats=l2.floats.filter(f=>f.t>0);
   // Input
@@ -1109,8 +1124,7 @@ function uL2(){
         l2.won=true;save.coins+=50;save.l2done=true;sv(save);
         if(l2.score>(save.hs.l2||0))save.hs.l2=l2.score;sv(save);
       }else{
-        genL2();
-        l2.poster=randSlogan(l2.poster);
+        genL2(); // v2.18: genL2 内部已重新打乱 posters
         l2.floats.push({x:l2.p.x+60,y:l2.p.y-50,txt:'第 '+(l2.stage+1)+' 关',t:80}); // v2.17: 换关提示用浮动文字，不再弹黑框
       }
     }
@@ -1131,13 +1145,18 @@ function drL2(){
     ctx.fillStyle=win;ctx.fillRect(wx,70,120,8);ctx.fillRect(wx,70,8,110);ctx.fillRect(wx+112,70,8,110);
     ctx.fillStyle='#fff';ctx.fillRect(wx+20,95,30,30);
   }
-  // poster (random slogan on the wall — no title, slogan only)
-  ctx.fillStyle='#fff';ctx.fillRect(400-bx%300,190,100,60);
-  ctx.fillStyle='#555';ctx.font='bold 12px "PingFang SC","Microsoft YaHei",Arial,sans-serif';ctx.textAlign='center';
-  const sl=l2.poster||'硬要做也能做';
-  const sln=Math.ceil(sl.length/6);
-  const py=212+(sln-1)*7;
-  for(let i=0;i<sln;i++)ctx.fillText(sl.substring(i*6,i*6+6),450-bx%300,py+i*15);
+  // posters (v2.18: 墙上的每张海报各显示不同标语——来自整池打乱的 posters 数组，同关内不重复)
+  const pCnt=l2.posters.length,pOff=400-bx,pK0=Math.floor(pOff/300);
+  for(let k=pK0-1;k<pK0+8;k++){
+    const wx=pOff-k*300;
+    if(wx<-70||wx>W+70)continue;
+    const sl=l2.posters[((k%pCnt)+pCnt)%pCnt];
+    ctx.fillStyle='#fff';ctx.fillRect(wx,190,100,60);
+    ctx.fillStyle='#555';ctx.font='bold 12px "PingFang SC","Microsoft YaHei",Arial,sans-serif';ctx.textAlign='center';
+    const sln=Math.ceil(sl.length/6);
+    const py=212+(sln-1)*7;
+    for(let i=0;i<sln;i++)ctx.fillText(sl.substring(i*6,i*6+6),wx+50,py+i*15);
+  }
   // platforms
   for(const pl of l2.plats){
     const px=pl.x-bx;if(px+pl.w<0||px>W)continue;
@@ -1308,7 +1327,7 @@ function drL2(){
     ctx.fillText('分数: '+l2.score,W/2,H/2);
     ctx.fillStyle='#f84';ctx.font='13px "PingFang SC","Microsoft YaHei",Arial,sans-serif';
     if(l2.won&&l2.piesEaten>=l2.piesTotal&&l2.piesTotal>0){
-      ctx.fillText('"这个饼实在太饱了"',W/2,H/2+50);
+      ctx.fillText('"这个饼太大了我吃不下"',W/2,H/2+50); // v2.18: 彩蛋文案
     }else{
       ctx.fillText(l2.won?'"明天又是新的一关…"':'"HR 说下周还有团建"',W/2,H/2+50);
     }
@@ -1620,6 +1639,8 @@ function drL3(){
 function loop(){
   af++;
   if(enterLock>0)enterLock--;
+  // v2.18: BGM 心跳守护——链意外死亡(挂起/中断)时一帧内自动重启，任何关卡音乐都不会丢失
+  if(bgmOn&&!muted&&!bgmTO&&!bgmStarting&&ac){bgmNextT=ac.currentTime;playNextBGMNote();}
   ctx.clearRect(0,0,W,H);
   if(inp.dtimer>0)inp.dtimer--;
   else inp.dt=false;
@@ -1679,7 +1700,7 @@ function handleTap(mx,my){
 }
 canvas.addEventListener('click',e=>{
   ia().then(()=>{ // v2.15: 桌面端同样在手势内接管 BGM 启动
-    if(!muted&&bgmOn){bgmStarting=false;if(!bgmTO){bgmNoteIdx=0;playNextBGMNote();}}
+    if(!muted&&bgmOn){bgmStarting=false;if(ac)bgmNextT=ac.currentTime;if(!bgmTO){bgmNoteIdx=0;playNextBGMNote();}} // v2.18: 恢复后立即以音频时钟对齐续播
   }).catch(()=>{});
   const rc=canvas.getBoundingClientRect();
   const mx=(e.clientX-rc.left)*(W/rc.width);
@@ -1691,6 +1712,7 @@ canvas.addEventListener('touchstart',e=>{
   ia().then(()=>{
     if(muted||!bgmOn)return;
     bgmStarting=false; // v2.15: 手势内直接接管启动，被挂起的旧链醒来后发现 bgmTO 已设会自动让位
+    if(ac)bgmNextT=ac.currentTime; // v2.18: 挂起恢复后以音频时钟为准立即续播
     if(!bgmTO){bgmNoteIdx=0;playNextBGMNote();}
   }).catch(()=>{});
 },{passive:true});
