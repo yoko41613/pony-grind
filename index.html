@@ -231,7 +231,7 @@ function si(cv){
       const tx=(t.clientX-rc.left)*sx,ty=(t.clientY-rc.top)*sx,side=tx<cx?'L':'R';
       if(n-inp.lt<300&&side===inp.ls){inp.dt=true;inp.dtimer=10;}
       inp.lt=n;inp.ls=side;
-      if(gs==='level3'){inp.sx0=tx;inp.sy0=ty;}
+      if(gs==='level3'||gs==='level1'){inp.sx0=tx;inp.sy0=ty;} // v2.17: L1 也记录滑动起点
     }
     if(gs==='menu'||gs==='shop'){
       for(const t of e.changedTouches){
@@ -247,11 +247,6 @@ function si(cv){
         if(tx<W/3)inp.leftDown=true;
         else if(tx>W*2/3)inp.rightDown=true;
       }
-    } else if(gs==='level1'){
-      for(const t of e.changedTouches){
-        const tx=(t.clientX-rc.left)*sx;
-        if(tx<cx){inp.js.a=true;inp.js.bx=tx;inp.js.by=(t.clientY-rc.top)*sx;}
-      }
     }
   },{passive:false});
   cv.addEventListener('touchmove',e=>{
@@ -263,16 +258,7 @@ function si(cv){
       for(const t of e.touches){const tx=(t.clientX-rc.left)*sx;if(tx<W/3)la=true;else if(tx>W*2/3)ra=true;}
       inp.rightDown=ra;inp.leftDown=la;return;
     }
-    if(gs==='level3')return;
-    let la=false,ra=false;
-    for(const t of e.touches){
-      const tx=(t.clientX-rc.left)*sx;
-      if(tx<W/2){la=true;inp.js.x=tx-inp.js.bx;inp.js.y=(t.clientY-rc.top)*sx-inp.js.by;
-        const d=Math.sqrt(inp.js.x**2+inp.js.y**2);if(d>50){inp.js.x=inp.js.x/d*50;inp.js.y=inp.js.y/d*50;}}
-      else ra=true;
-    }
-    if(!la){inp.js.a=false;inp.js.x=0;inp.js.y=0;}
-    inp.rightDown=ra;inp.leftDown=la;
+    // v2.17: L1/L3 无需拖拽摇杆（L1 滑动切道 / L3 滑动移动），level2 已在上方处理
   },{passive:false});
   cv.addEventListener('touchend',e=>{
     e.preventDefault();inp.ts=Array.from(e.touches);
@@ -298,10 +284,14 @@ function si(cv){
       for(const t of e.touches){const tx=(t.clientX-rc.left)*sx;if(tx<W/3)la=true;else if(tx>W*2/3)ra=true;}
       inp.rightDown=ra;inp.leftDown=la;return;
     }
-    inp.rightDown=false;inp.leftDown=false;
-    let la=false;
-    for(const t of e.touches){if((t.clientX-rc.left)*sx<W/2)la=true;}
-    if(!la){inp.js.a=false;inp.js.x=0;inp.js.y=0;}
+    inp.rightDown=false;inp.leftDown=false;inp.js.a=false;inp.js.x=0;inp.js.y=0;
+    // v2.17: L1 手机上下滑动切换车道（上滑→上道，下滑→下道），双击跳跃不变
+    if(gs==='level1'&&!l1.sel&&!l1.go&&!l1.win){
+      for(const t of e.changedTouches){
+        const tx=(t.clientX-rc.left)*sx,ty=(t.clientY-rc.top)*sx;
+        if(l1Swipe(tx-inp.sx0,ty-inp.sy0)){inp.lt=0;inp.ls='';} // 滑动不算进双击跳窗口
+      }
+    }
   },{passive:false});
   cv.addEventListener('touchcancel',()=>{inp.js.a=false;inp.js.x=0;inp.js.y=0;inp.menuTap=false;inp.rightDown=false;inp.leftDown=false;});
 }
@@ -353,7 +343,7 @@ function drMenu(){
   ctx.fillText('经验：'+save.xp+' XP',30,516);
   ctx.fillText('最高分 办公室赛马:'+(save.hs.l1||0)+' 大冒险:'+(save.hs.l2||0)+' 爱心工厂:'+(save.hs.l3||0),30,536);
   ctx.fillStyle='#888';ctx.font='12px "PingFang SC","Microsoft YaHei",Arial,sans-serif';
-  ctx.fillText('手机：摇杆/触摸移动 双击跳跃/滑动合成',W/2,585);
+  ctx.fillText('手机：滑动移动/上下切道 · 双击跳跃/兑换',W/2,585);
   ctx.fillStyle='#f84';ctx.font='bold 12px "PingFang SC","Microsoft YaHei",Arial,sans-serif';ctx.textAlign='center';
   if(menuTipT>0){ctx.fillStyle='#f84';ctx.font='bold 14px "PingFang SC","Microsoft YaHei",Arial,sans-serif';ctx.fillText(menuTip,W/2,618);}
   const qs=JOKES;
@@ -485,6 +475,15 @@ function l1Start(st){
   l1.luckLine='';
   l1.cont=false;
 }
+function l1Swipe(dx,dy){
+  // v2.17: 手机上下滑动切道——垂直滑动超过 28px 且垂直分量更大时切换车道
+  if(Math.abs(dy)>28&&Math.abs(dy)>Math.abs(dx)){
+    if(dy<0&&l1.pl>0)l1.pl--;
+    if(dy>0&&l1.pl<2)l1.pl++;
+    return true;
+  }
+  return false;
+}
 
 function uL1(){
   if(l1.sel){l1.tipT=Math.max(0,l1.tipT-1);return;}
@@ -502,10 +501,6 @@ function uL1(){
   l1.coinT++;
   if(l1.coinT>=600){l1.coinT=0;save.coins+=10;sv(save);}
   // Input
-  if(inp.js.a){
-    if(inp.js.y<-6&&l1.pl>0)l1.pl--;   // v2.16: 死区 15->6，更容易停在中间车道
-    if(inp.js.y>6&&l1.pl<2)l1.pl++;
-  }
   if(inp.keys['ArrowUp']||inp.keys['w']){if(l1.pl>0){l1.pl--;inp.keys['ArrowUp']=false;}}
   if(inp.keys['ArrowDown']||inp.keys['s']){if(l1.pl<2){l1.pl++;inp.keys['ArrowDown']=false;}}
   l1.py+=(l1.ly[l1.pl]-l1.py)*0.15;
@@ -747,29 +742,9 @@ function drL1(){
   // banner
   if(l1.bannerT>0&&!l1.win){ctx.fillStyle='#000a';ctx.fillRect(0,H/2-24,W,48);ctx.fillStyle='#fd4';ctx.font='bold 16px "PingFang SC","Microsoft YaHei",Arial,sans-serif';ctx.textAlign='center';ctx.fillText(l1.banner,W/2,H/2+5);}
   ctx.restore();
-  if(l1.sel==false&&l1.go==false&&l1.win==false){
-    // v2.16: 车道指示器
-    const lIndX=W/2, lIndY=H-78, lIndW=120, lIndH=42, lGap=4, bw=(lIndW-2*lGap)/3;
-    ctx.fillStyle='#000a';ctx.fillRect(lIndX-lIndW/2-6,lIndY-lIndH/2-6,lIndW+12,lIndH+12);
-    ctx.strokeStyle='#fff6';ctx.lineWidth=1;ctx.strokeRect(lIndX-lIndW/2-6,lIndY-lIndH/2-6,lIndW+12,lIndH+12);
-    for(let i=0;i<3;i++){
-      const xx=lIndX-lIndW/2+i*(bw+lGap);
-      const active=(l1.pl===i);
-      ctx.fillStyle=active?'#fd4':'#fff3';
-      ctx.fillRect(xx,lIndY-lIndH/2,bw,lIndH);
-      if(active){ctx.strokeStyle='#f80';ctx.lineWidth=2;ctx.strokeRect(xx+1.5,lIndY-lIndH/2+1.5,bw-3,lIndH-3);}
-    }
-    ctx.fillStyle='#fff';ctx.font='bold 11px "PingFang SC","Microsoft YaHei",Arial,sans-serif';ctx.textAlign='center';
-    ctx.fillText('↑ 上车道',lIndX,lIndY-lIndH/2-10);
-    ctx.fillText('↓ 下车道',lIndX,lIndY+lIndH/2+18);
-    if(inp.js.a){
-      ctx.fillStyle=(inp.js.y<-6)?'#fd4':'#888';
-      ctx.font='bold 13px "PingFang SC","Microsoft YaHei",Arial,sans-serif';
-      ctx.fillText('▲ 上移',lIndX,lIndY-lIndH/2-26);
-      ctx.fillStyle=(inp.js.y>6)?'#fd4':'#888';
-      ctx.fillText('▼ 下移',lIndX,lIndY+lIndH/2+34);
-    }
-  }
+  // v2.17: 车道指示 UI 已移除——手机用上下滑动切道
+  ctx.fillStyle='#888';ctx.font='12px "PingFang SC","Microsoft YaHei",Arial,sans-serif';ctx.textAlign='center';
+  ctx.fillText('上滑/下滑换道 · 双击跳跃',W/2,H-10);
   drawMuteBtn(ctx,W-34,34);
   // back to menu button
   ctx.fillStyle='#3a3a52';ctx.fillRect(10,10,72,32);
@@ -889,7 +864,7 @@ function rL2(){
   // 每一关都随机：三关背景色调顺序洗牌；标语每关/每次随机；地图布局由 genL2 随机生成
   const bgOrder=[0,1,2];
   for(let i=2;i>0;i--){const j=Math.floor(Math.random()*(i+1));const t=bgOrder[i];bgOrder[i]=bgOrder[j];bgOrder[j]=t;}
-  l2={stage:0,bgOrder:bgOrder,poster:randSlogan(''),p:{x:60,y:250,vx:0,vy:0,w:34,h:44,gnd:false,face:1},grav:0.5,jumpV:-16*jb,lives:3+el,score:0,big:false,horse:false,inv:0,go:false,won:false,cam:0,part:[],floats:[],banner:'',bannerT:30,bossT:0,bossDone:false,overSaved:false,winSaved:false,heartGiven:false,piesEaten:0,piesTotal:0}; // v2.16: 去掉红框默认 banner，开局直接随机
+  l2={stage:0,bgOrder:bgOrder,poster:randSlogan(''),p:{x:60,y:250,vx:0,vy:0,w:34,h:44,gnd:false,face:1},grav:0.5,jumpV:-16*jb,lives:3+el,score:0,big:false,horse:false,inv:0,go:false,won:false,cam:0,part:[],floats:[],banner:'',bannerT:30,bossT:0,bossDone:false,overSaved:false,winSaved:false,heartGiven:false,piesEaten:0,piesTotal:0}; // v2.17: banner 字段保留但不绘制（屏幕中间黑框横幅已移除）
   genL2();
 }
 function genL2(){
@@ -997,19 +972,14 @@ function l2Stomp(b){
     return;
   }
   b.hp--;b.hit=26;l2.p.vy=-9;l2.p.gnd=false;l2.score+=20;sh();
-  // 马蹄每次踩完即消耗：没踩死 boss 就要回去浮动平台再吃一次
-  l2.horse=false;
-  for(const c of l2.colls){if(c.type==='horseshoe')c.collected=false;}
+  // v2.17: 马蹄吃一次全程有效——踩中不消耗，直到 BOSS 被打死
   spP(b.x+b.w/2,b.y,10,'#f84',l2.part,7,7,22);
   l2.floats.push({x:b.x+b.w/2,y:b.y-12,txt:'踩! +20',t:34});
   if(b.hp<=0){
     b.dead=true;l2.bossT=0;boom();
     spP(b.x+b.w/2,b.y+b.h/2,25,'#fd4',l2.part,10,10,36);
     spP(b.x+b.w/2,b.y+b.h/2,15,'#f44',l2.part,8,8,30);
-    l2.score+=50;l2.banner='BOSS被踩扁了！';l2.bannerT=90;
-  }else{
-    l2.banner='马蹄用掉了！回去浮动平台再吃一个🐴';l2.bannerT=120;
-    l2.floats.push({x:l2.p.x+17,y:l2.p.y-14,txt:'马蹄用掉了！回去再吃🐴',t:70});
+    l2.score+=50;l2.floats.push({x:b.x+b.w/2,y:b.y-70,txt:'BOSS被踩扁了！',t:70});
   }
 }
 function l2Hurt(){
@@ -1028,10 +998,7 @@ function uL2(){
   const st=l2.stage; // stage-based difficulty (elevator cycle, etc.)
   if(l2.go||l2.won)return;
   l2.inv=Math.max(0,l2.inv-1);shake=Math.max(0,shake-1);
-  // 横幅/海报持续随机换句：上一句显示完后自动换新语录
-  if(l2.bannerT>0){l2.bannerT--;
-    if(l2.bannerT===0&&!l2.bossT){l2.banner=randSlogan(l2.banner);l2.poster=l2.banner;l2.bannerT=90+Math.floor(Math.random()*80);}
-  } // v2.16: 切换间隔缩短 150-250 → 90-170 帧，更频繁换句
+  // v2.17: 屏幕中间不再弹黑色横幅/随机标语（墙上海报 l2.poster 保留）
   for(const f of l2.floats){f.y-=0.8;f.t--;}
   l2.floats=l2.floats.filter(f=>f.t>0);
   // Input
@@ -1109,7 +1076,7 @@ function uL2(){
   }
   // Boss
   const b=l2.boss;
-  if(l2.p.x>l2.bp.x-80&&!b.active&&!b.dead){b.active=true;l2.banner=l2.horse?'⚠️ BOSS驾到！踩 '+b.hp+' 下！马蹄一次就没了，用完回去再吃🐴':'⚠️ BOSS驾到！先跳上浮动平台吃马蹄🐴再踩！';l2.bannerT=170;}
+  if(l2.p.x>l2.bp.x-80&&!b.active&&!b.dead){b.active=true;l2.floats.push({x:l2.p.x+40,y:l2.p.y-70,txt:l2.horse?'⚠️ BOSS驾到！踩 '+b.hp+' 下！':'⚠️ BOSS驾到！先吃浮动平台上的马蹄🐴再踩！',t:110});}
   if(b.active&&!b.dead){
     b.hit=Math.max(0,b.hit-1);
     b.x+=b.dir*b.spd;
@@ -1144,8 +1111,7 @@ function uL2(){
       }else{
         genL2();
         l2.poster=randSlogan(l2.poster);
-        l2.banner='第 '+(l2.stage+1)+' 关 · '+l2.poster;
-        l2.bannerT=120;
+        l2.floats.push({x:l2.p.x+60,y:l2.p.y-50,txt:'第 '+(l2.stage+1)+' 关',t:80}); // v2.17: 换关提示用浮动文字，不再弹黑框
       }
     }
   }
@@ -1330,11 +1296,10 @@ function drL2(){
   // progress
   ctx.textAlign='right';ctx.fillStyle='#888';ctx.font='12px "PingFang SC","Microsoft YaHei",Arial,sans-serif';
   ctx.fillText('进度 '+Math.floor(l2.p.x/l2.lw*100)+'%',W-15,48);
-  // banner
-  if(l2.bannerT>0){ctx.fillStyle='#000a';ctx.fillRect(0,H/2-24,W,48);ctx.fillStyle='#fd4';ctx.font='bold 15px "PingFang SC","Microsoft YaHei",Arial,sans-serif';ctx.textAlign='center';ctx.fillText(l2.banner,W/2,H/2+5);}
+  // v2.17: 屏幕中间的黑色横幅已移除（BOSS 提示改用浮动文字）
   // control hint
   ctx.fillStyle='#888';ctx.font='12px "PingFang SC","Microsoft YaHei",Arial,sans-serif';ctx.textAlign='center';
-  ctx.fillText('左右移动 · 双击跳跃 · 吃饼变大 · 吃马蹄🐴才能踩BOSS · 用完再吃',W/2,H-10);
+  ctx.fillText('左右移动 · 双击跳跃 · 吃饼变大 · 吃马蹄🐴才能踩BOSS',W/2,H-10);
   ctx.restore();
   if(l2.go||l2.won){ctx.fillStyle='#000a';ctx.fillRect(0,0,W,H);
     ctx.fillStyle=l2.won?'#fd4':'#f44';ctx.font='bold 30px "PingFang SC","Microsoft YaHei",Arial,sans-serif';ctx.textAlign='center';
@@ -1671,11 +1636,6 @@ function loop(){
   else if(gs==='level1'){uL1();drL1();}
   else if(gs==='level2'){uL2();drL2();}
   else if(gs==='level3'){uL3();drL3();}
-
-  if(gs==='level1'&&inp.js.a){
-    ctx.fillStyle='#fff3';ctx.beginPath();ctx.arc(inp.js.bx,inp.js.by,50,0,Math.PI*2);ctx.fill();
-    ctx.fillStyle='#fff6';ctx.beginPath();ctx.arc(inp.js.bx+inp.js.x,inp.js.by+inp.js.y,25,0,Math.PI*2);ctx.fill();
-  }
 
   requestAnimationFrame(loop);
 }
