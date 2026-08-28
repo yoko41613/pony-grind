@@ -291,7 +291,7 @@ function si(cv){
         delete inp.tS[t.identifier];
         if(st){
           const tx=(t.clientX-rc.left)*sx,ty=(t.clientY-rc.top)*sx;
-          if(Date.now()-st.t<220&&Math.abs(tx-st.x)<30&&Math.abs(ty-st.y)<30){inp.tap=true;inp.tapT=8;}
+          if(Date.now()-st.t<350&&Math.abs(tx-st.x)<50&&Math.abs(ty-st.y)<50){inp.tap=true;inp.tapT=12;} // v2.20: 单击判定放宽(220→350ms, 30→50px, 缓冲8→12帧)——实际点击常超220ms导致"单击不跳"
         }
       }
       for(const t of e.touches){const tx=(t.clientX-rc.left)*sx;if(tx<W/3)la=true;else if(tx>W*2/3)ra=true;}
@@ -321,8 +321,8 @@ function si(cv){
   cv.addEventListener('mouseup',e=>{
     if(gs!=='level2'){inp.mDown=false;inp.leftDown=false;inp.rightDown=false;return;}
     const rc=cv.getBoundingClientRect(),mx=(e.clientX-rc.left)*(W/rc.width),my=(e.clientY-rc.top)*(W/rc.width);
-    if(inp.mDown&&Date.now()-inp.mT<220&&!(mx>10&&mx<82&&my>10&&my<42)&&!isMuteTap(mx,my)){
-      inp.tap=true;inp.tapT=8; // 快速单击→跳跃
+    if(inp.mDown&&Date.now()-inp.mT<350&&!(mx>10&&mx<82&&my>10&&my<42)&&!isMuteTap(mx,my)){
+      inp.tap=true;inp.tapT=12; // v2.20: 鼠标端同步放宽单击判定(220→350ms, 缓冲8→12帧)
     }
     inp.mDown=false;inp.leftDown=false;inp.rightDown=false;
   });
