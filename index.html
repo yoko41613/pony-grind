@@ -213,7 +213,7 @@ const SHOP=[
 ];
 
 // ===== INPUT =====
-const inp={keys:{},ts:[],js:{a:false,x:0,y:0,bx:0,by:0},dt:false,dtimer:0,lt:0,ls:'',menuX:0,menuY:0,menuTap:false,rightDown:false,leftDown:false,sx0:0,sy0:0};
+const inp={keys:{},ts:[],js:{a:false,x:0,y:0,bx:0,by:0},dt:false,dtimer:0,lt:0,ls:'',menuX:0,menuY:0,menuTap:false,rightDown:false,leftDown:false,sx0:0,sy0:0,tap:false,tapT:0,tS:{},mDown:false,mT:0}; // v2.19: tap=单击跳跃标记(tapT 帧内有效), tS=触屏按点起点, mDown/mT=鼠标按下状态
 let nameEditing=false;
 const nameInput=document.getElementById('nameInput');
 const nameOk=document.getElementById('nameOk');
@@ -232,7 +232,7 @@ function si(cv){
     const n=Date.now(),cx=W/2,rc=cv.getBoundingClientRect(),sx=W/rc.width;
     for(const t of e.changedTouches){
       const tx=(t.clientX-rc.left)*sx,ty=(t.clientY-rc.top)*sx,side=tx<cx?'L':'R';
-      if(n-inp.lt<300&&side===inp.ls){inp.dt=true;inp.dtimer=10;}
+      if(gs!=='level2'&&n-inp.lt<300&&side===inp.ls){inp.dt=true;inp.dtimer=10;} // v2.19: L2 改为单击跳跃，双击判定仅保留给 L1/L3
       inp.lt=n;inp.ls=side;
       if(gs==='level3'||gs==='level1'){inp.sx0=tx;inp.sy0=ty;} // v2.17: L1 也记录滑动起点
     }
@@ -247,6 +247,7 @@ function si(cv){
     if(gs==='level2'){
       for(const t of e.changedTouches){
         const tx=(t.clientX-rc.left)*sx;
+        inp.tS[t.identifier]={x:tx,y:(t.clientY-rc.top)*sx,t:Date.now()}; // v2.19: 记录按点起点，用于区分「长按移动」与「单击跳跃」
         if(tx<W/3)inp.leftDown=true;
         else if(tx>W*2/3)inp.rightDown=true;
       }
@@ -283,7 +284,16 @@ function si(cv){
       return;
     }
     if(gs==='level2'){
+      // v2.19: 单击跳跃——按下不足 220ms 且位移 <30px 判定为单击；长按则是移动，松开仅清除方向
       let la=false,ra=false;
+      for(const t of e.changedTouches){
+        const st=inp.tS[t.identifier];
+        delete inp.tS[t.identifier];
+        if(st){
+          const tx=(t.clientX-rc.left)*sx,ty=(t.clientY-rc.top)*sx;
+          if(Date.now()-st.t<220&&Math.abs(tx-st.x)<30&&Math.abs(ty-st.y)<30){inp.tap=true;inp.tapT=8;}
+        }
+      }
       for(const t of e.touches){const tx=(t.clientX-rc.left)*sx;if(tx<W/3)la=true;else if(tx>W*2/3)ra=true;}
       inp.rightDown=ra;inp.leftDown=la;return;
     }
@@ -296,7 +306,27 @@ function si(cv){
       }
     }
   },{passive:false});
-  cv.addEventListener('touchcancel',()=>{inp.js.a=false;inp.js.x=0;inp.js.y=0;inp.menuTap=false;inp.rightDown=false;inp.leftDown=false;});
+  cv.addEventListener('touchcancel',()=>{inp.js.a=false;inp.js.x=0;inp.js.y=0;inp.menuTap=false;inp.rightDown=false;inp.leftDown=false;inp.tS={};inp.mDown=false;}); // v2.19: 清理按点记录
+  // v2.19: 鼠标端同样支持「长按左右移动 + 单击跳跃」（左半屏→左移，右半屏→右移，快速单击→跳跃）
+  cv.addEventListener('mousedown',e=>{
+    ia();
+    if(gs!=='level2')return;
+    const rc=cv.getBoundingClientRect(),mx=(e.clientX-rc.left)*(W/rc.width),my=(e.clientY-rc.top)*(W/rc.width);
+    if(mx>10&&mx<82&&my>10&&my<42)return; // 返回菜单按钮区域不触发移动
+    if(isMuteTap(mx,my))return; // 静音按钮区域不触发移动
+    inp.mDown=true;inp.mT=Date.now();
+    if(mx<W/2){inp.leftDown=true;inp.rightDown=false;}
+    else{inp.rightDown=true;inp.leftDown=false;}
+  });
+  cv.addEventListener('mouseup',e=>{
+    if(gs!=='level2'){inp.mDown=false;inp.leftDown=false;inp.rightDown=false;return;}
+    const rc=cv.getBoundingClientRect(),mx=(e.clientX-rc.left)*(W/rc.width),my=(e.clientY-rc.top)*(W/rc.width);
+    if(inp.mDown&&Date.now()-inp.mT<220&&!(mx>10&&mx<82&&my>10&&my<42)&&!isMuteTap(mx,my)){
+      inp.tap=true;inp.tapT=8; // 快速单击→跳跃
+    }
+    inp.mDown=false;inp.leftDown=false;inp.rightDown=false;
+  });
+  cv.addEventListener('mouseleave',()=>{inp.mDown=false;inp.leftDown=false;inp.rightDown=false;});
 }
 
 // ===== PARTICLES =====
@@ -1017,12 +1047,13 @@ function uL2(){
   for(const f of l2.floats){f.y-=0.8;f.t--;}
   l2.floats=l2.floats.filter(f=>f.t>0);
   // Input
+  if(inp.tapT>0){inp.tapT--;if(inp.tapT===0)inp.tap=false;} // v2.19: 单击跳跃标记在 tapT 帧内有效（空中按下→落地后自动跳的缓冲）
   if(inp.keys['ArrowLeft']||inp.keys['a']){l2.p.vx=-4.5;l2.p.face=-1;}
   else if(inp.keys['ArrowRight']||inp.keys['d']){l2.p.vx=4.5;l2.p.face=1;}
   else l2.p.vx*=0.8;
   if(inp.rightDown){l2.p.vx=4.5;l2.p.face=1;}
   if(inp.leftDown){l2.p.vx=-4.5;l2.p.face=-1;}
-  if((inp.keys[' ']||inp.keys['ArrowUp']||inp.keys['w']||inp.dt)&&l2.p.gnd){l2.p.vy=l2.jumpV;l2.p.gnd=false;sj();inp.dt=false;inp.keys[' ']=false;inp.keys['ArrowUp']=false;inp.keys['w']=false;}
+  if((inp.keys[' ']||inp.keys['ArrowUp']||inp.keys['w']||inp.dt||inp.tap)&&l2.p.gnd){l2.p.vy=l2.jumpV;l2.p.gnd=false;sj();inp.dt=false;inp.tap=false;inp.tapT=0;inp.keys[' ']=false;inp.keys['ArrowUp']=false;inp.keys['w']=false;}
   // Physics
   l2.p.vy+=l2.grav;l2.p.x+=l2.p.vx;l2.p.y+=l2.p.vy;l2.p.gnd=false;
   l2UpdPlats();
@@ -1318,7 +1349,7 @@ function drL2(){
   // v2.17: 屏幕中间的黑色横幅已移除（BOSS 提示改用浮动文字）
   // control hint
   ctx.fillStyle='#888';ctx.font='12px "PingFang SC","Microsoft YaHei",Arial,sans-serif';ctx.textAlign='center';
-  ctx.fillText('左右移动 · 双击跳跃 · 吃饼变大 · 吃马蹄🐴才能踩BOSS',W/2,H-10);
+  ctx.fillText('长按左右移动 · 单击跳跃 · 吃饼变大 · 吃马蹄🐴才能踩BOSS',W/2,H-10); // v2.19: L2 改长按移动+单击跳跃
   ctx.restore();
   if(l2.go||l2.won){ctx.fillStyle='#000a';ctx.fillRect(0,0,W,H);
     ctx.fillStyle=l2.won?'#fd4':'#f44';ctx.font='bold 30px "PingFang SC","Microsoft YaHei",Arial,sans-serif';ctx.textAlign='center';
