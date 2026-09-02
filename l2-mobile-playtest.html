@@ -69,7 +69,14 @@ corn:["8b8b","b8b8","tt8t","tt8t","tt8t","tt8t"],
 tomato:["tttt","t77t","7777","t77t","tttt"],
 guy:["t6t6t6tt","tttttttt","ttxxxxxt","txxxxxxt","txxxxxxt","txxxxxxt","tx7777xt","txxxxxxt","txxxxxxt","ttxxxxxt","t4t44t4t","t4t44t4t"],
 offcard:["taaaaaa","a5555a","a55a5a","a5555a","a5555a","taaaaaat"],
-fish:["ttttttiiiiittt","ttttiiiiiiiiit","ttiiiiiiiiiiit","tiiiiiiiiiiiii","tiiiii55iiiiii","ttiiiiiiiiiiit","tttttttttttttt"]
+fish:["ttttttiiiiittt","ttttiiiiiiiiit","ttiiiiiiiiiiit","tiiiiiiiiiiiii","tiiiii55iiiiii","ttiiiiiiiiiiit","tttttttttttttt"],
+badge:["ttttt11ttttt","tttt1111tttt","ttttt11ttttt","ttaaaaaaaaat","ta55555555at","ta55a55555at","ta55555555at","ta55555555at","ta55555555at","ttaaaaaaaat"],
+burger:["tttooooooott","ttoooooooooo","tooo33333ooo","t7777777777t","t8888888888t","t4444444444t","ttoooooooooo","tttyyyyyyttt"],
+blackpot:["ttt666666ttt","t6666666666t","666zzzzzz666","66zzzzzzzz66","66zzzzzzzz66","666666666666","t6666666666t","ttt6tttt6ttt"],
+stain:["ttt33333tttt","t333333333tt","33333333333t","t33333333333","tt333333333t","tttt33333ttt"],
+phone:["ttt666666ttt","tt66yyyy66tt","t66yyyyyy66t","t66y5555y66t","t66y5tt5y66t","t66y5555y66t","t66yyyyyy66t","tt66666666tt","ttt6tttt6ttt"],
+broom:["tttttt3ttttt","tttttt3ttttt","ttttt33ttttt","ttttt3tttttt","tttt33tttttt","tttt3ttttttt","ttt33ttttttt","ttt3tttttttt","tt333333tttt","t33333333ttt","3333333333tt"],
+eraser:["tttttttttttt","ttt777777ttt","tt77777777tt","t7777777777t","t6666666666t","tt66666666tt"]
 };
 
 function ds(ctx,spr,x,y,w,h,flip){
@@ -232,7 +239,7 @@ function si(cv){
     const n=Date.now(),cx=W/2,rc=cv.getBoundingClientRect(),sx=W/rc.width;
     for(const t of e.changedTouches){
       const tx=(t.clientX-rc.left)*sx,ty=(t.clientY-rc.top)*sx,side=tx<cx?'L':'R';
-      if(gs!=='level2'&&n-inp.lt<300&&side===inp.ls){inp.dt=true;inp.dtimer=10;} // v2.19: L2 改为单击跳跃，双击判定仅保留给 L1/L3
+      if(gs==='level3'&&n-inp.lt<300&&side===inp.ls){inp.dt=true;inp.dtimer=10;} // L1/L2 都使用单击跳跃，双击判定只保留给 L3
       inp.lt=n;inp.ls=side;
       if(gs==='level3'||gs==='level1'){inp.sx0=tx;inp.sy0=ty;} // v2.17: L1 也记录滑动起点
     }
@@ -292,11 +299,12 @@ function si(cv){
       inp.rightDown=ra;inp.leftDown=la;return;
     }
     inp.rightDown=false;inp.leftDown=false;inp.js.a=false;inp.js.x=0;inp.js.y=0;
-    // v2.17: L1 手机上下滑动切换车道（上滑→上道，下滑→下道），双击跳跃不变
+    // L1：上下滑动切换车道；未形成滑动的单次点击直接跳跃
     if(gs==='level1'&&!l1.sel&&!l1.go&&!l1.win){
       for(const t of e.changedTouches){
         const tx=(t.clientX-rc.left)*sx,ty=(t.clientY-rc.top)*sx;
-        if(l1Swipe(tx-inp.sx0,ty-inp.sy0)){inp.lt=0;inp.ls='';} // 滑动不算进双击跳窗口
+        if(l1Swipe(tx-inp.sx0,ty-inp.sy0)){inp.lt=0;inp.ls='';}
+        else{inp.dt=true;inp.dtimer=10;}
       }
     }
   },{passive:false});
@@ -370,7 +378,7 @@ function drMenu(){
   ctx.fillText('经验：'+save.xp+' XP',30,516);
   ctx.fillText('最高分 办公室赛马:'+(save.hs.l1||0)+' 大冒险:'+(save.hs.l2||0)+' 爱心工厂:'+(save.hs.l3||0),30,536);
   ctx.fillStyle='#888';ctx.font='12px "PingFang SC","Microsoft YaHei",Arial,sans-serif';
-  ctx.fillText('手机：滑动移动/上下切道 · 双击跳跃/兑换',W/2,585);
+  ctx.fillText('手机：滑动移动/上下切道 · 轻点跳跃',W/2,585);
   ctx.fillStyle='#f84';ctx.font='bold 12px "PingFang SC","Microsoft YaHei",Arial,sans-serif';ctx.textAlign='center';
   if(menuTipT>0){ctx.fillStyle='#f84';ctx.font='bold 14px "PingFang SC","Microsoft YaHei",Arial,sans-serif';ctx.fillText(menuTip,W/2,618);}
   const qs=JOKES;
@@ -472,10 +480,10 @@ function shuffledPosters(){ // v2.18: 12 句标语整池打乱——每张墙上
   return a;
 }
 const L1_NAME=['办公室','会议室','停车场'];
-const L1_BANNER=['办公室 · 躲耳机/文件/打印机/HR!','会议室 · 躲会议桌/滑椅/笔记本/老板!','停车场 · 躲来车/路障/老板车!'];
+const L1_BANNER=['','',''];
 const L1_GOAL=[10800,12600,14400];
 const L1_LV=['第1关','第2关','第3关'];
-const L1_DESC=['躲耳机、文件堆、打印机、HR','躲会议桌、滑动座椅、笔记本、老板','躲来车、路障锥、老板车'];
+const L1_DESC=['办公室','会议室','停车场'];
 // 运势测试语录：根据得分和剩余生命随机调侃
 const L1_LUCK={
   god:['你今天踩了狗屎运才能通关吧','运气也是实力，你这实力藏不住了','今日宜下班，宜摸鱼，宜通关','这运气，买彩票去吧','老板看了都羡慕你的走位'],
@@ -495,15 +503,17 @@ function rL1(){
   if(save.items.headset>0){save.items.headset--;stSlow=true;}
   if(save.items.offcard>0){save.items.offcard--;stInv=true;}
   sv(save);
-  l1={py:H*0.66,pl:1,pvy:0,jump:false,gnd:true,inv:stInv?180:0,score:0,dist:0,cam:0,bs:2,spd:2,lives:3,obs:[],coll:[],part:[],gy:H*0.88,ly:[H*0.52,H*0.66,H*0.80],st:0,si:80,go:false,goSaved:false,boostT:stBoost?180:0,bigT:0,slowT:stSlow?180:0,coinT:0,stage:0,goal:L1_GOAL[0],win:false,winSaved:false,banner:L1_BANNER[0],bannerT:140,sel:true,cont:false,tip:'',tipT:0,heartGiven:false,luckLine:''};
+  l1={py:H*0.66,pl:1,pvy:0,jump:false,gnd:true,inv:0,startInv:stInv?180:0,score:0,dist:0,cam:0,bs:2,spd:2,lives:3,obs:[],coll:[],part:[],gy:H*0.88,ly:[H*0.52,H*0.66,H*0.80],st:0,si:80,go:false,goSaved:false,boostT:0,startBoost:stBoost?180:0,bigT:0,slowT:0,startSlow:stSlow?180:0,coinT:0,stage:0,goal:L1_GOAL[0],win:false,winT:0,winSaved:false,banner:'',bannerT:0,sel:true,cont:false,tip:'',tipT:0,heartGiven:false,horseGiven:false,patternN:0,lastSafe:1,luckLine:''};
 }
 function l1Start(st){
+  const continuing=l1.cont;
   l1.stage=st;
   l1.dist=0;l1.cam=0;l1.obs=[];l1.coll=[];l1.st=0;l1.si=80;
-  l1.goal=L1_GOAL[st];l1.win=false;l1.sel=false;
-  l1.banner=L1_BANNER[st];l1.bannerT=140;
+  l1.goal=L1_GOAL[st];l1.win=false;l1.winT=0;l1.sel=false;
+  l1.banner='';l1.bannerT=0;
   l1.bigT=0;l1.boostT=0;l1.inv=0;l1.slowT=0;
-  if(!l1.cont){l1.score=0;l1.lives=3;}
+  l1.patternN=0;l1.lastSafe=1;l1.heartGiven=false;
+  if(!continuing){l1.score=0;l1.lives=3;l1.horseGiven=false;l1.boostT=l1.startBoost;l1.slowT=l1.startSlow;l1.inv=l1.startInv;}
   l1.luckLine='';
   l1.cont=false;
 }
@@ -521,6 +531,10 @@ function uL1(){
   if(l1.sel){l1.tipT=Math.max(0,l1.tipT-1);return;}
   if(l1.go)return;
   const raceOver=l1.win;
+  if(raceOver){
+    l1.winT++;
+    if(l1.stage<2&&l1.winT>150){l1.cont=true;l1Start(l1.stage+1);return;}
+  }
   if(!raceOver){
     l1.dist+=l1.spd;l1.cam+=l1.spd;
   }else{
@@ -540,10 +554,11 @@ function uL1(){
   l1.pvy+=0.5;l1.py+=l1.pvy;
   if(l1.py>=l1.ly[l1.pl]){l1.py=l1.ly[l1.pl];l1.pvy=0;l1.gnd=true;l1.jump=false;l1.jl=null;}
   // Spawn (per-stage pools, only while race is active)
-  if(!raceOver){l1.st++;if(l1.st>l1.si){l1.st=0;l1.si=Math.max(26,66-l1.dist*0.0028); // v2.12: 更紧凑的生成节奏，配合车道间距检查
+  if(!raceOver){l1.st++;if(l1.st>l1.si){l1.st=0;l1.si=Math.max(24,72-l1.stage*7-l1.dist*0.0025);
+    l1.patternN++;
     const r=Math.random();
-    // v2.13: 各障碍移动幅度表（滑椅62/会议桌36/笔记本28/BOSS80/HR16），所有公平性检查按最坏情况计算
-    const EXT={slider:62,desk:36,notebook:28,boss:80,hr:16};
+    // 移动物体按最坏位移参与安全通道检查，避免三道同时封死
+    const EXT={slider:62,desk:36,notebook:28,boss:80,hr:16,phone:28,broom:20};
     const extOf=(o)=>o.t==='boss'?80:(o.amp||0);
     const mkObs=(t,w,h,lane,sx)=>{
       const ob={t,w,h,x0:sx,lane,y:l1.ly[lane],sw:0};
@@ -553,6 +568,8 @@ function uL1(){
       else if(t==='desk'){ob.amp=24+Math.random()*12;ob.ph=Math.random()*6.28;}     // v2.13: 会议桌缓慢滑动
       else if(t==='notebook'){ob.amp=16+Math.random()*12;ob.ph=Math.random()*6.28;} // v2.13: 笔记本左右飘忽
       else if(t==='hr'){ob.amp=16;ob.ph=Math.random()*6.28;}
+      else if(t==='phone'){ob.amp=18+Math.random()*10;ob.ph=Math.random()*6.28;}
+      else if(t==='broom'){ob.amp=12+Math.random()*8;ob.ph=Math.random()*6.28;}
       else if(t==='boss'){ob.dir=Math.random()<0.5?1:-1;ob.spd=0.8+l1.stage*0.2;ob.origX=sx;}
       l1.obs.push(ob);
     };
@@ -590,11 +607,11 @@ function uL1(){
       if(!ok)l1.obs.pop();
       return ok;
     };
-    if(r<0.80){ // v2.18: 单障碍 72%→80%（道具让出的比例补到普通障碍，难度基本不变）
+    if(r<0.76){
       const pools=[
-        [{t:'papers',w:52,h:44,p:0.35},{t:'printer',w:56,h:52,p:0.30},{t:'hr',w:44,h:60,p:0.35}],
-        [{t:'desk',w:84,h:58,p:0.28},{t:'slider',w:44,h:54,p:0.28},{t:'notebook',w:40,h:40,p:0.24},{t:'boss',w:52,h:58,p:0.2}],
-        [{t:'car',w:96,h:54,p:0.34},{t:'cone',w:34,h:44,p:0.36},{t:'boss_car',w:84,h:54,p:0.16},{t:'slider',w:44,h:54,p:0.14}]
+        [{t:'papers',w:52,h:44,p:0.20},{t:'printer',w:56,h:52,p:0.16},{t:'hr',w:44,h:60,p:0.14},{t:'phone',w:42,h:46,p:0.18},{t:'stain',w:58,h:22,p:0.18},{t:'broom',w:42,h:58,p:0.14}],
+        [{t:'desk',w:84,h:58,p:0.16},{t:'slider',w:44,h:54,p:0.20},{t:'notebook',w:40,h:40,p:0.12},{t:'boss',w:52,h:58,p:0.10},{t:'blackpot',w:54,h:42,p:0.16},{t:'eraser',w:48,h:28,p:0.14},{t:'papers',w:52,h:44,p:0.12}],
+        [{t:'car',w:96,h:54,p:0.25},{t:'cone',w:34,h:44,p:0.24},{t:'boss_car',w:84,h:54,p:0.13},{t:'slider',w:44,h:54,p:0.12},{t:'broom',w:42,h:58,p:0.12},{t:'blackpot',w:54,h:42,p:0.14}]
       ];
       const pool=pools[l1.stage];
       let rr=Math.random(),acc=0,sel=pool[pool.length-1];
@@ -605,32 +622,42 @@ function uL1(){
         if(!laneBlocked(lane,sx,sel.t,sel.w)&&tryPlace(sel.t,sel.w,sel.h,lane,sx))break;
       }
     }
-    else if(r<0.90){ // v2.18: 正面道具 20%→10%，出现频率减半（喝咖啡/戴耳机/吃饼/摸鱼卡都少一半）
+    else if(r<0.84){ // 道具保持稀少，后两关会在相邻车道间移动
       let type;
-      if(!l1.heartGiven&&l1.lives<5&&Math.random()<0.18){type='heart';l1.heartGiven=true;}
-      else if(l1.stage===0)type=Math.random()<0.65?'coffee':'headset';
-      else if(l1.stage===1)type=Math.random()<0.70?'pie':'fish';
-      else type='clockout';
+      if(!l1.horseGiven&&l1.dist>l1.goal*0.55&&Math.random()<0.16){type='horseshoe';l1.horseGiven=true;}
+      else{
+        const rewards=['badge','burger','coffee','clockout'];
+        type=rewards[Math.floor(Math.random()*rewards.length)];
+      }
       let ilane=Math.floor(Math.random()*3);
       const ix=l1.dist+W+60;
       for(const o of l1.obs){ // 道具尽量不塞进障碍身上
         if(o.lane===ilane&&Math.abs(o.x0+o.sw+o.w/2-ix)<70){ilane=(ilane+1)%3;break;}
       }
-      l1.coll.push({x0:ix,y:l1.ly[ilane]-30,type,w:36,h:36,collected:false});
+      let toLane=ilane;
+      if(l1.stage>0&&Math.random()<0.58){toLane=Math.max(0,Math.min(2,ilane+(Math.random()<0.5?-1:1)));}
+      l1.coll.push({x0:ix,y:l1.ly[ilane]-30,type,w:36,h:36,collected:false,fromLane:ilane,toLane,phase:Math.random()*6.28});
     }
-    else{ // v2.12: 双障碍改为两条不同车道错位生成，杜绝同车道贴脸
+    else{ // 两道封锁、一道放行；安全车道持续变化，始终保证可通过
       const pools2=[
-        [{t:'papers',w:52,h:44},{t:'printer',w:56,h:52}],
-        [{t:'notebook',w:40,h:40},{t:'slider',w:44,h:54}],
-        [{t:'cone',w:34,h:44},{t:'car',w:96,h:54}]
+        [{t:'papers',w:52,h:44},{t:'phone',w:42,h:46},{t:'stain',w:58,h:22}],
+        [{t:'blackpot',w:54,h:42},{t:'slider',w:44,h:54},{t:'eraser',w:48,h:28}],
+        [{t:'cone',w:34,h:44},{t:'car',w:96,h:54},{t:'broom',w:42,h:58}]
       ];
       const pool2=pools2[l1.stage];
       const a=pool2[Math.floor(Math.random()*pool2.length)];
       const b=pool2[Math.floor(Math.random()*pool2.length)];
-      const sx1=l1.dist+W+80,sx2=sx1+90;
-      const lanes=[0,1,2].sort(()=>Math.random()-0.5);
+      let safe=Math.floor(Math.random()*3);
+      if(safe===l1.lastSafe)safe=(safe+1+(Math.random()<0.5?0:1))%3;
+      l1.lastSafe=safe;
+      const lanes=[0,1,2].filter(v=>v!==safe);
+      const sx1=l1.dist+W+80,sx2=sx1+34+l1.stage*12;
       if(!laneBlocked(lanes[0],sx1,a.t,a.w))tryPlace(a.t,a.w,a.h,lanes[0],sx1);
       if(!laneBlocked(lanes[1],sx2,b.t,b.w))tryPlace(b.t,b.w,b.h,lanes[1],sx2);
+      if(l1.patternN%2===0){
+        const rt=['badge','coffee','burger'][Math.floor(Math.random()*3)];
+        l1.coll.push({x0:sx1+30,y:l1.ly[safe]-30,type:rt,w:34,h:34,collected:false,fromLane:safe,toLane:safe,phase:0});
+      }
     }
   }}
   
@@ -641,6 +668,8 @@ function uL1(){
     else if(o.t==='desk')o.sw=Math.sin(l1.dist*0.012+o.ph)*o.amp;   // v2.13: 会议桌缓慢滑动
     else if(o.t==='notebook')o.sw=Math.sin(l1.dist*0.03+o.ph)*o.amp; // v2.13: 笔记本快速飘忽
     else if(o.t==='hr')o.sw=Math.sin(l1.dist*0.012+o.ph)*o.amp;
+    else if(o.t==='phone')o.sw=Math.sin(l1.dist*0.026+o.ph)*o.amp;
+    else if(o.t==='broom')o.sw=Math.sin(l1.dist*0.018+o.ph)*o.amp;
     else if(o.t==='car'||o.t==='boss_car')o.sw-=o.vspd;
     else if(o.t==='boss'){o.x0+=o.dir*o.spd;if(o.x0<o.origX-80||o.x0>o.origX+80)o.dir*=-1;}
     const ox=o.x0+o.sw-l1.dist;
@@ -665,10 +694,17 @@ function uL1(){
   // Collectibles
   if(!raceOver){for(const c of l1.coll){
     const cx2=c.x0-l1.dist;
+    if(c.fromLane!=null){
+      const wave=(Math.sin(l1.dist*0.016+c.phase)+1)/2;
+      c.y=l1.ly[c.fromLane]+(l1.ly[c.toLane]-l1.ly[c.fromLane])*wave-30;
+    }
     if(!c.collected&&px<cx2+c.w&&px+pw>cx2&&py<c.y+c.h&&py+ph>c.y){
       c.collected=true;
       if(c.type==='heart'){l1.lives=Math.min(5,l1.lives+1);sw();spP(cx2+c.w/2,c.y,8,'#f44',l1.part);}
       else if(c.type==='coffee'){l1.score+=10;sc();spP(cx2+c.w/2,c.y,5,'#fd4',l1.part);l1.boostT=240;}
+      else if(c.type==='badge'){l1.score+=20;sw();spP(cx2+c.w/2,c.y,7,'#6ff',l1.part);l1.inv=Math.max(l1.inv,100);}
+      else if(c.type==='burger'){l1.score+=15;sg();spP(cx2+c.w/2,c.y,7,'#fd4',l1.part);l1.bigT=180;}
+      else if(c.type==='horseshoe'){l1.score+=80;l1.lives=Math.min(5,l1.lives+1);l1.inv=180;sw();spP(cx2+c.w/2,c.y,14,'#fd4',l1.part,9,9,34);}
       else if(c.type==='headset'||c.type==='fish'){l1.score+=10;sc();spP(cx2+c.w/2,c.y,5,'#6ff',l1.part);l1.slowT=240;}
       else if(c.type==='pie'){l1.score+=20;sg();spP(cx2+c.w/2,c.y,8,'#fd4',l1.part);l1.bigT=180;}
       else if(c.type==='clockout'){l1.score+=15;sw();spP(cx2+c.w/2,c.y,6,'#4af',l1.part);l1.inv=300;}
@@ -679,7 +715,7 @@ function uL1(){
   l1.part=upP(l1.part);
   // Stage clear: cross the FINISH line (game ends, visuals keep scrolling)
   if(!l1.win&&l1.dist>=l1.goal-20){
-    l1.win=true;l1.winSaved=false;
+    l1.win=true;l1.winT=0;l1.winSaved=false;
     l1.luckLine=pickL1LuckLine(l1.score,l1.lives);
     l1.banner=L1_NAME[l1.stage]+'下班！';
     l1.bannerT=999;
@@ -692,13 +728,10 @@ function drL1(){
   ctx.save();ctx.translate(sx,sy);
   const stg=l1.stage;
   ctx.fillStyle=L1_BG[stg];ctx.fillRect(0,0,W,H);
-  // stage background images: scroll horizontally for motion (1:1 with the track),
-  // plus a slower parallax layer on top so depth is felt
+  // 每关使用一张固定背景；关内不再循环切换或横向漂移
   const bgImg=stg===0?IMG_L1P1:stg===1?IMG_L1P2:IMG_L1P3;
   if(bgImg&&bgImg.complete){
-    const off=Math.floor(l1.cam)%W; // v2.14: 整数偏移避免子像素接缝
-    ctx.drawImage(bgImg,-off,0,W,H);
-    ctx.drawImage(bgImg,W-off-1,0,W,H); // v2.14: 与上一张重叠1px，消除拼接线
+    ctx.drawImage(bgImg,0,0,W,H);
   }else{
     ctx.fillStyle=L1_BG[stg];ctx.fillRect(0,0,W,H);
   }
@@ -733,6 +766,11 @@ function drL1(){
     else if(o.t==='car')ds(ctx,S.car_side,ox,o.y,o.w,o.h,false);
     else if(o.t==='cone')ds(ctx,S.cone,ox,o.y,o.w,o.h,false);
     else if(o.t==='boss_car')ds(ctx,S.boss_car,ox,o.y,o.w,o.h,false);
+    else if(o.t==='blackpot')ds(ctx,S.blackpot,ox,o.y,o.w,o.h,false);
+    else if(o.t==='stain')ds(ctx,S.stain,ox,o.y,o.w,o.h,false);
+    else if(o.t==='phone')ds(ctx,S.phone,ox,o.y,o.w,o.h,false);
+    else if(o.t==='broom')ds(ctx,S.broom,ox,o.y,o.w,o.h,false);
+    else if(o.t==='eraser')ds(ctx,S.eraser,ox,o.y,o.w,o.h,false);
   }
   // collectibles
   for(const c of l1.coll){
@@ -744,6 +782,9 @@ function drL1(){
     else if(c.type==='fish')spr=S.fish;
     else if(c.type==='headset')spr=S.headphone;
     else if(c.type==='clockout')spr=S.clockout;
+    else if(c.type==='badge')spr=S.badge;
+    else if(c.type==='burger')spr=S.burger;
+    else if(c.type==='horseshoe')spr=S.horseshoe;
     ds(ctx,spr,cx2,c.y,c.w,c.h,false);
   }
   // pony
@@ -765,18 +806,9 @@ function drL1(){
   ctx.fillText('💰'+save.coins,95,94);
   ctx.fillStyle='#f44';ctx.font='bold 15px "PingFang SC","Microsoft YaHei",Arial,sans-serif';
   ctx.fillText('❤'.repeat(l1.lives),W-90,25);
-  ctx.textAlign='right';
-  if(l1.bigT>0){ctx.fillStyle='#fd4';ctx.font='bold 12px "PingFang SC","Microsoft YaHei",Arial,sans-serif';ctx.fillText('🥞 吃饼变大 撞飞一切!',W-15,50);}
-  else if(l1.boostT>0){ctx.fillStyle='#fd4';ctx.font='bold 12px "PingFang SC","Microsoft YaHei",Arial,sans-serif';ctx.fillText('⚡加速冲刺! 小心别撞上!',W-15,50);}
-  else if(l1.slowT>0){ctx.fillStyle='#6ff';ctx.font='bold 12px "PingFang SC","Microsoft YaHei",Arial,sans-serif';ctx.fillText('🎧 慢动作',W-15,50);}
-  else if(l1.inv>120&&af%4<2){ctx.fillStyle='#6ff';ctx.font='bold 12px "PingFang SC","Microsoft YaHei",Arial,sans-serif';ctx.fillText('🛡️ 无敌下班中!',W-15,50);}
+  // 道具效果只通过角色闪烁、速度和粒子表达，不显示文字说明
   if(!l1.win&&l1.spd>3.5){ctx.strokeStyle='#fff4';ctx.lineWidth=1;for(let i=0;i<4;i++){const s2=Math.random()*W;ctx.beginPath();ctx.moveTo(s2,Math.random()*H*0.6);ctx.lineTo(s2+15,Math.random()*H*0.6);ctx.stroke();}}
-  // banner
-  if(l1.bannerT>0&&!l1.win){ctx.fillStyle='#000a';ctx.fillRect(0,H/2-24,W,48);ctx.fillStyle='#fd4';ctx.font='bold 16px "PingFang SC","Microsoft YaHei",Arial,sans-serif';ctx.textAlign='center';ctx.fillText(l1.banner,W/2,H/2+5);}
   ctx.restore();
-  // v2.17: 车道指示 UI 已移除——手机用上下滑动切道
-  ctx.fillStyle='#888';ctx.font='12px "PingFang SC","Microsoft YaHei",Arial,sans-serif';ctx.textAlign='center';
-  ctx.fillText('上滑/下滑换道 · 双击跳跃',W/2,H-10);
   drawMuteBtn(ctx,W-34,34);
   // back to menu button
   ctx.fillStyle='#3a3a52';ctx.fillRect(10,10,72,32);
@@ -798,12 +830,12 @@ function drL1(){
     if(l1.stage<2){
       ctx.fillText(L1_LV[l1.stage]+' 通关!',W/2,H/2-70);
       ctx.fillStyle='#fff';ctx.font='16px "PingFang SC","Microsoft YaHei",Arial,sans-serif';
-      ctx.fillText('下一关 '+L1_LV[l1.stage+1]+' 已解锁!',W/2,H/2-32);
+      ctx.fillText('下一段路马上开始',W/2,H/2-32);
       ctx.fillText('剩余 ❤×'+l1.lives+'  分数 '+l1.score,W/2,H/2-4);
       ctx.fillStyle='#f84';ctx.font='bold 14px "PingFang SC","Microsoft YaHei",Arial,sans-serif';
-      ctx.fillText('运势测试: '+l1.luckLine,W/2,H/2+24);
+      ctx.fillText(l1.luckLine,W/2,H/2+24);
       ctx.fillStyle='#fd4';ctx.font='bold 15px "PingFang SC","Microsoft YaHei",Arial,sans-serif';
-      ctx.fillText('点击返回关卡选择',W/2,H/2+64);
+      ctx.fillText('点击立即继续',W/2,H/2+64);
     }else{
       ctx.fillText('全部通关! 🏆',W/2,H/2-80);
       ctx.fillStyle='#fff';ctx.font='16px "PingFang SC","Microsoft YaHei",Arial,sans-serif';
@@ -811,7 +843,7 @@ function drL1(){
       ctx.fillText('分数 '+l1.score,W/2,H/2-14);
       l1.luckLine=l1.luckLine||pickL1LuckLine(l1.score,l1.lives);
       ctx.fillStyle='#f84';ctx.font='bold 14px "PingFang SC","Microsoft YaHei",Arial,sans-serif';
-      ctx.fillText('运势测试: '+l1.luckLine,W/2,H/2+14);
+      ctx.fillText(l1.luckLine,W/2,H/2+14);
       ds(ctx,S.horse_coin,W/2-16,H/2+8,32,32,false);
       ctx.fillText('+100 马币',W/2,H/2+56);
       ctx.fillStyle='#fd4';ctx.font='bold 15px "PingFang SC","Microsoft YaHei",Arial,sans-serif';
@@ -1804,7 +1836,11 @@ function handleTap(mx,my){
     if(mx>10&&mx<82&&my>10&&my<42){gs='menu';startBGM(0);return;}
     if(l1.sel){l1SelTap(mx,my);return;}
     if(l1.go){l1.go=false;l1.sel=true;l1.cont=false;return;}
-    if(l1.win){l1.win=false;l1.sel=true;l1.cont=true;return;}
+    if(l1.win){
+      if(l1.stage<2){l1.cont=true;l1Start(l1.stage+1);}
+      else{l1.win=false;l1.sel=true;l1.cont=false;}
+      return;
+    }
     return;
   }
   if(gs==='level2'){
