@@ -220,7 +220,7 @@ const SHOP=[
 ];
 
 // ===== INPUT =====
-const inp={keys:{},ts:[],js:{a:false,x:0,y:0,bx:0,by:0},dt:false,dtimer:0,lt:0,ls:'',menuX:0,menuY:0,menuTap:false,rightDown:false,leftDown:false,sx0:0,sy0:0,tap:false,tapT:0,tS:{},mDown:false,mT:0}; // v2.19: tap=单击跳跃标记(tapT 帧内有效), tS=触屏按点起点, mDown/mT=鼠标按下状态
+const inp={keys:{},ts:[],js:{a:false,x:0,y:0,bx:0,by:0},dt:false,dtimer:0,lt:0,ls:'',menuX:0,menuY:0,menuTap:false,rightDown:false,leftDown:false,crouchDown:false,l2JoyId:null,joyX:0,joyY:0,mouseRole:'',sx0:0,sy0:0,tap:false,tapT:0,tS:{},mDown:false,mT:0};
 let nameEditing=false;
 const nameInput=document.getElementById('nameInput');
 const nameOk=document.getElementById('nameOk');
@@ -230,6 +230,20 @@ nameOk.addEventListener('click',()=>{
   nameEditing=false;nameInput.style.display='none';nameOk.style.display='none';
 });
 nameInput.addEventListener('keydown',e=>{if(e.key==='Enter')nameOk.click();});
+
+const L2_CTRL={jx:82,jy:H-72,jr:52,jumpX:W-62,jumpY:H-105,jumpR:43,crouchX:W-150,crouchY:H-55,crouchR:34};
+function l2SetJoy(tx,ty){
+  let dx=tx-L2_CTRL.jx,dy=ty-L2_CTRL.jy;
+  const d=Math.hypot(dx,dy)||1,lim=L2_CTRL.jr;
+  if(d>lim){dx=dx/d*lim;dy=dy/d*lim;}
+  inp.joyX=Math.max(-1,Math.min(1,dx/lim));inp.joyY=Math.max(-1,Math.min(1,dy/lim));
+}
+function l2ControlRole(tx,ty){
+  if(Math.hypot(tx-L2_CTRL.jumpX,ty-L2_CTRL.jumpY)<=L2_CTRL.jumpR+14)return 'jump';
+  if(Math.hypot(tx-L2_CTRL.crouchX,ty-L2_CTRL.crouchY)<=L2_CTRL.crouchR+14)return 'crouch';
+  if(tx<W*0.52&&ty>H-185)return 'joy';
+  return '';
+}
 
 function si(cv){
   window.addEventListener('keydown',e=>{inp.keys[e.key]=true;ia();});
@@ -253,11 +267,11 @@ function si(cv){
     }
     if(gs==='level2'){
       for(const t of e.changedTouches){
-        const tx=(t.clientX-rc.left)*sx;
-        inp.tS[t.identifier]={x:tx,y:(t.clientY-rc.top)*sx,t:Date.now()}; // v2.19: 记录按点起点，用于区分「长按移动」与「单击跳跃」
-        if(tx<W/3)inp.leftDown=true;
-        else if(tx<W*2/3)inp.rightDown=true;
-        else{inp.dt=true;inp.dtimer=10;}
+        const tx=(t.clientX-rc.left)*sx,ty=(t.clientY-rc.top)*sx,role=l2ControlRole(tx,ty);
+        inp.tS[t.identifier]={x:tx,y:ty,t:Date.now(),role};
+        if(role==='joy'){inp.l2JoyId=t.identifier;l2SetJoy(tx,ty);}
+        else if(role==='jump'){inp.dt=true;inp.dtimer=10;}
+        else if(role==='crouch')inp.crouchDown=true;
       }
     }
   },{passive:false});
@@ -266,9 +280,13 @@ function si(cv){
     if(gs==='menu'||gs==='shop')return;
     const rc=cv.getBoundingClientRect(),sx=W/rc.width;
     if(gs==='level2'){
-      let la=false,ra=false;
-      for(const t of e.touches){const tx=(t.clientX-rc.left)*sx;if(tx<W/3)la=true;else if(tx<W*2/3)ra=true;}
-      inp.rightDown=ra;inp.leftDown=la;return;
+      let crouch=false;
+      for(const t of e.touches){
+        const tx=(t.clientX-rc.left)*sx,ty=(t.clientY-rc.top)*sx,meta=inp.tS[t.identifier];
+        if(meta&&meta.role==='joy'&&t.identifier===inp.l2JoyId)l2SetJoy(tx,ty);
+        if(meta&&meta.role==='crouch')crouch=true;
+      }
+      inp.crouchDown=crouch;return;
     }
     // v2.17: L1/L3 无需拖拽摇杆（L1 滑动切道 / L3 滑动移动），level2 已在上方处理
   },{passive:false});
@@ -292,11 +310,14 @@ function si(cv){
       return;
     }
     if(gs==='level2'){
-      // L2 独立三键触控：左 / 右 / 跳，松手只清除移动方向。
-      let la=false,ra=false;
-      for(const t of e.changedTouches)delete inp.tS[t.identifier];
-      for(const t of e.touches){const tx=(t.clientX-rc.left)*sx;if(tx<W/3)la=true;else if(tx<W*2/3)ra=true;}
-      inp.rightDown=ra;inp.leftDown=la;return;
+      for(const t of e.changedTouches){
+        const meta=inp.tS[t.identifier];
+        if(meta&&meta.role==='joy'&&t.identifier===inp.l2JoyId){inp.l2JoyId=null;inp.joyX=0;inp.joyY=0;}
+        delete inp.tS[t.identifier];
+      }
+      inp.crouchDown=false;
+      for(const t of e.touches){const meta=inp.tS[t.identifier];if(meta&&meta.role==='crouch')inp.crouchDown=true;}
+      return;
     }
     inp.rightDown=false;inp.leftDown=false;inp.js.a=false;inp.js.x=0;inp.js.y=0;
     // L1：上下滑动切换车道；未形成滑动的单次点击直接跳跃
@@ -308,8 +329,8 @@ function si(cv){
       }
     }
   },{passive:false});
-  cv.addEventListener('touchcancel',()=>{inp.js.a=false;inp.js.x=0;inp.js.y=0;inp.menuTap=false;inp.rightDown=false;inp.leftDown=false;inp.tS={};inp.mDown=false;}); // v2.19: 清理按点记录
-  // v2.19: 鼠标端同样支持「长按左右移动 + 单击跳跃」（左半屏→左移，右半屏→右移，快速单击→跳跃）
+  cv.addEventListener('touchcancel',()=>{inp.js.a=false;inp.js.x=0;inp.js.y=0;inp.menuTap=false;inp.rightDown=false;inp.leftDown=false;inp.crouchDown=false;inp.l2JoyId=null;inp.joyX=0;inp.joyY=0;inp.tS={};inp.mDown=false;inp.mouseRole='';});
+  // 鼠标端也可拖动轮盘并点击跳跃/下蹲按钮，键盘仍可使用方向键
   cv.addEventListener('mousedown',e=>{
     ia();
     if(gs!=='level2')return;
@@ -317,18 +338,21 @@ function si(cv){
     if(mx>10&&mx<82&&my>10&&my<42)return; // 返回菜单按钮区域不触发移动
     if(isMuteTap(mx,my))return; // 静音按钮区域不触发移动
     inp.mDown=true;inp.mT=Date.now();
-    if(mx<W/2){inp.leftDown=true;inp.rightDown=false;}
-    else{inp.rightDown=true;inp.leftDown=false;}
+    inp.mouseRole=l2ControlRole(mx,my);
+    if(inp.mouseRole==='joy')l2SetJoy(mx,my);
+    else if(inp.mouseRole==='jump'){inp.dt=true;inp.dtimer=10;}
+    else if(inp.mouseRole==='crouch')inp.crouchDown=true;
+  });
+  cv.addEventListener('mousemove',e=>{
+    if(gs!=='level2'||!inp.mDown||inp.mouseRole!=='joy')return;
+    const rc=cv.getBoundingClientRect(),mx=(e.clientX-rc.left)*(W/rc.width),my=(e.clientY-rc.top)*(W/rc.width);
+    l2SetJoy(mx,my);
   });
   cv.addEventListener('mouseup',e=>{
-    if(gs!=='level2'){inp.mDown=false;inp.leftDown=false;inp.rightDown=false;return;}
-    const rc=cv.getBoundingClientRect(),mx=(e.clientX-rc.left)*(W/rc.width),my=(e.clientY-rc.top)*(W/rc.width);
-    if(inp.mDown&&Date.now()-inp.mT<350&&!(mx>10&&mx<82&&my>10&&my<42)&&!isMuteTap(mx,my)){
-      inp.tap=true;inp.tapT=12; // v2.20: 鼠标端同步放宽单击判定(220→350ms, 缓冲8→12帧)
-    }
-    inp.mDown=false;inp.leftDown=false;inp.rightDown=false;
+    if(gs!=='level2'){inp.mDown=false;inp.leftDown=false;inp.rightDown=false;inp.crouchDown=false;inp.mouseRole='';return;}
+    inp.mDown=false;inp.leftDown=false;inp.rightDown=false;inp.crouchDown=false;inp.joyX=0;inp.joyY=0;inp.mouseRole='';
   });
-  cv.addEventListener('mouseleave',()=>{inp.mDown=false;inp.leftDown=false;inp.rightDown=false;});
+  cv.addEventListener('mouseleave',()=>{inp.mDown=false;inp.leftDown=false;inp.rightDown=false;inp.crouchDown=false;inp.joyX=0;inp.joyY=0;inp.mouseRole='';});
 }
 
 // ===== PARTICLES =====
@@ -484,6 +508,7 @@ const L1_BANNER=['','',''];
 const L1_GOAL=[10800,12600,14400];
 const L1_LV=['第1关','第2关','第3关'];
 const L1_DESC=['办公室','会议室','停车场'];
+const L1_ITEMS=[['badge','coffee'],['burger','clockout'],['headset']];
 // 运势测试语录：根据得分和剩余生命随机调侃
 const L1_LUCK={
   god:['你今天踩了狗屎运才能通关吧','运气也是实力，你这实力藏不住了','今日宜下班，宜摸鱼，宜通关','这运气，买彩票去吧','老板看了都羡慕你的走位'],
@@ -626,7 +651,12 @@ function uL1(){
       if(!ok)l1.obs.pop();
       return ok;
     };
-    if(r<0.76){
+    if(l1.stage===2&&!l1.horseGiven&&l1.dist>l1.goal*0.55){
+      const lane=Math.floor(Math.random()*3),ix=l1.dist+W+60;
+      l1.coll.push({x0:ix,y:l1.ly[lane]-30,type:'horseshoe',w:38,h:38,collected:false,fromLane:lane,toLane:lane,phase:0});
+      l1.horseGiven=true;
+    }
+    else if(r<0.76){
       const pools=[
         [{t:'papers',w:52,h:44,p:0.20},{t:'printer',w:56,h:52,p:0.16},{t:'hr',w:44,h:60,p:0.14},{t:'phone',w:42,h:46,p:0.18},{t:'stain',w:58,h:22,p:0.18},{t:'broom',w:42,h:58,p:0.14}],
         [{t:'desk',w:84,h:58,p:0.16},{t:'slider',w:44,h:54,p:0.20},{t:'notebook',w:40,h:40,p:0.12},{t:'boss',w:52,h:58,p:0.10},{t:'blackpot',w:54,h:42,p:0.16},{t:'eraser',w:48,h:28,p:0.14},{t:'papers',w:52,h:44,p:0.12}],
@@ -643,11 +673,8 @@ function uL1(){
     }
     else if(r<0.84){ // 道具保持稀少，后两关会在相邻车道间移动
       let type;
-      if(!l1.horseGiven&&l1.dist>l1.goal*0.55&&Math.random()<0.16){type='horseshoe';l1.horseGiven=true;}
-      else{
-        const rewards=['badge','burger','coffee','clockout'];
-        type=rewards[Math.floor(Math.random()*rewards.length)];
-      }
+      const rewards=L1_ITEMS[l1.stage];
+      type=rewards[Math.floor(Math.random()*rewards.length)];
       let ilane=Math.floor(Math.random()*3);
       const ix=l1.dist+W+60;
       for(const o of l1.obs){ // 道具尽量不塞进障碍身上
@@ -674,7 +701,7 @@ function uL1(){
       if(!laneBlocked(lanes[0],sx1,a.t,a.w))tryPlace(a.t,a.w,a.h,lanes[0],sx1);
       if(!laneBlocked(lanes[1],sx2,b.t,b.w))tryPlace(b.t,b.w,b.h,lanes[1],sx2);
       if(l1.patternN%2===0){
-        const rt=['badge','coffee','burger'][Math.floor(Math.random()*3)];
+        const rp=L1_ITEMS[l1.stage],rt=rp[Math.floor(Math.random()*rp.length)];
         l1.coll.push({x0:sx1+30,y:l1.ly[safe]-30,type:rt,w:34,h:34,collected:false,fromLane:safe,toLane:safe,phase:0});
       }
     }
@@ -977,7 +1004,7 @@ function rL2(){
   // 每一关都随机：三关背景色调顺序洗牌；标语每关/每次随机；地图布局由 genL2 随机生成
   const bgOrder=[0,1,2];
   for(let i=2;i>0;i--){const j=Math.floor(Math.random()*(i+1));const t=bgOrder[i];bgOrder[i]=bgOrder[j];bgOrder[j]=t;}
-  l2={stage:0,bgOrder:bgOrder,posters:shuffledPosters(),p:{x:60,y:250,vx:0,vy:0,w:34,h:44,gnd:false,face:1},grav:0.5,jumpV:-16*jb,lives:3+el,score:0,big:false,horse:false,shield:0,slowT:0,doorT:0,boostT:0,burdenT:0,inv:0,go:false,won:false,cam:0,part:[],floats:[],bossT:0,bossDone:false,overSaved:false,winSaved:false,heartGiven:false,piesEaten:0,piesTotal:0};
+  l2={stage:0,bgOrder:bgOrder,posters:shuffledPosters(),p:{x:60,y:250,vx:0,vy:0,w:34,h:44,gnd:false,face:1,crouch:false},grav:0.5,jumpV:-16*jb,lives:3+el,score:0,big:false,horse:false,shield:0,slowT:0,doorT:0,boostT:0,burdenT:0,inv:0,go:false,won:false,cam:0,part:[],floats:[],bossT:0,bossDone:false,overSaved:false,winSaved:false,heartGiven:false,piesEaten:0,piesTotal:0};
   genL2();
 }
 function genL2(){
@@ -1081,7 +1108,7 @@ function genL2(){
     ox+=(300-st*35)+Math.random()*(220-st*30);
   }
   if(potCount===0)l2.obs.push({x:Math.min(lw-1050,980+st*160),y:-70,type:'fallpot',w:54,h:42,vy:0,state:'wait',targetY:l2.gy-42,ph:0});
-  l2.p.x=60;l2.p.y=250;l2.p.vx=0;l2.p.vy=0;
+  l2.p.x=60;l2.p.y=250;l2.p.vx=0;l2.p.vy=0;l2.p.h=44;l2.p.crouch=false;
 }
 function l2UpdPlats(){
   for(const pl of l2.plats){
@@ -1188,13 +1215,18 @@ function uL2(){
   l2.floats=l2.floats.filter(f=>f.t>0);
   // Input
   if(inp.tapT>0){inp.tapT--;if(inp.tapT===0)inp.tap=false;}
-  const runSpd=(l2.boostT>0?5.5:4.5)*(l2.burdenT>0?0.58:1);
+  const crouchWanted=inp.crouchDown||inp.keys['ArrowDown']||inp.keys['s'];
+  if(crouchWanted&&l2.p.gnd&&!l2.p.crouch){l2.p.y+=18;l2.p.h=26;l2.p.crouch=true;}
+  else if(!crouchWanted&&l2.p.crouch){l2.p.y-=18;l2.p.h=44;l2.p.crouch=false;}
+  const runSpd=(l2.boostT>0?5.5:4.5)*(l2.burdenT>0?0.58:1)*(l2.p.crouch?0.68:1);
   if(inp.keys['ArrowLeft']||inp.keys['a']){l2.p.vx=-runSpd;l2.p.face=-1;}
   else if(inp.keys['ArrowRight']||inp.keys['d']){l2.p.vx=runSpd;l2.p.face=1;}
   else l2.p.vx*=0.8;
+  if(Math.abs(inp.joyX)>0.12){l2.p.vx=runSpd*inp.joyX;l2.p.face=inp.joyX<0?-1:1;}
   if(inp.rightDown){l2.p.vx=runSpd;l2.p.face=1;}
   if(inp.leftDown){l2.p.vx=-runSpd;l2.p.face=-1;}
-  if((inp.keys[' ']||inp.keys['ArrowUp']||inp.keys['w']||inp.dt||inp.tap)&&l2.p.gnd){l2.p.vy=l2.jumpV*(l2.boostT>0?1.08:1)*(l2.burdenT>0?0.58:1);l2.p.gnd=false;sj();inp.dt=false;inp.tap=false;inp.tapT=0;inp.keys[' ']=false;inp.keys['ArrowUp']=false;inp.keys['w']=false;}
+  if((inp.keys[' ']||inp.keys['ArrowUp']||inp.keys['w']||inp.dt||inp.tap)&&l2.p.gnd&&!l2.p.crouch){l2.p.vy=l2.jumpV*(l2.boostT>0?1.08:1)*(l2.burdenT>0?0.58:1);l2.p.gnd=false;sj();inp.dt=false;inp.tap=false;inp.tapT=0;inp.keys[' ']=false;inp.keys['ArrowUp']=false;inp.keys['w']=false;}
+  else if(l2.p.crouch&&(inp.dt||inp.tap||inp.keys[' ']||inp.keys['ArrowUp']||inp.keys['w'])){inp.dt=false;inp.tap=false;inp.tapT=0;inp.keys[' ']=false;inp.keys['ArrowUp']=false;inp.keys['w']=false;}
   // Physics
   l2.p.vy+=l2.grav;l2.p.x+=l2.p.vx;l2.p.y+=l2.p.vy;l2.p.gnd=false;
   l2UpdPlats();
@@ -1228,7 +1260,7 @@ function uL2(){
       l2Hurt();
       if(!l2.go){l2.p.vy=-9;l2.p.gnd=false;}
     }
-    if(z.type==='ground'&&l2.p.y<l2.gy-92){
+    if(z.type==='ground'&&!l2.p.crouch&&l2.p.x>z.x+18&&l2.p.x+l2.p.w<z.x+z.w-18){
       l2Hurt();
       if(!l2.go){l2.p.vy=3;}
     }
@@ -1371,8 +1403,8 @@ function drL2(){
       ctx.fillStyle='#fff';ctx.font='bold 20px Arial';ctx.textAlign='center';ctx.fillText('↑',zx+z.w/2,l2.gy+25);
     }else{
       ctx.fillStyle='rgba(255,190,50,0.1)';ctx.fillRect(zx,l2.gy-125,z.w,125);
-      const scanY=l2.gy-108+Math.sin(z.ph*0.045)*12;
-      ctx.fillStyle='rgba(255,60,60,0.18)';ctx.fillRect(zx,scanY-12,z.w,24);
+      const scanY=l2.gy-36+Math.sin(z.ph*0.045)*3;
+      ctx.fillStyle='rgba(255,60,60,0.18)';ctx.fillRect(zx,scanY-8,z.w,16);
       ctx.fillStyle='#f44';ctx.fillRect(zx,scanY-2,z.w,4);
       ctx.fillStyle='#fff';ctx.font='bold 20px Arial';ctx.textAlign='center';ctx.fillText('↓',zx+z.w/2,l2.gy-25);
     }
@@ -1521,11 +1553,12 @@ function drL2(){
   let spr=S.pony_flat;
   if(!l2.p.gnd)spr=S.pony_jump;
   else if(l2.p.vx!==0&&af%10<5)spr=S.pony_run1;
+  if(l2.p.crouch)spr=S.pony_flat;
   if(l2.big)spr=S.pony_chubby;
   if(l2.inv>0&&af%4<2)ctx.globalAlpha=0.5;
-  const pw=l2.big?l2.p.w+22:l2.p.w+8;
-  const ph2=l2.big?l2.p.h+20:l2.p.h+8;
-  ds(ctx,spr,l2.p.x-bx,l2.p.y-8,pw,ph2,l2.p.face<0);
+  const pw=l2.p.crouch?(l2.big?54:44):(l2.big?l2.p.w+22:l2.p.w+8);
+  const ph2=l2.p.crouch?(l2.big?38:30):(l2.big?l2.p.h+20:l2.p.h+8);
+  ds(ctx,spr,l2.p.x-bx,l2.p.y-(l2.p.crouch?4:8),pw,ph2,l2.p.face<0);
   if(l2.burdenT>0){
     const potX=l2.p.x-bx+(l2.p.face<0?18:8),potY=l2.p.y+8;
     ds(ctx,S.blackpot,potX,potY,30,23,l2.p.face<0);
@@ -1554,15 +1587,17 @@ function drL2(){
   // progress
   ctx.textAlign='right';ctx.fillStyle='#888';ctx.font='12px "PingFang SC","Microsoft YaHei",Arial,sans-serif';
   ctx.fillText('进度 '+Math.floor(l2.p.x/l2.lw*100)+'%',W-15,48);
-  // Mobile touch controls: left third, middle third, right third.
-  ctx.globalAlpha=0.42;
-  const cy=H-58;
-  ctx.fillStyle='#24283d';ctx.beginPath();ctx.arc(62,cy,36,0,Math.PI*2);ctx.fill();
-  ctx.beginPath();ctx.arc(154,cy,36,0,Math.PI*2);ctx.fill();
-  ctx.fillStyle='#1e8f8f';ctx.beginPath();ctx.arc(W-60,cy,42,0,Math.PI*2);ctx.fill();
-  ctx.globalAlpha=0.9;ctx.fillStyle='#fff';ctx.font='bold 25px Arial';ctx.textAlign='center';
-  ctx.fillText('‹',62,cy+9);ctx.fillText('›',154,cy+9);ctx.fillText('↑',W-60,cy+9);
-  ctx.globalAlpha=1;
+  // 半透明虚拟轮盘 + 跳跃/下蹲，保留尽可能多的可视区域
+  ctx.save();ctx.globalAlpha=0.24;
+  ctx.fillStyle='#202538';ctx.beginPath();ctx.arc(L2_CTRL.jx,L2_CTRL.jy,L2_CTRL.jr,0,Math.PI*2);ctx.fill();
+  ctx.strokeStyle='#fff';ctx.lineWidth=2;ctx.beginPath();ctx.arc(L2_CTRL.jx,L2_CTRL.jy,L2_CTRL.jr-4,0,Math.PI*2);ctx.stroke();
+  const knobX=L2_CTRL.jx+inp.joyX*28,knobY=L2_CTRL.jy+inp.joyY*18;
+  ctx.globalAlpha=0.38;ctx.fillStyle='#dfe8ef';ctx.beginPath();ctx.arc(knobX,knobY,23,0,Math.PI*2);ctx.fill();
+  ctx.globalAlpha=inp.dt?0.48:0.25;ctx.fillStyle='#1e9a9a';ctx.beginPath();ctx.arc(L2_CTRL.jumpX,L2_CTRL.jumpY,L2_CTRL.jumpR,0,Math.PI*2);ctx.fill();
+  ctx.globalAlpha=inp.crouchDown?0.48:0.25;ctx.fillStyle='#685f78';ctx.beginPath();ctx.arc(L2_CTRL.crouchX,L2_CTRL.crouchY,L2_CTRL.crouchR,0,Math.PI*2);ctx.fill();
+  ctx.globalAlpha=0.72;ctx.fillStyle='#fff';ctx.font='bold 24px Arial';ctx.textAlign='center';
+  ctx.fillText('↔',L2_CTRL.jx,L2_CTRL.jy+8);ctx.fillText('↑',L2_CTRL.jumpX,L2_CTRL.jumpY+8);ctx.fillText('↓',L2_CTRL.crouchX,L2_CTRL.crouchY+8);
+  ctx.restore();
   ctx.restore();
   if(l2.go||l2.won){ctx.fillStyle='#000a';ctx.fillRect(0,0,W,H);
     ctx.fillStyle=l2.won?'#fd4':'#f44';ctx.font='bold 30px "PingFang SC","Microsoft YaHei",Arial,sans-serif';ctx.textAlign='center';
