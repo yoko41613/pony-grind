@@ -679,7 +679,7 @@ function uL1(){
       }
     }
   }}
-  
+
 // Update obstacles (screen x = x0 + sw - dist)
   let px=120+(l1.rideX||0);const pw=44,ph=56;let py=l1.py;
   if(!raceOver){for(const o of l1.obs){
@@ -696,7 +696,7 @@ function uL1(){
     else if(o.t==='boss'){o.x0+=o.dir*o.spd;if(o.x0<o.origX-80||o.x0>o.origX+80)o.dir*=-1;}
     const ox=o.x0+o.sw-l1.dist;
     if(o===l1.chairRide){
-      l1.rideX=Math.max(-48,Math.min(W-210,ox-120));
+      l1.rideX=Math.max(-70,Math.min(W-210,ox-120));
       px=120+l1.rideX;
     }
     if(l1.jump&&l1.jl!=null&&o.lane<Math.min(l1.jl,l1.pl))continue; // v2.13: 跳跃时不再误伤上一条车道的障碍
@@ -709,11 +709,17 @@ function uL1(){
         o.dead=true;l1.score+=20;save.coins+=2;sv(save);sc();
         spP(ox+o.w/2,o.y+o.h/2,10,'#fd4',l1.part,6,6,22);
       }else if(o.t==='stain'&&!o.used&&l1.inv<=0){
-        o.used=true;o.dead=true;l1.dizzyT=300;l1.stumbleT=22;l1.inv=Math.max(l1.inv,36);shake=7;sh();
+        o.used=true;o.dead=true;
+        // 咖啡渍把小马滑进相邻跑道：中路随机，上下边路只能向内滑。
+        if(l1.pl===0)l1.pl=1;
+        else if(l1.pl===2)l1.pl=1;
+        else l1.pl=Math.random()<0.5?0:2;
+        l1.dizzyT=300;l1.stumbleT=34;l1.inv=Math.max(l1.inv,44);shake=7;sh();
         spP(px+pw/2,py+ph/2,10,'#c87942',l1.part,8,4,26);
       }else if(o.t==='slider'&&!o.ridden&&l1.chairRideT<=0&&l1.inv<=0){
-        o.ridden=true;o.riding=true;o.rideScreenV=Math.cos(l1.dist*0.02+o.ph)>=0?1.9:-1.9;
-        o.lane=l1.pl;o.y=l1.ly[l1.pl];l1.chairRide=o;l1.chairRideT=105;l1.inv=Math.max(l1.inv,112);
+        // 坐上椅子后固定向画面左侧倒退，不再随机前后移动。
+        o.ridden=true;o.riding=true;o.rideScreenV=-0.75;
+        o.lane=l1.pl;o.y=l1.ly[l1.pl];l1.chairRide=o;l1.chairRideT=96;l1.inv=Math.max(l1.inv,104);
         l1.jump=false;l1.gnd=true;l1.pvy=0;l1.py=l1.ly[l1.pl];shake=5;sh();
       }else if(l1.inv<=0){
         l1.lives--;l1.inv=60;shake=15;sh();
@@ -763,10 +769,12 @@ function drL1(){
   ctx.save();ctx.translate(sx,sy);
   const stg=l1.stage;
   ctx.fillStyle=L1_BG[stg];ctx.fillRect(0,0,W,H);
-  // 每关使用一张固定背景；关内不再循环切换或横向漂移
+  // 每关始终使用自己的固定主题图，但随奔跑持续向左滚动。
   const bgImg=stg===0?IMG_L1P1:stg===1?IMG_L1P2:IMG_L1P3;
   if(bgImg&&bgImg.complete){
-    ctx.drawImage(bgImg,0,0,W,H);
+    const bgShift=-((l1.cam*0.12)%W);
+    ctx.drawImage(bgImg,bgShift,0,W,H);
+    ctx.drawImage(bgImg,bgShift+W,0,W,H);
   }else{
     ctx.fillStyle=L1_BG[stg];ctx.fillRect(0,0,W,H);
   }
@@ -1029,7 +1037,7 @@ function genL2(){
   // boss arena: boss fights on the GROUND
   const bp={x:lw-640,y:l2.gy,w:540,h:0};
   l2.bp=bp;
-  l2.boss={x:lw-500,y:l2.gy-56,w:52,h:56,hp:3+Math.floor(Math.random()*3),dir:1,spd:1.4+st*0.5,t:0,atks:[],hit:0,active:false,dead:false}; // v2.16: BOSS 血量 2-3 → 3-5，每场都不同
+  l2.boss={x:lw-500,y:l2.gy-56,w:52,h:56,hp:3+Math.floor(Math.random()*3),dir:1,spd:1.4+st*0.5,t:0,atks:[],hit:0,active:false,dead:false,label:['老板','甲方','超级BOSS'][st]}; // 三关分别显示对应 BOSS 身份
   // shelter elevator inside boss arena (hide from boss attacks)
   l2.bpElev={x:bp.x+28,y:l2.gy-110,w:64,h:110,ph:0};
   // floating platform above the arena — hidden horseshoe coin sits on it (needed to attack the boss)
@@ -1112,7 +1120,8 @@ function l2UpdElevator(ob,st,boss=false){
   else ob.gap=56;
   ob.open=ob.gap>28;
 }
-function l2ScanY(z){return l2.gy-118+Math.sin(z.ph*0.045)*82;}
+// 光束保留上下扫描，但最低点仍高于贴地角色；贴地跑可稳定通过，跳起才会碰线。
+function l2ScanY(z){return l2.gy-130+Math.sin(z.ph*0.036)*72;}
 function l2Collect(c){
   c.collected=true;
   if(c.type==='pancake'){
@@ -1511,6 +1520,8 @@ function drL2(){
     if(b.hit>0&&af%3<2)ctx.globalAlpha=0.5;
     ds(ctx,S.boss_suit,bx2,b.y,b.w,b.h,false);
     ctx.globalAlpha=1;
+    ctx.fillStyle='#c22';ctx.font='bold 13px "PingFang SC","Microsoft YaHei",Arial,sans-serif';ctx.textAlign='center';
+    ctx.fillText(b.label,bx2+b.w/2,b.y-23);
     // hp hearts
     for(let i=0;i<3;i++){
       ctx.fillStyle=i<b.hp?'#f44':'#444';
