@@ -548,19 +548,84 @@ function pickL1LuckLine(score,lives){
   if(lives>=1&&score>=50)return L1_LUCK.normal[Math.floor(Math.random()*L1_LUCK.normal.length)];
   return L1_LUCK.bad[Math.floor(Math.random()*L1_LUCK.bad.length)];
 }
+// v4.3: 障碍生成工具提到全局——开局预热要复用，且保证三关的锅参数完全一致（同一尺寸、同一坠落高度）
+const POT_W=54,POT_H=42,POT_DROP=300;
+const L1_EXT={slider:62,desk:36,notebook:28,boss:80,hr:16,phone:28,whiteboard:16,blackpot:30};
+function l1ExtOf(o){return o.t==='boss'?80:(o.amp||0);}
+function l1MkObs(t,w,h,lane,sx){
+  const ob={t,w,h,x0:sx,lane,y:l1.ly[lane],sw:0};
+  if(t==='car')ob.vspd=l1.bs*1.4;
+  else if(t==='boss_car')ob.vspd=l1.bs*0.35;
+  else if(t==='slider'){ob.amp=32+Math.random()*30;ob.ph=Math.random()*6.28;}
+  else if(t==='desk'){ob.amp=24+Math.random()*12;ob.ph=Math.random()*6.28;}
+  else if(t==='notebook'){ob.amp=16+Math.random()*12;ob.ph=Math.random()*6.28;}
+  else if(t==='hr'){ob.amp=16;ob.ph=Math.random()*6.28;}
+  else if(t==='phone'){ob.amp=18+Math.random()*10;ob.ph=Math.random()*6.28;}
+  else if(t==='whiteboard'){ob.amp=10+Math.random()*8;ob.ph=Math.random()*6.28;}
+  else if(t==='blackpot'){ob.fall=true;ob.vy=0;ob.landed=false;ob.landT=0;ob.y=l1.ly[lane]-POT_DROP;}
+  else if(t==='boss'){ob.dir=Math.random()<0.5?1:-1;ob.spd=0.8+l1.stage*0.2;ob.origX=sx;}
+  l1.obs.push(ob);
+}
+function l1LaneBlocked(lane,sx,nt,w){
+  const ne=L1_EXT[nt]||0;
+  for(const o of l1.obs){
+    if(o.lane!==lane)continue;
+    const orr=o.x0+o.sw+o.w;
+    let g=190+w*0.25+ne+l1ExtOf(o);
+    if(nt==='car')g=Math.max(g,460);
+    if(nt==='boss_car')g=Math.max(g,360);
+    if(sx<orr+g)return true;
+  }
+  return false;
+}
+function l1LaneFree(lane,a,b){
+  for(const o of l1.obs){
+    if(o.lane!==lane)continue;
+    const e=l1ExtOf(o);
+    const ol=o.x0+o.sw-e,orr=o.x0+o.sw+o.w+e;
+    if(orr>a&&ol<b)return false;
+  }
+  return true;
+}
+function l1TryPlace(t,w,h,lane,sx){
+  // v4.3: 新障碍不能压在已放好的道具上——否则道具就变成"必须撞一下才拿得到"
+  for(const c of l1.coll){
+    if(c.fromLane!==lane&&c.toLane!==lane)continue;
+    if(sx+w+60>c.x0-110&&sx-60<c.x0+110)return false;
+  }
+  l1MkObs(t,w,h,lane,sx);
+  const ne=L1_EXT[t]||0;
+  const L=(t==='car'?620:t==='boss_car'?420:260)+ne;
+  const a=sx-L,b=sx+w+260+ne;
+  let ok=false;
+  for(let ln=0;ln<3;ln++){if(l1LaneFree(ln,a,b)){ok=true;break;}}
+  if(!ok)l1.obs.pop();
+  return ok;
+}
+// v4.3: 开局预热用的温和障碍（三关一致，保证开局就有东西要躲，但不会一上来就劝退）
+const L1_OPEN=[{t:'papers',w:52,h:44},{t:'phone',w:42,h:46},{t:'stain',w:58,h:22},{t:'whiteboard',w:58,h:44}];
 function rL1(){
   let stBoost=false,stSlow=false,stInv=false;
   if(save.items.coffee>0){save.items.coffee--;stBoost=true;}
   if(save.items.headset>0){save.items.headset--;stSlow=true;}
   if(save.items.offcard>0){save.items.offcard--;stInv=true;}
   sv(save);
-  l1={py:H*0.66,pl:1,pvy:0,jump:false,gnd:true,inv:0,startInv:stInv?180:0,score:0,dist:0,cam:0,bs:2,spd:2,lives:3,obs:[],coll:[],part:[],gy:H*0.88,ly:[H*0.52,H*0.66,H*0.80],st:0,si:80,go:false,goSaved:false,boostT:0,startBoost:stBoost?180:0,bigT:0,slowT:0,startSlow:stSlow?180:0,jumpBoostT:0,dizzyT:0,stumbleT:0,chairRide:null,chairRideT:0,rideX:0,coinT:0,stage:0,goal:L1_GOAL[0],win:false,winT:0,winSaved:false,banner:'',bannerT:0,sel:true,cont:false,tip:'',tipT:0,heartGiven:false,horseGiven:false,patternN:0,lastSafe:1,luckLine:'',burdenT:0,floats:[]};
+  l1={py:H*0.66,pl:1,pvy:0,jump:false,gnd:true,inv:0,startInv:stInv?180:0,score:0,dist:0,cam:0,bs:2,spd:2,lives:3,obs:[],coll:[],part:[],gy:H*0.88,ly:[H*0.52,H*0.66,H*0.80],st:0,si:46,go:false,goSaved:false,boostT:0,startBoost:stBoost?180:0,bigT:0,slowT:0,startSlow:stSlow?180:0,jumpBoostT:0,dizzyT:0,stumbleT:0,chairRide:null,chairRideT:0,rideX:0,coinT:0,stage:0,goal:L1_GOAL[0],win:false,winT:0,winSaved:false,banner:'',bannerT:0,sel:true,cont:false,tip:'',tipT:0,heartGiven:false,horseGiven:false,patternN:0,lastSafe:1,luckLine:'',burdenT:0,floats:[]};
 }
 function l1Start(st){
   const continuing=l1.cont;
   l1.stage=st;
-  l1.dist=0;l1.cam=0;l1.obs=[];l1.coll=[];l1.st=0;l1.si=80;
+  l1.dist=0;l1.cam=0;l1.obs=[];l1.coll=[];l1.st=0;l1.si=46;
   l1.goal=L1_GOAL[st];l1.win=false;l1.winT=0;l1.sel=false;
+  // v4.3: 开局预热——第一组障碍直接摆在眼前（约 300px 后就要做选择），不再有空场
+  {
+    const o1=L1_OPEN[Math.floor(Math.random()*L1_OPEN.length)];
+    const o2=L1_OPEN[Math.floor(Math.random()*L1_OPEN.length)];
+    const ln1=Math.floor(Math.random()*3);
+    const ln2=(ln1+1+Math.floor(Math.random()*2))%3;
+    l1TryPlace(o1.t,o1.w,o1.h,ln1,430);
+    l1TryPlace(o2.t,o2.w,o2.h,ln2,640);
+  }
   l1.banner='';l1.bannerT=0;
   l1.bigT=0;l1.boostT=0;l1.inv=0;l1.slowT=0;l1.jumpBoostT=0;l1.dizzyT=0;l1.stumbleT=0;l1.chairRide=null;l1.chairRideT=0;l1.rideX=0;l1.burdenT=0;l1.floats=[];
   l1.patternN=0;l1.lastSafe=1;l1.heartGiven=false;
@@ -629,67 +694,18 @@ function uL1(){
   if(!raceOver){l1.st++;if(l1.st>l1.si){l1.st=0;l1.si=Math.max(24,72-l1.stage*7-l1.dist*0.0025);
     l1.patternN++;
     const r=Math.random();
-    // 移动物体按最坏位移参与安全通道检查，避免三道同时封死
-    const EXT={slider:62,desk:36,notebook:28,boss:80,hr:16,phone:28,whiteboard:16,blackpot:30};
-    const extOf=(o)=>o.t==='boss'?80:(o.amp||0);
-    const mkObs=(t,w,h,lane,sx)=>{
-      const ob={t,w,h,x0:sx,lane,y:l1.ly[lane],sw:0};
-      if(t==='car')ob.vspd=l1.bs*1.4;
-      else if(t==='boss_car')ob.vspd=l1.bs*0.35;
-      else if(t==='slider'){ob.amp=32+Math.random()*30;ob.ph=Math.random()*6.28;}
-      else if(t==='desk'){ob.amp=24+Math.random()*12;ob.ph=Math.random()*6.28;}     // v2.13: 会议桌缓慢滑动
-      else if(t==='notebook'){ob.amp=16+Math.random()*12;ob.ph=Math.random()*6.28;} // v2.13: 笔记本左右飘忽
-      else if(t==='hr'){ob.amp=16;ob.ph=Math.random()*6.28;}
-      else if(t==='phone'){ob.amp=18+Math.random()*10;ob.ph=Math.random()*6.28;}
-      else if(t==='whiteboard'){ob.amp=10+Math.random()*8;ob.ph=Math.random()*6.28;}
-      else if(t==='blackpot'){ob.fall=true;ob.vy=0;ob.landed=false;ob.landT=0;ob.y=l1.ly[lane]-260-Math.random()*90;} // v4.1: 锅从天上掉
-      else if(t==='boss'){ob.dir=Math.random()<0.5?1:-1;ob.spd=0.8+l1.stage*0.2;ob.origX=sx;}
-      l1.obs.push(ob);
-    };
-    // v2.13: 同车道最小间距——基础间隙提到190，并计入双方移动幅度
-    const laneBlocked=(lane,sx,nt,w)=>{
-      const ne=EXT[nt]||0;
-      for(const o of l1.obs){
-        if(o.lane!==lane)continue;
-        const orr=o.x0+o.sw+o.w;
-        let g=190+w*0.25+ne+extOf(o);
-        if(nt==='car')g=Math.max(g,460);      // 车会追上前方案碍，需要整段净空
-        if(nt==='boss_car')g=Math.max(g,360); // 老板车慢速前移，也会逐渐贴上前方案碍
-        if(sx<orr+g)return true;
-      }
-      return false;
-    };
-    // v2.13: 通道公平性保证——放置后任何窗口内必须保留至少一条完全无障碍的车道（按移动最坏幅度），
-    // 从根源上杜绝"三条道同时被堵、无论如何都避不开"的死局
-    const laneFree=(lane,a,b)=>{
-      for(const o of l1.obs){
-        if(o.lane!==lane)continue;
-        const e=extOf(o);
-        const ol=o.x0+o.sw-e,orr=o.x0+o.sw+o.w+e;
-        if(orr>a&&ol<b)return false;
-      }
-      return true;
-    };
-    const tryPlace=(t,w,h,lane,sx)=>{
-      mkObs(t,w,h,lane,sx);
-      const ne=EXT[t]||0;
-      const L=(t==='car'?620:t==='boss_car'?420:260)+ne; // 车一路左移，回看窗口更长
-      const a=sx-L,b=sx+w+260+ne;
-      let ok=false;
-      for(let ln=0;ln<3;ln++){if(laneFree(ln,a,b)){ok=true;break;}}
-      if(!ok)l1.obs.pop();
-      return ok;
-    };
     if(l1.stage===2&&!l1.horseGiven&&l1.dist>l1.goal*0.55){
       const lane=Math.floor(Math.random()*3),ix=l1.dist+W+60;
-      l1.coll.push({x0:ix,y:l1.ly[lane]-30,type:'horseshoe',w:38,h:38,collected:false,fromLane:lane,toLane:lane,phase:0});
-      l1.horseGiven=true;
+      if(l1LaneFree(lane,ix-200,ix+200)&&!l1.obs.some(o=>o.lane===lane&&(o.t==='car'||o.t==='boss_car'))){
+        l1.coll.push({x0:ix,y:l1.ly[lane]-30,type:'horseshoe',w:38,h:38,collected:false,fromLane:lane,toLane:lane,phase:0});
+        l1.horseGiven=true;
+      }
     }
     else if(r<0.76){
       const pools=[
-        [{t:'papers',w:52,h:44,p:0.20},{t:'printer',w:56,h:52,p:0.16},{t:'hr',w:44,h:60,p:0.14},{t:'phone',w:42,h:46,p:0.18},{t:'stain',w:58,h:22,p:0.18},{t:'whiteboard',w:58,h:44,p:0.14}],
-        [{t:'desk',w:84,h:58,p:0.16},{t:'slider',w:44,h:54,p:0.20},{t:'notebook',w:40,h:40,p:0.12},{t:'boss',w:52,h:58,p:0.10},{t:'blackpot',w:54,h:42,p:0.16},{t:'eraser',w:48,h:28,p:0.14},{t:'papers',w:52,h:44,p:0.12}],
-        [{t:'car',w:96,h:54,p:0.30},{t:'cone',w:34,h:44,p:0.28},{t:'boss_car',w:84,h:54,p:0.14},{t:'whiteboard',w:58,h:44,p:0.14},{t:'blackpot',w:54,h:42,p:0.14}]
+        [{t:'papers',w:52,h:44,p:0.18},{t:'printer',w:56,h:52,p:0.14},{t:'hr',w:44,h:60,p:0.13},{t:'phone',w:42,h:46,p:0.16},{t:'stain',w:58,h:22,p:0.15},{t:'whiteboard',w:58,h:44,p:0.12},{t:'blackpot',w:POT_W,h:POT_H,p:0.12}],
+        [{t:'desk',w:84,h:58,p:0.15},{t:'slider',w:44,h:54,p:0.18},{t:'notebook',w:40,h:40,p:0.11},{t:'boss',w:52,h:58,p:0.09},{t:'blackpot',w:POT_W,h:POT_H,p:0.16},{t:'eraser',w:48,h:28,p:0.13},{t:'papers',w:52,h:44,p:0.11}],
+        [{t:'car',w:96,h:54,p:0.28},{t:'cone',w:34,h:44,p:0.26},{t:'boss_car',w:84,h:54,p:0.13},{t:'whiteboard',w:58,h:44,p:0.13},{t:'blackpot',w:POT_W,h:POT_H,p:0.15}]
       ];
       const pool=pools[l1.stage];
       let rr=Math.random(),acc=0,sel=pool[pool.length-1];
@@ -697,26 +713,35 @@ function uL1(){
       const sx=l1.dist+W+80;
       const lanes=[0,1,2].sort(()=>Math.random()-0.5);
       for(const lane of lanes){
-        if(!laneBlocked(lane,sx,sel.t,sel.w)&&tryPlace(sel.t,sel.w,sel.h,lane,sx))break;
+        if(!l1LaneBlocked(lane,sx,sel.t,sel.w)&&l1TryPlace(sel.t,sel.w,sel.h,lane,sx))break;
       }
     }
     else if(r<0.84){ // 道具保持稀少，后两关会在相邻车道间移动
       let type;
       const rewards=L1_ITEMS[l1.stage];
       type=rewards[Math.floor(Math.random()*rewards.length)];
-      let ilane=Math.floor(Math.random()*3);
       const ix=l1.dist+W+60;
-      for(const o of l1.obs){ // 道具尽量不塞进障碍身上
-        if(o.lane===ilane&&Math.abs(o.x0+o.sw+o.w/2-ix)<70){ilane=(ilane+1)%3;break;}
+      // v4.3: 道具只落在"前后 200px 完全净空"的车道上——不再出现"为了吃道具必须撞障碍"的坑位
+      const cand=[0,1,2].sort(()=>Math.random()-0.5);
+      let ilane=-1;
+      // 车会一路移动，任何"当前净空"都不作数，直接排除有车的车道
+      for(const ln of cand){
+        if(l1.obs.some(o=>o.lane===ln&&(o.t==='car'||o.t==='boss_car')))continue;
+        if(l1LaneFree(ln,ix-200,ix+200)){ilane=ln;break;}
       }
+      if(ilane<0)return; // 三条道都不干净就这次不放道具
       let toLane=ilane;
-      if(l1.stage>0&&Math.random()<0.58){toLane=Math.max(0,Math.min(2,ilane+(Math.random()<0.5?-1:1)));}
+      // 道具会横移到相邻车道，那条道也必须净空
+      if(l1.stage>0&&Math.random()<0.58){
+        const cand2=Math.max(0,Math.min(2,ilane+(Math.random()<0.5?-1:1)));
+        if(l1LaneFree(cand2,ix-200,ix+200))toLane=cand2;
+      }
       l1.coll.push({x0:ix,y:l1.ly[ilane]-30,type,w:36,h:36,collected:false,fromLane:ilane,toLane,phase:Math.random()*6.28});
     }
     else{ // 两道封锁、一道放行；安全车道持续变化，始终保证可通过
       const pools2=[
         [{t:'papers',w:52,h:44},{t:'phone',w:42,h:46},{t:'stain',w:58,h:22}],
-        [{t:'blackpot',w:54,h:42},{t:'slider',w:44,h:54},{t:'eraser',w:48,h:28}],
+        [{t:'blackpot',w:POT_W,h:POT_H},{t:'slider',w:44,h:54},{t:'eraser',w:48,h:28}],
         [{t:'cone',w:34,h:44},{t:'car',w:96,h:54},{t:'whiteboard',w:58,h:44}]
       ];
       const pool2=pools2[l1.stage];
@@ -727,11 +752,15 @@ function uL1(){
       l1.lastSafe=safe;
       const lanes=[0,1,2].filter(v=>v!==safe);
       const sx1=l1.dist+W+80,sx2=sx1+34+l1.stage*12;
-      if(!laneBlocked(lanes[0],sx1,a.t,a.w))tryPlace(a.t,a.w,a.h,lanes[0],sx1);
-      if(!laneBlocked(lanes[1],sx2,b.t,b.w))tryPlace(b.t,b.w,b.h,lanes[1],sx2);
+      if(!l1LaneBlocked(lanes[0],sx1,a.t,a.w))l1TryPlace(a.t,a.w,a.h,lanes[0],sx1);
+      if(!l1LaneBlocked(lanes[1],sx2,b.t,b.w))l1TryPlace(b.t,b.w,b.h,lanes[1],sx2);
       if(l1.patternN%2===0){
         const rp=L1_ITEMS[l1.stage],rt=rp[Math.floor(Math.random()*rp.length)];
-        l1.coll.push({x0:sx1+30,y:l1.ly[safe]-30,type:rt,w:34,h:34,collected:false,fromLane:safe,toLane:safe,phase:0});
+        const ix2=sx1+30;
+        // v4.3: 安全车道也必须前后 200px 净空才放道具
+        if(l1LaneFree(safe,ix2-200,ix2+200)&&!l1.obs.some(o=>o.lane===safe&&(o.t==='car'||o.t==='boss_car'))){
+          l1.coll.push({x0:ix2,y:l1.ly[safe]-30,type:rt,w:34,h:34,collected:false,fromLane:safe,toLane:safe,phase:0});
+        }
       }
     }
   }}
@@ -1093,16 +1122,22 @@ function genL2(){
   l2.horse=false; // 每关开局没有马蹄：必须先吃浮动平台上的马蹄印记才能踩 boss
   const lw=3800+st*1200;
   l2.lw=lw; l2.gy=Math.floor(H*0.85);
-  // Two route-reading challenges per stage: one where the floor is unsafe,
-  // then one where jumping is unsafe. Their order stays readable on mobile.
-  const airX=760+st*180,airW=500+st*40;
-  const groundX=Math.min(lw-1450,1880+st*310),groundW=520+st*30;
+  // v4.3: 路线挑战 = 1 段红毯区 + 3 段更短的激光，分散在关卡不同位置
+  //       ① 低空横扫（贴地跑） ② 高空横扫（别上平台） ③ 空中光柱（左右找空隙）
+  const airX=760+st*180,airW=440+st*30;
+  const lzW=240+st*18;                                // 每段都比原来短一半以上
+  const g1=Math.max(airX+airW+180,Math.min(lw-2100,1320+st*160)); // 必须排在红毯区之后，两段不重叠
+  const g2=g1+lzW+360+st*40;
+  const g3=Math.min(lw-1000,g2+lzW+380+st*50);
   l2.zones=[
     {x:airX,w:airW,type:'air',ph:0},
-    {x:groundX,w:groundW,type:'ground',ph:85}
+    {x:g1,w:lzW,type:'ground',ph:85},
+    {x:g2,w:lzW,type:'sky',ph:Math.random()*120},
+    {x:g3,w:lzW,type:'pillar',ph:Math.random()*120}
   ];
-  // v4.2: 激光扫描区必须能"贴地通过"——这段区间不放任何逼你起跳的东西
-  const gzFrom=groundX-110, gzTo=groundX+groundW+110;
+  // v4.2: 激光区必须能"贴地通过"——这些区间不放任何逼你起跳的东西
+  const laserZ=l2.zones.filter(z=>z.type!=='air');
+  const groundZ=l2.zones.filter(z=>z.type==='ground');
   const plats=[{x:0,y:l2.gy,w:lw,h:40,mv:null,ground:true}];
   let px=250,lastY=l2.gy-180;
   while(px<lw-750){
@@ -1110,8 +1145,9 @@ function genL2(){
     let y=lastY+(Math.random()*90-45);
     y=Math.max(300,Math.min(470,y));
     if(plats.length===1)y=Math.min(y,425); // first platform must be reachable from ground
-    // Keep the low-clearance section free of floating platforms.
-    if(px+w>groundX-70&&px<groundX+groundW+70){px=groundX+groundW+100;lastY=l2.gy-180;continue;}
+    // 低空激光区上方不放平台（会被逼到激光里）；高空/光柱区照常放
+    const gz=groundZ.find(z=>px+w>z.x-70&&px<z.x+z.w+70);
+    if(gz){px=gz.x+gz.w+100;lastY=l2.gy-180;continue;}
     const pl={x:px,y,w,h:14,mv:null};
     // more floating platforms & faster motion on later stages
     if(Math.random()<(0.35+st*0.1)){
@@ -1141,6 +1177,8 @@ function genL2(){
   const hp={x:bp.x+150,y:340,w:130,h:14,mv:{axis:'y',a:280,b:440,dir:1,spd:0.8}};
   plats.push(hp);
   l2.horsePlat=hp;
+  // v4.3: 逃生出口——踩扁 BOSS 后这道门才打开，走进去才算进入下一关
+  l2.exit={x:bp.x+bp.w-96,y:l2.gy-104,w:60,h:104,open:false,announced:false,t:0};
   // collectibles: pies (变大) on normal platforms, only 1 red heart per whole run, hidden horseshoe above arena
   l2.colls=[];
   let pieCount=0;
@@ -1167,7 +1205,7 @@ function genL2(){
   const rewardCount=2+st;
   for(let i=0;i<rewardCount;i++){
     const rx=520+i*(lw-1500)/Math.max(1,rewardCount-1);
-    if(rx+90>gzFrom&&rx-90<gzTo)continue; // v4.2: 不在激光区里放需要跳起来才拿的道具
+    if(laserZ.some(z=>rx+90>z.x-60&&rx-90<z.x+z.w+60))continue; // v4.2: 不在激光区里放需要跳起来才拿的道具
     const ry=i%2?l2.gy-42:l2.gy-150;
     l2.colls.push({x:rx,y:ry,type:rewardTypes[(i+st)%rewardTypes.length],collected:false,motion:{a:rx-70,b:rx+70,dir:i%2?1:-1,spd:0.75+st*0.16}});
   }
@@ -1178,7 +1216,9 @@ function genL2(){
   l2.obs=[];
   let ox=450,potCount=0;
   while(ox<lw-850){
-    if(ox+120>gzFrom&&ox<gzTo){ox=gzTo+40;continue;} // 整段让开，保证低头贴地跑是可行解
+    // 缓冲 160px：HR 会在生成点 ±60 巡逻，落锅触发范围也很大，都要算进去
+    const lz=laserZ.find(z=>ox+120>z.x-160&&ox<z.x+z.w+160);
+    if(lz){ox=lz.x+lz.w+200;continue;} // 激光区整段让开，保证地面始终是可行解
     const r=Math.random();
     let ob;
     if(r<0.43){
@@ -1221,6 +1261,15 @@ function l2UpdElevator(ob,st,boss=false){
 }
 // 光束保留上下扫描，但最低点仍高于贴地角色；贴地跑可稳定通过，跳起才会碰线。
 function l2ScanY(z){return l2.gy-152+Math.sin(z.ph*0.036)*70;} // v4.2: 最低点抬到离地 82px，贴地跑有 ~38px 余量
+// v4.3: 高空横扫——扫的是平台层(300~470)，地面走安全，站到平台上就会被扫
+function l2SkyBeamY(z){return 385+Math.sin(z.ph*0.032)*85;}
+// v4.3: 空中光柱——从天花板垂到地面，只在区中央来回扫（两侧留通道），且周期性熄灭
+function l2PillarX(z){
+  const period=150,t=z.ph%period;
+  const u=t<75?t/75:(150-t)/75;
+  return z.x+z.w*0.30+u*(z.w*0.40); // 只扫中央 40%，两侧各留出站位
+}
+function l2PillarOn(z){return (z.ph%160)<52;} // 亮 52 帧 / 灭 108 帧：等它熄灭就能冲过去
 function l2Collect(c){
   c.collected=true;
   if(c.type==='pancake'){
@@ -1341,11 +1390,17 @@ function uL2(){
       l2Hurt();
       if(!l2.go){l2.p.vy=-9;l2.p.gnd=false;}
     }
-    if(z.type==='ground'){
-      const beamY=l2ScanY(z),beamHalf=6;
+    if(z.type==='ground'||z.type==='sky'){
+      const beamY=(z.type==='sky'?l2SkyBeamY(z):l2ScanY(z)),beamHalf=6;
       const inside=l2.p.x+l2.p.w>z.x+12&&l2.p.x<z.x+z.w-12;
       const touched=l2.p.y+l2.p.h>beamY-beamHalf&&l2.p.y<beamY+beamHalf;
       if(inside&&touched){l2Hurt();if(!l2.go)l2.p.vy+=1.5;}
+    }
+    if(z.type==='pillar'){ // 竖直光柱：熄灭时无害，亮着时只能靠左右走位躲
+      if(l2PillarOn(z)){
+        const px=l2PillarX(z);
+        if(l2.p.x+l2.p.w>px-12&&l2.p.x<px+12){l2Hurt();if(!l2.go)l2.p.vy+=1.5;}
+      }
     }
   }
   // Obstacles: elevator + HR patrols + falling black pots
@@ -1435,15 +1490,26 @@ function uL2(){
   }
   if(b.dead){
     l2.bossT++;
-    if(l2.bossT>110){
-      l2.stage++;
-      if(l2.stage>=3){
-        l2.won=true;save.coins+=50;save.l2done=true;sv(save);
-        if(l2.score>(save.hs.l2||0))save.hs.l2=l2.score;sv(save);
-      }else{
-        genL2(); // v2.18: genL2 内部已重新打乱 posters
-        l2.floats.push({x:l2.p.x+60,y:l2.p.y-50,txt:'第 '+(l2.stage+1)+' 关',t:80}); // v2.17: 换关提示用浮动文字，不再弹黑框
+    // v4.3: BOSS 倒下后不再自动切关——先开逃生出口，玩家自己走进门才算过关
+    if(l2.bossT>110&&l2.exit){
+      if(!l2.exit.open){
+        l2.exit.open=true;
+        if(!l2.exit.announced){l2.exit.announced=true;l2.floats.push({x:l2.exit.x+30,y:l2.exit.y-46,txt:'下班!',t:90});}
       }
+      const ex=l2.exit;
+      if(l2.p.x+l2.p.w>ex.x+8&&l2.p.x<ex.x+ex.w-8&&l2.p.y+l2.p.h>ex.y+20){
+        ex.t++;
+        if(ex.t>5){
+          l2.stage++;
+          if(l2.stage>=3){
+            l2.won=true;save.coins+=50;save.l2done=true;sv(save);
+            if(l2.score>(save.hs.l2||0))save.hs.l2=l2.score;sv(save);
+          }else{
+            genL2(); // v2.18: genL2 内部已重新打乱 posters
+            l2.floats.push({x:l2.p.x+60,y:l2.p.y-50,txt:'第 '+(l2.stage+1)+' 关',t:80}); // v2.17: 换关提示用浮动文字，不再弹黑框
+          }
+        }
+      }else ex.t=0;
     }
   }
   l2.part=upP(l2.part);
@@ -1484,8 +1550,34 @@ function drL2(){
         ctx.fillStyle='#f66';ctx.beginPath();ctx.moveTo(x,l2.gy);ctx.lineTo(x+12,l2.gy-18);ctx.lineTo(x+24,l2.gy);ctx.fill();
       }
       ctx.fillStyle='#fff';ctx.font='bold 20px Arial';ctx.textAlign='center';ctx.fillText('↑',zx+z.w/2,l2.gy+25);
+    }else if(z.type==='sky'){
+      // 高空横扫：危险带在平台层，贴地这一带是安全通道
+      const scanY=l2SkyBeamY(z);
+      ctx.fillStyle='rgba(255,190,50,0.08)';ctx.fillRect(zx,250,z.w,240);      // 高处危险带
+      ctx.fillStyle='rgba(90,220,140,0.12)';ctx.fillRect(zx,490,z.w,l2.gy-490); // 贴地安全
+      ctx.fillStyle='rgba(120,240,170,0.5)';ctx.fillRect(zx,490,z.w,2);
+      ctx.fillStyle='rgba(255,60,60,0.18)';ctx.fillRect(zx,scanY-8,z.w,16);
+      ctx.fillStyle='#f44';ctx.fillRect(zx,scanY-2,z.w,4);
+      ctx.fillStyle='rgba(255,90,90,0.9)';ctx.beginPath();ctx.arc(zx+6,scanY,4,0,Math.PI*2);ctx.fill();
+      ctx.beginPath();ctx.arc(zx+z.w-6,scanY,4,0,Math.PI*2);ctx.fill();
+    }else if(z.type==='pillar'){
+      // 空中光柱：只在区中央来回扫，两侧留通道；熄灭时变虚线
+      const px=zx+l2PillarX(z)-z.x,top=96,on=l2PillarOn(z);
+      const warn=!on&&(z.ph%160)>140; // 快亮了，地面光斑闪烁预警
+      if(on){
+        ctx.fillStyle='rgba(255,60,60,0.10)';ctx.fillRect(px-20,top,40,l2.gy-top);
+        ctx.fillStyle='rgba(255,80,80,0.30)';ctx.fillRect(px-8,top,16,l2.gy-top);
+        ctx.fillStyle='#ff5555';ctx.fillRect(px-3,top,6,l2.gy-top);
+        ctx.fillStyle='#fff';ctx.fillRect(px-1,top,2,l2.gy-top);
+      }else{
+        ctx.strokeStyle='rgba(255,90,90,0.35)';ctx.lineWidth=2;ctx.setLineDash([7,9]);
+        ctx.beginPath();ctx.moveTo(px,top);ctx.lineTo(px,l2.gy);ctx.stroke();ctx.setLineDash([]);
+      }
+      ctx.fillStyle=on?'#c33':'#844';ctx.fillRect(px-16,top-14,32,14);   // 天花板发射器
+      ctx.fillStyle=on?'rgba(255,120,120,'+(0.3+0.2*Math.sin(z.ph*0.18))+')':(warn?'rgba(255,200,90,0.55)':'rgba(255,120,120,0.18)');
+      if(on||warn)ctx.beginPath();if(on||warn)ctx.arc(px,l2.gy-4,on?9:7,0,Math.PI*2);if(on||warn)ctx.fill(); // 地面光斑
     }else{
-      // 扫描区：上方是危险带，贴地这一条是安全通道（用颜色分层表达，不放文字说明）
+      // 低空横扫：上方是危险带，贴地这一条是安全通道（用颜色分层表达，不放文字说明）
       const scanY=l2ScanY(z);
       ctx.fillStyle='rgba(255,190,50,0.07)';ctx.fillRect(zx,l2.gy-232,z.w,232); // 光束扫过的范围
       ctx.fillStyle='rgba(90,220,140,0.13)';ctx.fillRect(zx,l2.gy-74,z.w,74);   // 贴地安全通道
@@ -1503,6 +1595,26 @@ function drL2(){
     ctx.fillStyle=pl.rail?'#47d7d7':pl.mv?'#7fc9c9':'#a08568';ctx.fillRect(px,pl.y,pl.w,4);
     if(pl.rail){ctx.fillStyle='#dfffff';for(let x=px+8;x<px+pl.w-4;x+=20)ctx.fillRect(x,pl.y+5,12,3);}
     for(let dx=px;dx<px+pl.w;dx+=20){ctx.fillStyle='#7a6348';ctx.fillRect(dx,pl.y+pl.h-3,18,3);}
+  }
+  // v4.3: 逃生出口（踩扁 BOSS 后变绿打开，走进去进入下一关）
+  if(l2.exit){
+    const ex=l2.exit.x-bx,ey=l2.exit.y,ew=l2.exit.w,eh=l2.exit.h;
+    if(ex+ew>-40&&ex<W+40){
+      const lit=l2.exit.open;
+      ctx.fillStyle='#4a3b2c';ctx.fillRect(ex-7,ey-9,ew+14,eh+9);          // 门框
+      ctx.fillStyle=lit?'#1aa85e':'#7d4b4b';ctx.fillRect(ex,ey,ew,eh);      // 门面
+      ctx.fillStyle=lit?'rgba(215,255,235,'+(0.45+0.2*Math.sin(af*0.12))+')':'rgba(50,26,26,0.55)';
+      ctx.fillRect(ex+6,ey+6,ew-12,eh-12);                                  // 门内光
+      ctx.fillStyle='#ffe';ctx.fillRect(ex+ew-15,ey+Math.round(eh*0.5),9,5); // 门把手
+      ctx.fillStyle=lit?'#20303a':'#4a2e2e';ctx.fillRect(ex-5,ey-31,ew+10,21); // 标志牌
+      ctx.fillStyle=lit?'#6ffbad':'#c07070';ctx.font='bold 13px Arial';ctx.textAlign='center';
+      ctx.fillText('EXIT',ex+ew/2,ey-16);
+      if(lit){ // 打开后地面箭头指引，不用文字
+        const a=0.35+0.3*Math.sin(af*0.16);
+        ctx.fillStyle='rgba(120,255,180,'+a+')';
+        ctx.beginPath();ctx.moveTo(ex+ew/2,ey+eh+16);ctx.lineTo(ex+ew/2-11,ey+eh+36);ctx.lineTo(ex+ew/2+11,ey+eh+36);ctx.fill();
+      }
+    }
   }
   // collectibles
   for(const c of l2.colls){
