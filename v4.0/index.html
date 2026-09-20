@@ -72,6 +72,7 @@ offcard:["taaaaaat","a5555att","a55a5att","a5555att","a5555att","taaaaaat"],
 fish:["ttttttiiiiittt","ttttiiiiiiiiit","ttiiiiiiiiiiit","tiiiiiiiiiiiii","tiiiii55iiiiii","ttiiiiiiiiiiit","tttttttttttttt"],
 badge:["ttttt11ttttt","tttt1111tttt","ttttt11ttttt","ttaaaaaaaaat","ta55555555at","ta55a55555at","ta55555555at","ta55555555at","ta55555555at","ttaaaaaaaaat"],
 burger:["tttooooooott","ttoooooooooo","tooo33333ooo","t7777777777t","t8888888888t","t4444444444t","ttoooooooooo","tttyyyyyyttt"],
+sock:["tt5555ttt","tt5555ttt","tt5555ttt","tt5555ttt","tt55555tt","tt555555t","ttc555555","tcc555555","tcc55555t","tccc555tt","ttccccctt","ttccccctt"],
 milktea:["tttttt8ttttt","ttttt88ttttt","ttttt8tttttt","ttiiiiiiiitt","tiiiiiiiiiit","tiii3333iiit","tiii3i3iiiit","tiiiiiiiiiit","tiii3i3iiiit","tiiiiiiiiiit","ttiiiiiiiitt"],
 popcorn:["ttt1tt1tt1tt","tt11111111tt","t1111111111t","t7y7y7y7y7yt","t7y7y7y7y7yt","t7y7y7y7y7yt","t7y7y7y7y7yt","tt7y7y7y7ytt"],
 blackpot:["tttttttttttttt","tttzzzzzzzzttt","ttzk666666kztt","tkkz6z6666zkkt","kkkz666666zkkk","tkkz666666zkkt","ttzk666666kztt","tttzz6666zzttt","ttttzzzzzztttt","tttttttttttttt"],
@@ -1113,7 +1114,7 @@ function rL2(){
   // 每一关都随机：三关背景色调顺序洗牌；标语每关/每次随机；地图布局由 genL2 随机生成
   const bgOrder=[0,1,2];
   for(let i=2;i>0;i--){const j=Math.floor(Math.random()*(i+1));const t=bgOrder[i];bgOrder[i]=bgOrder[j];bgOrder[j]=t;}
-  l2={stage:0,bgOrder:bgOrder,posters:shuffledPosters(),p:{x:60,y:250,vx:0,vy:0,w:34,h:44,gnd:false,face:1},grav:0.5,jumpV:-16*jb,lives:3+el,score:0,big:false,horse:false,shield:0,slowT:0,doorT:0,boostT:0,burdenT:0,inv:0,go:false,won:false,cam:0,part:[],floats:[],bossT:0,bossDone:false,overSaved:false,winSaved:false,heartGiven:false,piesEaten:0,piesTotal:0};
+  l2={stage:0,bgOrder:bgOrder,posters:shuffledPosters(),p:{x:60,y:250,vx:0,vy:0,w:34,h:44,gnd:false,face:1},grav:0.5,jumpV:-16*jb,lives:3+el,score:0,big:false,horse:false,shield:0,slowT:0,doorT:0,boostT:0,burdenT:0,inv:0,dizzyT:0,coffeeT:0,go:false,won:false,cam:0,part:[],floats:[],bossT:0,bossDone:false,overSaved:false,winSaved:false,heartGiven:false,piesEaten:0,piesTotal:0};
   genL2();
 }
 function genL2(){
@@ -1185,7 +1186,13 @@ function genL2(){
   for(let i=1;i<plats.length;i++){
     const pl=plats[i];
     if(pl===hp)continue;
-    if(Math.random()<0.6){
+    // v4.4: 台阶上混进两种神秘道具——袜子和咖啡，外观不标好坏，效果自己试
+    const r2=Math.random();
+    if(r2<0.14){
+      l2.colls.push({x:pl.x+20+Math.random()*(pl.w-40),y:pl.y-34-Math.random()*30,type:'sock',collected:false});
+    }else if(r2<0.28){
+      l2.colls.push({x:pl.x+20+Math.random()*(pl.w-40),y:pl.y-34-Math.random()*30,type:'coffee',collected:false});
+    }else if(r2<0.72){
       l2.colls.push({x:pl.x+20+Math.random()*(pl.w-40),y:pl.y-34-Math.random()*30,type:'pancake',collected:false});
       pieCount++;
     }
@@ -1259,8 +1266,16 @@ function l2UpdElevator(ob,st,boss=false){
   else ob.gap=56;
   ob.open=ob.gap>28;
 }
-// 光束保留上下扫描，但最低点仍高于贴地角色；贴地跑可稳定通过，跳起才会碰线。
-function l2ScanY(z){return l2.gy-152+Math.sin(z.ph*0.036)*70;} // v4.2: 最低点抬到离地 82px，贴地跑有 ~38px 余量
+// v4.4: 低空激光改成"短光柱"——只有一小段，在区内横向往返 + 上下浮动。
+// 浮到高处时下面能直接跑过去，沉到低处会扫到贴地的马：看准它抬头的时机再过。
+const L2_BEAM_W=76;
+function l2Beam(z){
+  const period=200,t=z.ph%period;
+  const u=t<100?t/100:(200-t)/100;              // 0..1..0 横向往返
+  const x=z.x+12+u*(z.w-24-L2_BEAM_W);
+  const y=l2.gy-140+Math.sin(z.ph*0.03)*100;    // 上下浮动: gy-240 .. gy-40（约 3.5 秒一轮，看得清）
+  return {x:x,y:y,w:L2_BEAM_W};
+}
 // v4.3: 高空横扫——扫的是平台层(300~470)，地面走安全，站到平台上就会被扫
 function l2SkyBeamY(z){return 385+Math.sin(z.ph*0.032)*85;}
 // v4.3: 空中光柱——从天花板垂到地面，只在区中央来回扫（两侧留通道），且周期性熄灭
@@ -1309,6 +1324,16 @@ function l2Collect(c){
     l2.boostT=300;l2.score+=25;sw();
     l2.floats.push({x:c.x,y:c.y-6,txt:'🧋 加速',t:44});
   }
+  else if(c.type==='sock'){ // v4.4: 台阶上的袜子——闻一下就转晕，方向颠倒几秒
+    l2.dizzyT=200;l2.score+=5;sh();
+    spP(c.x,c.y,9,'#9aa',l2.part);
+    l2.floats.push({x:c.x,y:c.y-6,txt:'🧦 好臭!! 天旋地转',t:60});
+  }
+  else if(c.type==='coffee'){ // v4.4: 台阶上的咖啡——提神，短时间内刀枪不入
+    l2.coffeeT=280;l2.score+=25;sw();
+    spP(c.x,c.y,9,'#fa0',l2.part);
+    l2.floats.push({x:c.x,y:c.y-6,txt:'☕ 精神拉满!!',t:60});
+  }
 }
 function l2Stomp(b){
   if(!l2.horse){
@@ -1329,6 +1354,7 @@ function l2Stomp(b){
 }
 function l2Hurt(forceLife=false){
   if(l2.inv>0)return;
+  if(l2.coffeeT>0)return; // v4.4: 咖啡提神期——刀枪不入
   if(l2.shield>0&&!forceLife){l2.shield--;l2.inv=55;shake=7;sh();
     l2.floats.push({x:l2.p.x+17,y:l2.p.y-10,txt:'文件挡住了',t:36});return;}
   if(l2.big&&!forceLife){l2.big=false;l2.inv=80;shake=12;sh();
@@ -1346,16 +1372,19 @@ function uL2(){
   if(l2.go||l2.won)return;
   l2.inv=Math.max(0,l2.inv-1);shake=Math.max(0,shake-1);
   l2.slowT=Math.max(0,l2.slowT-1);l2.doorT=Math.max(0,l2.doorT-1);l2.boostT=Math.max(0,l2.boostT-1);l2.burdenT=Math.max(0,l2.burdenT-1);
+  l2.dizzyT=Math.max(0,l2.dizzyT-1);l2.coffeeT=Math.max(0,l2.coffeeT-1); // v4.4: 袜子眩晕 / 咖啡无敌倒计时
   for(const f of l2.floats){f.y-=0.8;f.t--;}
   l2.floats=l2.floats.filter(f=>f.t>0);
   // Input
   if(inp.tapT>0){inp.tapT--;if(inp.tapT===0)inp.tap=false;}
   const runSpd=(l2.boostT>0?5.5:4.5)*(l2.burdenT>0?0.58:1);
-  if(inp.keys['ArrowLeft']||inp.keys['a']){l2.p.vx=-runSpd;l2.p.face=-1;}
-  else if(inp.keys['ArrowRight']||inp.keys['d']){l2.p.vx=runSpd;l2.p.face=1;}
+  // v4.4: 袜子臭晕——方向反过来，转晕的时候左右会打架
+  const dz=l2.dizzyT>0;
+  if(inp.keys['ArrowLeft']||inp.keys['a']){l2.p.vx=dz?runSpd:-runSpd;l2.p.face=dz?1:-1;}
+  else if(inp.keys['ArrowRight']||inp.keys['d']){l2.p.vx=dz?-runSpd:runSpd;l2.p.face=dz?-1:1;}
   else l2.p.vx*=0.8;
-  if(inp.rightDown){l2.p.vx=runSpd;l2.p.face=1;}
-  if(inp.leftDown){l2.p.vx=-runSpd;l2.p.face=-1;}
+  if(inp.rightDown){l2.p.vx=dz?-runSpd:runSpd;l2.p.face=dz?-1:1;}
+  if(inp.leftDown){l2.p.vx=dz?runSpd:-runSpd;l2.p.face=dz?1:-1;}
   if((inp.keys[' ']||inp.keys['ArrowUp']||inp.keys['w']||inp.dt||inp.tap)&&l2.p.gnd){l2.p.vy=l2.jumpV*(l2.boostT>0?1.08:1)*(l2.burdenT>0?0.58:1);l2.p.gnd=false;sj();inp.dt=false;inp.tap=false;inp.tapT=0;inp.keys[' ']=false;inp.keys['ArrowUp']=false;inp.keys['w']=false;}
   // Physics
   l2.p.vy+=l2.grav;l2.p.x+=l2.p.vx;l2.p.y+=l2.p.vy;l2.p.gnd=false;
@@ -1390,8 +1419,14 @@ function uL2(){
       l2Hurt();
       if(!l2.go){l2.p.vy=-9;l2.p.gnd=false;}
     }
-    if(z.type==='ground'||z.type==='sky'){
-      const beamY=(z.type==='sky'?l2SkyBeamY(z):l2ScanY(z)),beamHalf=6;
+    if(z.type==='ground'){
+      // v4.4: 短光柱碰撞——只有光束这一小段有伤害，且它一直在动
+      const bm=l2Beam(z);
+      const hit=l2.p.x+l2.p.w>bm.x&&l2.p.x<bm.x+bm.w&&l2.p.y+l2.p.h>bm.y-7&&l2.p.y<bm.y+7;
+      if(hit){l2Hurt();if(!l2.go)l2.p.vy+=1.5;}
+    }
+    if(z.type==='sky'){
+      const beamY=l2SkyBeamY(z),beamHalf=6;
       const inside=l2.p.x+l2.p.w>z.x+12&&l2.p.x<z.x+z.w-12;
       const touched=l2.p.y+l2.p.h>beamY-beamHalf&&l2.p.y<beamY+beamHalf;
       if(inside&&touched){l2Hurt();if(!l2.go)l2.p.vy+=1.5;}
@@ -1577,15 +1612,17 @@ function drL2(){
       ctx.fillStyle=on?'rgba(255,120,120,'+(0.3+0.2*Math.sin(z.ph*0.18))+')':(warn?'rgba(255,200,90,0.55)':'rgba(255,120,120,0.18)');
       if(on||warn)ctx.beginPath();if(on||warn)ctx.arc(px,l2.gy-4,on?9:7,0,Math.PI*2);if(on||warn)ctx.fill(); // 地面光斑
     }else{
-      // 低空横扫：上方是危险带，贴地这一条是安全通道（用颜色分层表达，不放文字说明）
-      const scanY=l2ScanY(z);
-      ctx.fillStyle='rgba(255,190,50,0.07)';ctx.fillRect(zx,l2.gy-232,z.w,232); // 光束扫过的范围
-      ctx.fillStyle='rgba(90,220,140,0.13)';ctx.fillRect(zx,l2.gy-74,z.w,74);   // 贴地安全通道
-      ctx.fillStyle='rgba(120,240,170,0.5)';ctx.fillRect(zx,l2.gy-74,z.w,2);
-      ctx.fillStyle='rgba(255,60,60,0.18)';ctx.fillRect(zx,scanY-8,z.w,16);
-      ctx.fillStyle='#f44';ctx.fillRect(zx,scanY-2,z.w,4);
-      ctx.fillStyle='rgba(255,90,90,0.9)';ctx.beginPath();ctx.arc(zx+6,scanY,4,0,Math.PI*2);ctx.fill();
-      ctx.beginPath();ctx.arc(zx+z.w-6,scanY,4,0,Math.PI*2);ctx.fill();
+      // v4.4: 短光柱——一条淡轨道显示它的浮动范围，光束本身横向来回+上下走
+      const bm=l2Beam(z),bmx=bm.x-bx;
+      ctx.fillStyle='rgba(255,120,120,0.06)';ctx.fillRect(bmx,l2.gy-246,bm.w,210); // 浮动范围
+      ctx.fillStyle='rgba(255,60,60,0.18)';ctx.fillRect(bmx,bm.y-9,bm.w,18);
+      ctx.fillStyle='#f44';ctx.fillRect(bmx,bm.y-3,bm.w,6);
+      ctx.fillStyle='rgba(255,160,160,0.95)';
+      ctx.beginPath();ctx.arc(bmx+4,bm.y,4.5,0,Math.PI*2);ctx.fill();
+      ctx.beginPath();ctx.arc(bmx+bm.w-4,bm.y,4.5,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle='#c33';                                                        // 上下发射头
+      ctx.fillRect(bmx+bm.w/2-8,bm.y-16,16,5);
+      ctx.fillRect(bmx+bm.w/2-8,bm.y+11,16,5);
     }
   }
   // platforms
@@ -1620,7 +1657,7 @@ function drL2(){
   for(const c of l2.colls){
     if(c.collected)continue;const vx=c.x-bx;
     if(vx<-20||vx>W+20)continue;
-    const spr=c.type==='pancake'?S.pancake:c.type==='horseshoe'?S.horseshoe:c.type==='redheart'?S.heart:c.type==='headset'?S.headphone:c.type==='folder'?S.papers:c.type==='clockout'?S.clockout:c.type==='milktea'?S.coffee:S.coin;
+    const spr=c.type==='pancake'?S.pancake:c.type==='horseshoe'?S.horseshoe:c.type==='redheart'?S.heart:c.type==='headset'?S.headphone:c.type==='folder'?S.papers:c.type==='clockout'?S.clockout:c.type==='milktea'?S.coffee:c.type==='sock'?S.sock:c.type==='coffee'?S.coffee:S.coin;
     ds(ctx,spr,vx-16,c.y-16,32,32,false);
     if(c.type==='pancake'){ctx.fillStyle='#0002';ctx.fillRect(vx-9,c.y+15,18,3);}
     else if(c.type==='horseshoe'){
@@ -1764,6 +1801,21 @@ function drL2(){
     ds(ctx,S.blackpot,potX,potY,30,23,l2.p.face<0);
     ctx.fillStyle='rgba(50,50,50,0.35)';ctx.beginPath();ctx.arc(potX+15,potY-5,4+2*Math.sin(af*0.2),0,Math.PI*2);ctx.fill();
   }
+  // v4.4: 状态可视化——臭晕时头顶转圈圈，咖啡无敌期周围冒金星
+  if(l2.dizzyT>0){
+    for(let i=0;i<3;i++){
+      const ang=af*0.12+i*2.09;
+      ctx.fillStyle='rgba(200,200,210,0.9)';
+      ctx.beginPath();ctx.arc(l2.p.x-bx+pw/2+Math.cos(ang)*17,l2.p.y-10+Math.sin(ang)*6,3,0,Math.PI*2);ctx.fill();
+    }
+  }
+  if(l2.coffeeT>0){
+    for(let i=0;i<4;i++){
+      const ang=af*0.09+i*1.57;
+      ctx.fillStyle='rgba(255,190,60,'+(0.55+0.35*Math.sin(af*0.2+i))+')';
+      ctx.beginPath();ctx.arc(l2.p.x-bx+pw/2+Math.cos(ang)*24,l2.p.y+ph2/2+Math.sin(ang)*20,2.6,0,Math.PI*2);ctx.fill();
+    }
+  }
   if(l2.big){ctx.fillStyle='#fd4';ctx.font='bold 11px "PingFang SC","Microsoft YaHei",Arial,sans-serif';ctx.textAlign='center';ctx.fillText('🥞大马',l2.p.x-bx+pw/2,l2.p.y-14);}
   if(l2.horse){ctx.fillStyle='#fd4';ctx.font='bold 13px "PingFang SC","Microsoft YaHei",Arial,sans-serif';ctx.textAlign='center';ctx.fillText('🐴',l2.p.x-bx+pw/2,l2.p.y-26);}
   ctx.globalAlpha=1;
@@ -1781,7 +1833,7 @@ function drL2(){
   ctx.fillText('分数:'+l2.score,95,48);
   ctx.fillText('💰'+save.coins,95,71);
   ctx.fillStyle='#a0704a';ctx.font='bold 13px "PingFang SC","Microsoft YaHei",Arial,sans-serif';
-  ctx.fillText((l2.big?'🥞':'')+(l2.horse?' 🐴':'')+(l2.shield?' 📁':'')+(l2.slowT?' 🎧':'')+(l2.doorT?' 🪪':'')+(l2.boostT?' 🧋':'')+(l2.burdenT?' ⚫':''),95,94);
+  ctx.fillText((l2.big?'🥞':'')+(l2.horse?' 🐴':'')+(l2.shield?' 📁':'')+(l2.slowT?' 🎧':'')+(l2.doorT?' 🪪':'')+(l2.boostT?' 🧋':'')+(l2.burdenT?' ⚫':'')+(l2.dizzyT?' 🧦':'')+(l2.coffeeT?' ☕':''),95,94);
   ctx.fillStyle='#f44';ctx.font='bold 15px "PingFang SC","Microsoft YaHei",Arial,sans-serif';
   ctx.fillText('❤'.repeat(l2.lives),W-90,25);
   // progress
