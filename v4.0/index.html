@@ -72,7 +72,6 @@ offcard:["taaaaaat","a5555att","a55a5att","a5555att","a5555att","taaaaaat"],
 fish:["ttttttiiiiittt","ttttiiiiiiiiit","ttiiiiiiiiiiit","tiiiiiiiiiiiii","tiiiii55iiiiii","ttiiiiiiiiiiit","tttttttttttttt"],
 badge:["ttttt11ttttt","tttt1111tttt","ttttt11ttttt","ttaaaaaaaaat","ta55555555at","ta55a55555at","ta55555555at","ta55555555at","ta55555555at","ttaaaaaaaaat"],
 burger:["tttooooooott","ttoooooooooo","tooo33333ooo","t7777777777t","t8888888888t","t4444444444t","ttoooooooooo","tttyyyyyyttt"],
-sock:["tt5555ttt","tt5555ttt","tt5555ttt","tt5555ttt","tt55555tt","tt555555t","ttc555555","tcc555555","tcc55555t","tccc555tt","ttccccctt","ttccccctt"],
 milktea:["tttttt8ttttt","ttttt88ttttt","ttttt8tttttt","ttiiiiiiiitt","tiiiiiiiiiit","tiii3333iiit","tiii3i3iiiit","tiiiiiiiiiit","tiii3i3iiiit","tiiiiiiiiiit","ttiiiiiiiitt"],
 popcorn:["ttt1tt1tt1tt","tt11111111tt","t1111111111t","t7y7y7y7y7yt","t7y7y7y7y7yt","t7y7y7y7y7yt","t7y7y7y7y7yt","tt7y7y7y7ytt"],
 blackpot:["tttttttttttttt","tttzzzzzzzzttt","ttzk666666kztt","tkkz6z6666zkkt","kkkz666666zkkk","tkkz666666zkkt","ttzk666666kztt","tttzz6666zzttt","ttttzzzzzztttt","tttttttttttttt"],
@@ -1114,7 +1113,7 @@ function rL2(){
   // 每一关都随机：三关背景色调顺序洗牌；标语每关/每次随机；地图布局由 genL2 随机生成
   const bgOrder=[0,1,2];
   for(let i=2;i>0;i--){const j=Math.floor(Math.random()*(i+1));const t=bgOrder[i];bgOrder[i]=bgOrder[j];bgOrder[j]=t;}
-  l2={stage:0,bgOrder:bgOrder,posters:shuffledPosters(),p:{x:60,y:250,vx:0,vy:0,w:34,h:44,gnd:false,face:1},grav:0.5,jumpV:-16*jb,lives:3+el,score:0,big:false,horse:false,shield:0,slowT:0,doorT:0,boostT:0,burdenT:0,inv:0,dizzyT:0,coffeeT:0,go:false,won:false,cam:0,part:[],floats:[],bossT:0,bossDone:false,overSaved:false,winSaved:false,heartGiven:false,piesEaten:0,piesTotal:0};
+  l2={stage:0,bgOrder:bgOrder,posters:shuffledPosters(),p:{x:60,y:250,vx:0,vy:0,w:34,h:44,gnd:false,face:1},grav:0.5,jumpV:-16*jb,lives:3+el,score:0,big:false,horse:false,shield:0,slowT:0,doorT:0,boostT:0,burdenT:0,inv:0,coffeeT:0,go:false,won:false,cam:0,part:[],floats:[],bossT:0,bossDone:false,overSaved:false,winSaved:false,heartGiven:false,piesEaten:0,piesTotal:0};
   genL2();
 }
 // v4.5: 通用洗牌——用于道具类型池，保证每局出现的顺序都不一样
@@ -1172,7 +1171,8 @@ function genL2(){
   // boss arena: boss fights on the GROUND
   const bp={x:lw-640,y:l2.gy,w:540,h:0};
   l2.bp=bp;
-  l2.boss={x:lw-500,y:l2.gy-56,w:52,h:56,hp:3+Math.floor(Math.random()*3),dir:1,spd:1.4+st*0.5,t:0,atks:[],hit:0,active:false,dead:false,label:['老板','甲方','超级BOSS'][st]}; // 三关分别显示对应 BOSS 身份
+  // v4.6: BOSS 固定 3 下踩扁（原来是 3~5 随机，血条只画 3 格，打不死像没掉血）
+  l2.boss={x:lw-500,y:l2.gy-56,w:52,h:56,hp:3,hpMax:3,dir:1,spd:1.4+st*0.5,t:0,atks:[],hit:0,active:false,dead:false,label:['老板','甲方','超级BOSS'][st]}; // 三关分别显示对应 BOSS 身份
   // shelter elevator inside boss arena (hide from boss attacks)
   l2.bpElev={x:bp.x+28,y:l2.gy-110,w:64,h:110,ph:0};
   // floating platform above the arena — hidden horseshoe coin sits on it (needed to attack the boss)
@@ -1184,19 +1184,23 @@ function genL2(){
   // v4.3: 逃生出口——踩扁 BOSS 后这道门才打开，走进去才算进入下一关
   l2.exit={x:bp.x+bp.w-96,y:l2.gy-104,w:60,h:104,open:false,announced:false,t:0};
   // v4.5: 道具全部随机化——配比、类型、位置每局都不一样
+  // v4.6: 那件"闻了会晕"的道具彻底删除，原位置换成会开合盖子的马桶
   l2.colls=[];
+  l2.lids=[];
   const rr=(a,b)=>a+Math.random()*(b-a);
-  const sockRate=rr(0.07,0.20),coffeeRate=rr(0.07,0.20),pieRate=rr(0.38,0.62);
+  const lidRate=rr(0.10,0.24),coffeeRate=rr(0.07,0.20),pieRate=rr(0.38,0.62);
   const heartIdx=1+Math.floor(Math.random()*Math.max(1,plats.length-2));
   let pieCount=0;
   for(let i=1;i<plats.length;i++){
     const pl=plats[i];
     if(pl===hp)continue;
-    // 台阶上混进两种神秘道具——袜子和咖啡，外观不标好坏，效果自己试
+    // 台阶上混进咖啡和台阶马桶——马桶盖子会开合，合着是踏脚石，掀开喷水不能碰
     const r2=Math.random();
-    if(r2<sockRate)l2.colls.push({x:pl.x+rr(16,Math.max(20,pl.w-16)),y:pl.y-rr(30,64),type:'sock',collected:false});
-    else if(r2<sockRate+coffeeRate)l2.colls.push({x:pl.x+rr(16,Math.max(20,pl.w-16)),y:pl.y-rr(30,64),type:'coffee',collected:false});
-    else if(r2<sockRate+coffeeRate+pieRate){l2.colls.push({x:pl.x+rr(16,Math.max(20,pl.w-16)),y:pl.y-rr(30,64),type:'pancake',collected:false});pieCount++;}
+    if(r2<lidRate){
+      if(!pl.mv&&!pl.rail&&pl.w>=70)l2.lids.push(mkLid(pl,rr(10,pl.w-54)));
+    }
+    else if(r2<lidRate+coffeeRate)l2.colls.push({x:pl.x+rr(16,Math.max(20,pl.w-16)),y:pl.y-rr(30,64),type:'coffee',collected:false});
+    else if(r2<lidRate+coffeeRate+pieRate){l2.colls.push({x:pl.x+rr(16,Math.max(20,pl.w-16)),y:pl.y-rr(30,64),type:'pancake',collected:false});pieCount++;}
     // 整局只有 1 颗红心，藏在随机某块台阶上
     if(!l2.heartGiven&&i>=heartIdx&&pl.x>lw*0.30){
       l2.colls.push({x:pl.x+pl.w/2,y:pl.y-40,type:'redheart',collected:false});
@@ -1212,7 +1216,7 @@ function genL2(){
     pieCount++;
   }
   // 地面往返道具：类型整池打乱，位置随机且互相拉开距离
-  const rewardTypes=shuf(['headset','folder','clockout','milktea','sock','coffee']);
+  const rewardTypes=shuf(['headset','folder','clockout','milktea','coffee']); // v4.6: 五选一，不再有负面道具
   const rewardCount=2+st+Math.floor(Math.random()*2);
   const placedRx=[];
   for(let i=0;i<rewardCount;i++){
@@ -1302,6 +1306,27 @@ function l2UpdToilet(ob,st){
   else {ob.jet=0;ob.warn=false;}
 }
 function l2ToiletTop(ob){return l2.gy-(54+ob.jet*150);} // 水柱顶端：gy-54 → gy-204
+// v4.6: 台阶马桶——盖子开合，顶掉原来的负面道具。合盖时是块可以踩的踏脚石，
+//       盖子掀起来就冲水，水柱期间谁站在附近谁挨打，等它盖回去再过。
+const LID_W=44,LID_H=30,LID_JET_H=92;
+function mkLid(pl,off){
+  const l={pl:pl,off:off,x:pl.x+off,y:pl.y-LID_H,w:LID_W,h:LID_H,ph:Math.floor(Math.random()*180),jet:0,open:0,warn:false};
+  return l;
+}
+function l2UpdLid(l,st){
+  if(l.pl){l.x=l.pl.x+l.off;l.y=l.pl.y-l.h;} // 跟着台阶走
+  l.ph++;
+  const period=Math.max(150,206-st*16),ph=l.ph%period;
+  const shutEnd=period-84,warnEnd=shutEnd+16,riseEnd=warnEnd+10,holdEnd=riseEnd+34,fallEnd=holdEnd+12,closeEnd=fallEnd+12;
+  if(ph<shutEnd){l.jet=0;l.open=0;l.warn=false;}
+  else if(ph<warnEnd){l.jet=0;l.open=0.16;l.warn=true;}                                        // 盖子抖动预警
+  else if(ph<riseEnd){l.jet=0;l.open=0.16+0.84*(ph-warnEnd)/(riseEnd-warnEnd);l.warn=false;}   // 掀盖
+  else if(ph<holdEnd){l.jet=Math.min(1,(ph-riseEnd)/8);l.open=1;l.warn=false;}                 // 冲水中
+  else if(ph<fallEnd){l.jet=Math.max(0,1-(ph-holdEnd)/(fallEnd-holdEnd));l.open=1;l.warn=false;}
+  else if(ph<closeEnd){l.jet=0;l.open=Math.max(0,1-(ph-fallEnd)/(closeEnd-fallEnd));l.warn=false;} // 盖回去
+  else {l.jet=0;l.open=0;l.warn=false;}
+}
+function l2LidTop(l){return l.y+12-l.jet*LID_JET_H;} // 水柱顶端（从桶口往上 92px）
 // v4.4: 低空激光改成"短光柱"——只有一小段，在区内横向往返 + 上下浮动。
 // 浮到高处时下面能直接跑过去，沉到低处会扫到贴地的马：看准它抬头的时机再过。
 const L2_BEAM_W=76;
@@ -1360,11 +1385,6 @@ function l2Collect(c){
     l2.boostT=300;l2.score+=25;sw();
     l2.floats.push({x:c.x,y:c.y-6,txt:'🧋 加速',t:44});
   }
-  else if(c.type==='sock'){ // v4.4: 台阶上的袜子——闻一下就转晕，方向颠倒几秒
-    l2.dizzyT=200;l2.score+=5;sh();
-    spP(c.x,c.y,9,'#9aa',l2.part);
-    l2.floats.push({x:c.x,y:c.y-6,txt:'🧦 好臭!! 天旋地转',t:60});
-  }
   else if(c.type==='coffee'){ // v4.4: 台阶上的咖啡——提神，短时间内刀枪不入
     l2.coffeeT=280;l2.score+=25;sw();
     spP(c.x,c.y,9,'#fa0',l2.part);
@@ -1377,10 +1397,11 @@ function l2Stomp(b){
     l2.floats.push({x:b.x+b.w/2,y:b.y-20,txt:'需要马蹄印记! 🐴',t:46});
     return;
   }
-  b.hp--;b.hit=26;l2.p.vy=-9;l2.p.gnd=false;l2.score+=20;sh();
+  b.hp--;b.hit=26;l2.p.vy=-9;l2.p.gnd=false;l2.score+=20;shake=Math.max(shake,9);sh();
   // v2.17: 马蹄吃一次全程有效——踩中不消耗，直到 BOSS 被打死
   spP(b.x+b.w/2,b.y,10,'#f84',l2.part,7,7,22);
-  l2.floats.push({x:b.x+b.w/2,y:b.y-12,txt:'踩! +20',t:34});
+  // v4.6: 每一下都把剩余血量喊出来，踩中不至于像"没掉血"
+  l2.floats.push({x:b.x+b.w/2,y:b.y-12,txt:b.hp>0?('踩! 还剩 '+b.hp+' 下'):'踩! +20',t:b.hp>0?46:34});
   if(b.hp<=0){
     b.dead=true;l2.bossT=0;boom();
     spP(b.x+b.w/2,b.y+b.h/2,25,'#fd4',l2.part,10,10,36);
@@ -1408,26 +1429,44 @@ function uL2(){
   if(l2.go||l2.won)return;
   l2.inv=Math.max(0,l2.inv-1);shake=Math.max(0,shake-1);
   l2.slowT=Math.max(0,l2.slowT-1);l2.doorT=Math.max(0,l2.doorT-1);l2.boostT=Math.max(0,l2.boostT-1);l2.burdenT=Math.max(0,l2.burdenT-1);
-  l2.dizzyT=Math.max(0,l2.dizzyT-1);l2.coffeeT=Math.max(0,l2.coffeeT-1); // v4.4: 袜子眩晕 / 咖啡无敌倒计时
+  l2.coffeeT=Math.max(0,l2.coffeeT-1); // v4.6: 咖啡无敌倒计时
   for(const f of l2.floats){f.y-=0.8;f.t--;}
   l2.floats=l2.floats.filter(f=>f.t>0);
   // Input
   if(inp.tapT>0){inp.tapT--;if(inp.tapT===0)inp.tap=false;}
   const runSpd=(l2.boostT>0?5.5:4.5)*(l2.burdenT>0?0.58:1);
-  // v4.4: 袜子臭晕——方向反过来，转晕的时候左右会打架
-  const dz=l2.dizzyT>0;
-  if(inp.keys['ArrowLeft']||inp.keys['a']){l2.p.vx=dz?runSpd:-runSpd;l2.p.face=dz?1:-1;}
-  else if(inp.keys['ArrowRight']||inp.keys['d']){l2.p.vx=dz?-runSpd:runSpd;l2.p.face=dz?-1:1;}
+  if(inp.keys['ArrowLeft']||inp.keys['a']){l2.p.vx=-runSpd;l2.p.face=-1;}
+  else if(inp.keys['ArrowRight']||inp.keys['d']){l2.p.vx=runSpd;l2.p.face=1;}
   else l2.p.vx*=0.8;
-  if(inp.rightDown){l2.p.vx=dz?-runSpd:runSpd;l2.p.face=dz?-1:1;}
-  if(inp.leftDown){l2.p.vx=dz?runSpd:-runSpd;l2.p.face=dz?1:-1;}
+  if(inp.rightDown){l2.p.vx=runSpd;l2.p.face=1;}
+  if(inp.leftDown){l2.p.vx=-runSpd;l2.p.face=-1;}
   if((inp.keys[' ']||inp.keys['ArrowUp']||inp.keys['w']||inp.dt||inp.tap)&&l2.p.gnd){l2.p.vy=l2.jumpV*(l2.boostT>0?1.08:1)*(l2.burdenT>0?0.58:1);l2.p.gnd=false;sj();inp.dt=false;inp.tap=false;inp.tapT=0;inp.keys[' ']=false;inp.keys['ArrowUp']=false;inp.keys['w']=false;}
   // Physics
   l2.p.vy+=l2.grav;l2.p.x+=l2.p.vx;l2.p.y+=l2.p.vy;l2.p.gnd=false;
   l2UpdPlats();
+  for(const ld of l2.lids||[])l2UpdLid(ld,st); // v4.6: 台阶马桶的盖子先更新（位置跟着台阶走）
   for(const pl of l2.plats){
     if(l2.p.x+l2.p.w>pl.x&&l2.p.x<pl.x+pl.w&&l2.p.y+l2.p.h>pl.y&&l2.p.y+l2.p.h<pl.y+24&&l2.p.vy>=0){
       l2.p.y=pl.y-l2.p.h;l2.p.vy=0;l2.p.gnd=true;
+    }
+  }
+  // v4.6: 台阶马桶——合盖时是块踏脚石（盖子也挡路，跳过去即可），掀盖冲水时水柱打人
+  for(const l of l2.lids||[]){
+    if(l2.p.vy>=0&&l2.p.x+l2.p.w>l.x+2&&l2.p.x<l.x+l.w-2&&l2.p.y+l2.p.h>l.y&&l2.p.y+l2.p.h<l.y+18){
+      l2.p.y=l.y-l2.p.h;l2.p.vy=0;l2.p.gnd=true;
+    }
+    if(l.open<0.6&&l2.p.x+l2.p.w>l.x+3&&l2.p.x<l.x+l.w-3&&l2.p.y+l2.p.h>l.y+16&&l2.p.y<l.y+l.h){
+      if(l2.p.x+l2.p.w/2<l.x+l.w/2)l2.p.x=l.x-l2.p.w-1;else l2.p.x=l.x+l.w+1;
+      l2.p.vx=0;
+    }
+    if(l.jet>0.02){
+      const cx=l.x+l.w/2,top=l2LidTop(l);
+      if(l2.p.x+l2.p.w>cx-11&&l2.p.x<cx+11&&l2.p.y+l2.p.h>top&&l2.p.y<l.y+16){
+        l2Hurt();
+        if(l2.go)break;
+        if(l2.p.x+l2.p.w/2<cx)l2.p.x=l.x-l2.p.w-1;else l2.p.x=l.x+l.w+1;
+        l2.p.vx=0;
+      }
     }
   }
   if(l2.p.x<0)l2.p.x=0;if(l2.p.x>l2.lw-l2.p.w)l2.p.x=l2.lw-l2.p.w;
@@ -1546,7 +1585,7 @@ function uL2(){
   }
   // Boss
   const b=l2.boss;
-  if(l2.p.x>l2.bp.x-80&&!b.active&&!b.dead){b.active=true;l2.floats.push({x:l2.p.x+40,y:l2.p.y-70,txt:l2.horse?'⚠️ BOSS驾到！踩 '+b.hp+' 下！':'⚠️ BOSS驾到！先吃浮动平台上的马蹄🐴再踩！',t:110});}
+  if(l2.p.x>l2.bp.x-80&&!b.active&&!b.dead){b.active=true;l2.floats.push({x:l2.p.x+40,y:l2.p.y-70,txt:l2.horse?'⚠️ BOSS驾到！踩 '+b.hpMax+' 下！':'⚠️ BOSS驾到！先吃浮动平台上的马蹄🐴再踩！',t:110});}
   if(b.active&&!b.dead){
     b.hit=Math.max(0,b.hit-1);
     b.x+=b.dir*b.spd;
@@ -1598,6 +1637,34 @@ function uL2(){
   l2.part=upP(l2.part);
 }
 
+// v4.6: 台阶马桶的画法——水箱、桶身，加上会掀起来的盖子；掀开时从桶口冲出水柱
+function drLid(l,ox,af){
+  const cx=ox+l.w/2;
+  if(l.jet>0.02){
+    const top=l2LidTop(l),mY=l.y+12,jh=mY-top;
+    ctx.fillStyle='rgba(90,180,255,0.30)';ctx.fillRect(cx-11,top,22,jh);
+    ctx.fillStyle='rgba(160,225,255,'+(0.45+0.15*Math.sin(af*0.5))+')';ctx.fillRect(cx-6,top,12,jh);
+    ctx.fillStyle='#eafcff';ctx.fillRect(cx-2.5,top,5,jh);
+    for(let i=0;i<3;i++){
+      const sy=top+((af*5+i*19)%Math.max(20,jh));
+      ctx.fillStyle='rgba(255,255,255,0.75)';ctx.beginPath();ctx.arc(cx-7+((i*11+af*2)%14),sy,2.2,0,Math.PI*2);ctx.fill();
+    }
+  }
+  ctx.fillStyle='#e9eef5';ctx.fillRect(cx-13,l.y,26,14);           // 水箱
+  ctx.fillStyle='#cfd8e3';ctx.fillRect(cx-13,l.y,26,3);
+  ctx.fillStyle='#9aa7b5';ctx.fillRect(cx-4,l.y+13,8,4);           // 冲水钮
+  ctx.fillStyle='#f4f8fc';ctx.fillRect(ox+4,l.y+14,l.w-8,l.h-14);  // 桶身
+  ctx.fillStyle='#dbe4ee';ctx.fillRect(ox+4,l.y+14,l.w-8,4);
+  ctx.fillStyle='#fff';ctx.beginPath();ctx.ellipse(cx,l.y+16,l.w/2-7,5,0,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle='#8fa0b2';ctx.beginPath();ctx.ellipse(cx,l.y+16,l.w/2-14,2.5,0,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle='#c8d2de';ctx.fillRect(ox+6,l.y+l.h-6,l.w-12,6);   // 底座
+  const jit=l.warn?Math.sin(af*0.9)*0.09:0;                        // 快开盖了：盖子抖一下
+  ctx.save();ctx.translate(ox+5,l.y+14);ctx.rotate(-(l.open*1.25+jit));
+  ctx.fillStyle='#eef3f9';ctx.fillRect(0,-10,l.w-10,11);
+  ctx.fillStyle='#c3cedb';ctx.fillRect(0,-10,l.w-10,3);
+  ctx.fillStyle='#fff';ctx.fillRect(l.w-14,-8,7,3);
+  ctx.restore();
+}
 function drL2(){
   const bx=l2.cam,sx=shake>0?(Math.random()-0.5)*shake:0,sy=shake>0?(Math.random()-0.5)*shake:0;
   ctx.save();ctx.translate(sx,sy);
@@ -1704,7 +1771,7 @@ function drL2(){
   for(const c of l2.colls){
     if(c.collected)continue;const vx=c.x-bx;
     if(vx<-20||vx>W+20)continue;
-    const spr=c.type==='pancake'?S.pancake:c.type==='horseshoe'?S.horseshoe:c.type==='redheart'?S.heart:c.type==='headset'?S.headphone:c.type==='folder'?S.papers:c.type==='clockout'?S.clockout:c.type==='milktea'?S.coffee:c.type==='sock'?S.sock:c.type==='coffee'?S.coffee:S.coin;
+    const spr=c.type==='pancake'?S.pancake:c.type==='horseshoe'?S.horseshoe:c.type==='redheart'?S.heart:c.type==='headset'?S.headphone:c.type==='folder'?S.papers:c.type==='clockout'?S.clockout:c.type==='milktea'?S.coffee:c.type==='coffee'?S.coffee:S.coin;
     ds(ctx,spr,vx-16,c.y-16,32,32,false);
     if(c.type==='pancake'){ctx.fillStyle='#0002';ctx.fillRect(vx-9,c.y+15,18,3);}
     // v4.5: 道具不再带属性光晕（金色/红色/青色半透明底），好坏自己试
@@ -1793,6 +1860,11 @@ function drL2(){
       ctx.fillText(open?'带薪休假':'●',ox+ob.w/2,ob.y+ob.h-6);
     }
   }
+  // v4.6: 台阶马桶——盖子开合，掀开就冲水
+  for(const ld of l2.lids||[]){
+    const lx=ld.x-bx;if(lx<-70||lx>W+70)continue;
+    drLid(ld,lx,af);
+  }
   // boss arena shelter elevator
   if(l2.bpElev){
     const ev=l2.bpElev,ox=ev.x-bx;
@@ -1834,13 +1906,18 @@ function drL2(){
     if(b.hit>0&&af%3<2)ctx.globalAlpha=0.5;
     ds(ctx,S.boss_suit,bx2,b.y,b.w,b.h,false);
     ctx.globalAlpha=1;
-    ctx.fillStyle='#c22';ctx.font='bold 13px "PingFang SC","Microsoft YaHei",Arial,sans-serif';ctx.textAlign='center';
-    ctx.fillText(b.label,bx2+b.w/2,b.y-23);
-    // hp hearts
-    for(let i=0;i<3;i++){
-      ctx.fillStyle=i<b.hp?'#f44':'#444';
-      ctx.fillRect(bx2+6+i*14,b.y-14,10,9);
+    // v4.6: BOSS 血条——固定 3 格，踩一下就实打实掉一格
+    const hpm=Math.max(1,b.hpMax||3),barW=Math.max(64,b.w+22),barH=9;
+    const barX=bx2+b.w/2-barW/2,barY=b.y-32;
+    ctx.fillStyle='rgba(20,20,26,0.55)';ctx.fillRect(barX-3,barY-3,barW+6,barH+6);
+    ctx.fillStyle='#3a3a46';ctx.fillRect(barX,barY,barW,barH);
+    const segW=(barW-(hpm-1)*3)/hpm;
+    for(let i=0;i<hpm;i++){
+      ctx.fillStyle=i<b.hp?(b.hit>0&&i===b.hp?'#ffd257':'#f44'):'#4b4b57';
+      ctx.fillRect(barX+i*(segW+3),barY,segW,barH);
     }
+    ctx.fillStyle='#fff';ctx.font='bold 11px "PingFang SC","Microsoft YaHei",Arial,sans-serif';ctx.textAlign='center';
+    ctx.fillText(b.label+'  '+b.hp+'/'+hpm,bx2+b.w/2,barY-6);
   }
   // boss attacks
   for(const a of b.atks){
@@ -1862,14 +1939,7 @@ function drL2(){
     ds(ctx,S.blackpot,potX,potY,30,23,l2.p.face<0);
     ctx.fillStyle='rgba(50,50,50,0.35)';ctx.beginPath();ctx.arc(potX+15,potY-5,4+2*Math.sin(af*0.2),0,Math.PI*2);ctx.fill();
   }
-  // v4.4: 状态可视化——臭晕时头顶转圈圈，咖啡无敌期周围冒金星
-  if(l2.dizzyT>0){
-    for(let i=0;i<3;i++){
-      const ang=af*0.12+i*2.09;
-      ctx.fillStyle='rgba(200,200,210,0.9)';
-      ctx.beginPath();ctx.arc(l2.p.x-bx+pw/2+Math.cos(ang)*17,l2.p.y-10+Math.sin(ang)*6,3,0,Math.PI*2);ctx.fill();
-    }
-  }
+  // v4.4: 状态可视化——咖啡无敌期周围冒金星
   if(l2.coffeeT>0){
     for(let i=0;i<4;i++){
       const ang=af*0.09+i*1.57;
@@ -1894,7 +1964,7 @@ function drL2(){
   ctx.fillText('分数:'+l2.score,95,48);
   ctx.fillText('💰'+save.coins,95,71);
   ctx.fillStyle='#a0704a';ctx.font='bold 13px "PingFang SC","Microsoft YaHei",Arial,sans-serif';
-  ctx.fillText((l2.big?'🥞':'')+(l2.horse?' 🐴':'')+(l2.shield?' 📁':'')+(l2.slowT?' 🎧':'')+(l2.doorT?' 🪪':'')+(l2.boostT?' 🧋':'')+(l2.burdenT?' ⚫':'')+(l2.dizzyT?' 🧦':'')+(l2.coffeeT?' ☕':''),95,94);
+  ctx.fillText((l2.big?'🥞':'')+(l2.horse?' 🐴':'')+(l2.shield?' 📁':'')+(l2.slowT?' 🎧':'')+(l2.doorT?' 🪪':'')+(l2.boostT?' 🧋':'')+(l2.burdenT?' ⚫':'')+(l2.coffeeT?' ☕':''),95,94);
   ctx.fillStyle='#f44';ctx.font='bold 15px "PingFang SC","Microsoft YaHei",Arial,sans-serif';
   ctx.fillText('❤'.repeat(l2.lives),W-90,25);
   // progress
