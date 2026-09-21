@@ -1117,19 +1117,20 @@ function rL2(){
   l2={stage:0,bgOrder:bgOrder,posters:shuffledPosters(),p:{x:60,y:250,vx:0,vy:0,w:34,h:44,gnd:false,face:1},grav:0.5,jumpV:-16*jb,lives:3+el,score:0,big:false,horse:false,shield:0,slowT:0,doorT:0,boostT:0,burdenT:0,inv:0,dizzyT:0,coffeeT:0,go:false,won:false,cam:0,part:[],floats:[],bossT:0,bossDone:false,overSaved:false,winSaved:false,heartGiven:false,piesEaten:0,piesTotal:0};
   genL2();
 }
+// v4.5: 通用洗牌——用于道具类型池，保证每局出现的顺序都不一样
+function shuf(a){const r=a.slice();for(let i=r.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));const t=r[i];r[i]=r[j];r[j]=t;}return r;}
 function genL2(){
   const st=l2.stage;
   l2.posters=shuffledPosters(); // v2.18: 每关重新打乱——这一关墙上的每张海报都不同，下一关又是新的一轮
   l2.horse=false; // 每关开局没有马蹄：必须先吃浮动平台上的马蹄印记才能踩 boss
-  const lw=3800+st*1200;
+  const lw=4600+st*1400; // v4.5: 加长，给障碍留出更多生成位
   l2.lw=lw; l2.gy=Math.floor(H*0.85);
-  // v4.3: 路线挑战 = 1 段红毯区 + 3 段更短的激光，分散在关卡不同位置
-  //       ① 低空横扫（贴地跑） ② 高空横扫（别上平台） ③ 空中光柱（左右找空隙）
-  const airX=760+st*180,airW=440+st*30;
-  const lzW=240+st*18;                                // 每段都比原来短一半以上
-  const g1=Math.max(airX+airW+180,Math.min(lw-2100,1320+st*160)); // 必须排在红毯区之后，两段不重叠
-  const g2=g1+lzW+360+st*40;
-  const g3=Math.min(lw-1000,g2+lzW+380+st*50);
+  // v4.5: 区域位置每局随机抖动——不再每次都在同样的坐标遇到同样的挑战
+  const airX=700+Math.floor(Math.random()*260)+st*60,airW=420+st*30;
+  const lzW=240+st*18;
+  const g1=Math.max(airX+airW+240,Math.min(lw-1500,Math.floor(lw*(0.42+Math.random()*0.09))));
+  const g2=g1+lzW+270+Math.floor(Math.random()*90);
+  const g3=Math.max(g2+lzW+280,Math.min(lw-1000,g2+lzW+300+Math.floor(Math.random()*90)));
   l2.zones=[
     {x:airX,w:airW,type:'air',ph:0},
     {x:g1,w:lzW,type:'ground',ph:85},
@@ -1175,70 +1176,91 @@ function genL2(){
   // shelter elevator inside boss arena (hide from boss attacks)
   l2.bpElev={x:bp.x+28,y:l2.gy-110,w:64,h:110,ph:0};
   // floating platform above the arena — hidden horseshoe coin sits on it (needed to attack the boss)
-  const hp={x:bp.x+150,y:340,w:130,h:14,mv:{axis:'y',a:280,b:440,dir:1,spd:0.8}};
+  // v4.5: 藏马蹄的浮动平台位置每局随机（横向 70~250，纵向 300~410 之间浮动）
+  const hpX=bp.x+70+Math.floor(Math.random()*180),hpY=300+Math.floor(Math.random()*110);
+  const hp={x:hpX,y:hpY,w:130,h:14,mv:{axis:'y',a:Math.max(260,hpY-50),b:Math.min(450,hpY+50),dir:Math.random()<0.5?1:-1,spd:0.7+Math.random()*0.4}};
   plats.push(hp);
   l2.horsePlat=hp;
   // v4.3: 逃生出口——踩扁 BOSS 后这道门才打开，走进去才算进入下一关
   l2.exit={x:bp.x+bp.w-96,y:l2.gy-104,w:60,h:104,open:false,announced:false,t:0};
-  // collectibles: pies (变大) on normal platforms, only 1 red heart per whole run, hidden horseshoe above arena
+  // v4.5: 道具全部随机化——配比、类型、位置每局都不一样
   l2.colls=[];
+  const rr=(a,b)=>a+Math.random()*(b-a);
+  const sockRate=rr(0.07,0.20),coffeeRate=rr(0.07,0.20),pieRate=rr(0.38,0.62);
+  const heartIdx=1+Math.floor(Math.random()*Math.max(1,plats.length-2));
   let pieCount=0;
   for(let i=1;i<plats.length;i++){
     const pl=plats[i];
     if(pl===hp)continue;
-    // v4.4: 台阶上混进两种神秘道具——袜子和咖啡，外观不标好坏，效果自己试
+    // 台阶上混进两种神秘道具——袜子和咖啡，外观不标好坏，效果自己试
     const r2=Math.random();
-    if(r2<0.14){
-      l2.colls.push({x:pl.x+20+Math.random()*(pl.w-40),y:pl.y-34-Math.random()*30,type:'sock',collected:false});
-    }else if(r2<0.28){
-      l2.colls.push({x:pl.x+20+Math.random()*(pl.w-40),y:pl.y-34-Math.random()*30,type:'coffee',collected:false});
-    }else if(r2<0.72){
-      l2.colls.push({x:pl.x+20+Math.random()*(pl.w-40),y:pl.y-34-Math.random()*30,type:'pancake',collected:false});
-      pieCount++;
-    }
-    // only 1 bonus red heart for the entire L2 run, on a mid-level platform
-    if(!l2.heartGiven&&i>=2&&pl.x>lw*0.35){
+    if(r2<sockRate)l2.colls.push({x:pl.x+rr(16,Math.max(20,pl.w-16)),y:pl.y-rr(30,64),type:'sock',collected:false});
+    else if(r2<sockRate+coffeeRate)l2.colls.push({x:pl.x+rr(16,Math.max(20,pl.w-16)),y:pl.y-rr(30,64),type:'coffee',collected:false});
+    else if(r2<sockRate+coffeeRate+pieRate){l2.colls.push({x:pl.x+rr(16,Math.max(20,pl.w-16)),y:pl.y-rr(30,64),type:'pancake',collected:false});pieCount++;}
+    // 整局只有 1 颗红心，藏在随机某块台阶上
+    if(!l2.heartGiven&&i>=heartIdx&&pl.x>lw*0.30){
       l2.colls.push({x:pl.x+pl.w/2,y:pl.y-40,type:'redheart',collected:false});
       l2.heartGiven=true;
     }
   }
   // hidden horseshoe coin: follows the floating platform above the arena
   l2.colls.push({x:hp.x+hp.w/2,y:hp.y-34,type:'horseshoe',collected:false,pl:hp});
-  // guaranteed pie right before the boss arena (reachable from the ground)
-  l2.colls.push({x:bp.x-210,y:540,type:'pancake',collected:false});
-  l2.colls.push({x:bp.x-105,y:470,type:'pancake',collected:false});
-  // These rewards visibly shuttle left/right, so collecting them is a timing choice.
-  const rewardTypes=['headset','folder','clockout','milktea'];
-  const rewardCount=2+st;
-  for(let i=0;i<rewardCount;i++){
-    const rx=520+i*(lw-1500)/Math.max(1,rewardCount-1);
-    if(laserZ.some(z=>rx+90>z.x-60&&rx-90<z.x+z.w+60))continue; // v4.2: 不在激光区里放需要跳起来才拿的道具
-    const ry=i%2?l2.gy-42:l2.gy-150;
-    l2.colls.push({x:rx,y:ry,type:rewardTypes[(i+st)%rewardTypes.length],collected:false,motion:{a:rx-70,b:rx+70,dir:i%2?1:-1,spd:0.75+st*0.16}});
+  // BOSS 前的补给：数量与位置每局随机
+  const preCount=1+Math.floor(Math.random()*3);
+  for(let i=0;i<preCount;i++){
+    l2.colls.push({x:bp.x-rr(120,300)-i*72,y:rr(430,560),type:'pancake',collected:false});
+    pieCount++;
   }
-  pieCount+=2;
+  // 地面往返道具：类型整池打乱，位置随机且互相拉开距离
+  const rewardTypes=shuf(['headset','folder','clockout','milktea','sock','coffee']);
+  const rewardCount=2+st+Math.floor(Math.random()*2);
+  const placedRx=[];
+  for(let i=0;i<rewardCount;i++){
+    let rx=0,ok=false;
+    for(let t=0;t<24;t++){
+      rx=rr(480,lw-1500);
+      if(laserZ.some(z=>rx+90>z.x-60&&rx-90<z.x+z.w+60))continue;
+      if(placedRx.some(p=>Math.abs(p-rx)<260))continue;
+      ok=true;break;
+    }
+    if(!ok)continue;
+    placedRx.push(rx);
+    const ry=Math.random()<0.5?l2.gy-42:l2.gy-150;
+    l2.colls.push({x:rx,y:ry,type:rewardTypes[i%rewardTypes.length],collected:false,motion:{a:rx-70,b:rx+70,dir:Math.random()<0.5?1:-1,spd:0.75+st*0.16}});
+  }
   l2.piesTotal=pieCount;
   l2.piesEaten=0;
-  // obstacles: elevator + HR patrols + black pots that fall from above
+  // v4.5: 障碍池按关配置——第 2 关马桶登场（顶替电梯），第 3 关马桶 + 电梯混合
+  //       同时把激光区的清场缓冲从 160 收到 80、间距收紧，一关的障碍数量从 2~3 个提到 5~7 个
   l2.obs=[];
-  let ox=450,potCount=0;
-  while(ox<lw-850){
-    // 缓冲 160px：HR 会在生成点 ±60 巡逻，落锅触发范围也很大，都要算进去
-    const lz=laserZ.find(z=>ox+120>z.x-160&&ox<z.x+z.w+160);
-    if(lz){ox=lz.x+lz.w+200;continue;} // 激光区整段让开，保证地面始终是可行解
-    const r=Math.random();
-    let ob;
-    if(r<0.43){
-      ob={x:ox,y:l2.gy-110,type:'elevator',w:64,h:110,ph:Math.floor(Math.random()*150),gap:56,open:true};
-    }else if(r<0.77){
-      ob={x:ox,y:l2.gy-58,type:'hr',w:46,h:58,ph:0,bx:ox,dir:Math.random()<0.5?1:-1,spd:1.2+st*0.5,bubbleT:0};
-    }else{
-      ob={x:ox,y:-70,type:'fallpot',w:54,h:42,vy:0,state:'wait',targetY:l2.gy-42,ph:Math.floor(Math.random()*40)};potCount++;
-    }
-    l2.obs.push(ob);
-    ox+=(300-st*35)+Math.random()*(220-st*30);
+  const POOLS=[
+    [['elevator',0.40],['hr',0.34],['fallpot',0.26]],
+    [['toilet',0.40],['hr',0.34],['fallpot',0.26]],
+    [['toilet',0.30],['elevator',0.26],['hr',0.24],['fallpot',0.20]]
+  ];
+  const pool=POOLS[Math.min(2,st)];
+  const pickType=(allow)=>{
+    const cand=pool.filter(it=>!allow||allow.indexOf(it[0])>=0);
+    let r=Math.random()*cand.reduce((s,it)=>s+it[1],0);
+    for(const it of cand){r-=it[1];if(r<=0)return it[0];}
+    return cand[cand.length-1][0];
+  };
+  let ox=430+Math.floor(Math.random()*90),potCount=0,guard=0;
+  while(ox<lw-820&&guard++<400){
+    const inAir=ox+130>airX-70&&ox<airX+airW+70;
+    const t=pickType(inAir?['hr','fallpot']:null); // 红毯区只放低矮障碍，免得顶到轨道桥
+    // v4.5: 按类型留缓冲——HR 会 ±60 巡逻，必须多留，否则刚出激光区就被它堵住
+    const clr=(t==='hr'?200:120);
+    const lz=laserZ.find(z=>ox+130>z.x-clr&&ox<z.x+z.w+clr);
+    if(lz){ox=lz.x+lz.w+clr;continue;} // 激光区让开，保证地面始终是可行解
+    if(t==='elevator')l2.obs.push({x:ox,y:l2.gy-110,type:'elevator',w:64,h:110,ph:Math.floor(Math.random()*150),gap:56,open:true});
+    else if(t==='hr')l2.obs.push({x:ox,y:l2.gy-58,type:'hr',w:46,h:58,ph:0,bx:ox,dir:Math.random()<0.5?1:-1,spd:1.2+st*0.5,bubbleT:0});
+    else if(t==='toilet')l2.obs.push({x:ox,y:l2.gy-54,type:'toilet',w:58,h:54,ph:Math.floor(Math.random()*160),jet:0,warn:false});
+    else{l2.obs.push({x:ox,y:-70,type:'fallpot',w:54,h:42,vy:0,state:'wait',targetY:l2.gy-42,ph:Math.floor(Math.random()*40)});potCount++;}
+    ox+=(200-st*20)+Math.random()*(150-st*16);
+    if(Math.random()<0.22)ox+=100+Math.random()*70; // 偶尔来一小段连障碍
   }
-  if(potCount===0)l2.obs.push({x:Math.min(lw-1050,980+st*160),y:-70,type:'fallpot',w:54,h:42,vy:0,state:'wait',targetY:l2.gy-42,ph:0});
+  if(potCount===0)l2.obs.push({x:Math.min(lw-1050,900+Math.floor(Math.random()*400)+st*160),y:-70,type:'fallpot',w:54,h:42,vy:0,state:'wait',targetY:l2.gy-42,ph:0});
   l2.p.x=60;l2.p.y=250;l2.p.vx=0;l2.p.vy=0;l2.p.h=44;
 }
 function l2UpdPlats(){
@@ -1266,6 +1288,20 @@ function l2UpdElevator(ob,st,boss=false){
   else ob.gap=56;
   ob.open=ob.gap>28;
 }
+// v4.5: 马桶——超级玛丽食人花的节奏。安静时只是个矮马桶，一跃就过；
+//       冲水时喷起高水柱（最高约 204px），这时候硬闯必挨打，得等它落回去。
+function l2UpdToilet(ob,st){
+  ob.ph++;
+  const period=Math.max(140,196-st*16),ph=ob.ph%period;
+  const idleEnd=period-78,warnEnd=idleEnd+18,riseEnd=warnEnd+12,holdEnd=riseEnd+44,fallEnd=holdEnd+14;
+  if(ph<idleEnd){ob.jet=0;ob.warn=false;}
+  else if(ph<warnEnd){ob.jet=0;ob.warn=true;}
+  else if(ph<riseEnd){ob.jet=(ph-warnEnd)/(riseEnd-warnEnd);ob.warn=false;}
+  else if(ph<holdEnd){ob.jet=1;ob.warn=false;}
+  else if(ph<fallEnd){ob.jet=1-(ph-holdEnd)/(fallEnd-holdEnd);ob.warn=false;}
+  else {ob.jet=0;ob.warn=false;}
+}
+function l2ToiletTop(ob){return l2.gy-(54+ob.jet*150);} // 水柱顶端：gy-54 → gy-204
 // v4.4: 低空激光改成"短光柱"——只有一小段，在区内横向往返 + 上下浮动。
 // 浮到高处时下面能直接跑过去，沉到低处会扫到贴地的马：看准它抬头的时机再过。
 const L2_BEAM_W=76;
@@ -1468,6 +1504,18 @@ function uL2(){
       }
       continue;
     }
+    if(ob.type==='toilet'){
+      l2UpdToilet(ob,st);
+      const top=l2ToiletTop(ob);
+      if(l2.p.x+l2.p.w>ob.x+4&&l2.p.x<ob.x+ob.w-4&&l2.p.y+l2.p.h>top+2&&l2.p.y<ob.y+ob.h-2){
+        l2Hurt();
+        if(l2.go)break;
+        if(l2.p.x+l2.p.w/2<ob.x+ob.w/2)l2.p.x=ob.x-l2.p.w-1;
+        else l2.p.x=ob.x+ob.w+1;
+        l2.p.vx=0;
+      }
+      continue;
+    }
     if(ob.type==='elevator'){
       l2UpdElevator(ob,st);
       // The player fits only when the animated opening is wider than the pony.
@@ -1579,18 +1627,17 @@ function drL2(){
   for(const z of l2.zones){
     const zx=z.x-bx;if(zx+z.w<0||zx>W)continue;
     if(z.type==='air'){
-      const pulse=0.22+0.12*Math.sin(z.ph*0.12);
-      ctx.fillStyle='rgba(255,70,70,'+pulse+')';ctx.fillRect(zx,l2.gy-18,z.w,58);
+      // v4.5: 改成实心地毯，不再用闪烁的半透明红底去"提示"这是危险区
+      ctx.fillStyle='#b8342f';ctx.fillRect(zx,l2.gy-18,z.w,58);
+      ctx.fillStyle='#8e2622';ctx.fillRect(zx,l2.gy-18,z.w,5);
       for(let x=zx-(z.ph%32);x<zx+z.w;x+=32){
         ctx.fillStyle='#f66';ctx.beginPath();ctx.moveTo(x,l2.gy);ctx.lineTo(x+12,l2.gy-18);ctx.lineTo(x+24,l2.gy);ctx.fill();
       }
       ctx.fillStyle='#fff';ctx.font='bold 20px Arial';ctx.textAlign='center';ctx.fillText('↑',zx+z.w/2,l2.gy+25);
     }else if(z.type==='sky'){
       // 高空横扫：危险带在平台层，贴地这一带是安全通道
+      // v4.5: 只画光束本身，不再用黄/绿半透明底标注"危险带/安全通道"
       const scanY=l2SkyBeamY(z);
-      ctx.fillStyle='rgba(255,190,50,0.08)';ctx.fillRect(zx,250,z.w,240);      // 高处危险带
-      ctx.fillStyle='rgba(90,220,140,0.12)';ctx.fillRect(zx,490,z.w,l2.gy-490); // 贴地安全
-      ctx.fillStyle='rgba(120,240,170,0.5)';ctx.fillRect(zx,490,z.w,2);
       ctx.fillStyle='rgba(255,60,60,0.18)';ctx.fillRect(zx,scanY-8,z.w,16);
       ctx.fillStyle='#f44';ctx.fillRect(zx,scanY-2,z.w,4);
       ctx.fillStyle='rgba(255,90,90,0.9)';ctx.beginPath();ctx.arc(zx+6,scanY,4,0,Math.PI*2);ctx.fill();
@@ -1660,16 +1707,8 @@ function drL2(){
     const spr=c.type==='pancake'?S.pancake:c.type==='horseshoe'?S.horseshoe:c.type==='redheart'?S.heart:c.type==='headset'?S.headphone:c.type==='folder'?S.papers:c.type==='clockout'?S.clockout:c.type==='milktea'?S.coffee:c.type==='sock'?S.sock:c.type==='coffee'?S.coffee:S.coin;
     ds(ctx,spr,vx-16,c.y-16,32,32,false);
     if(c.type==='pancake'){ctx.fillStyle='#0002';ctx.fillRect(vx-9,c.y+15,18,3);}
-    else if(c.type==='horseshoe'){
-      ctx.fillStyle='rgba(255,215,74,'+(0.28+0.22*Math.sin(af*0.15))+')';
-      ctx.beginPath();ctx.arc(vx,c.y,22,0,Math.PI*2);ctx.fill();
-    }
-    else if(c.type==='redheart'){
-      ctx.fillStyle='rgba(255,70,70,'+(0.22+0.16*Math.sin(af*0.12))+')';
-      ctx.beginPath();ctx.arc(vx,c.y,18,0,Math.PI*2);ctx.fill();
-    }
+    // v4.5: 道具不再带属性光晕（金色/红色/青色半透明底），好坏自己试
     else if(c.motion){
-      ctx.fillStyle='rgba(65,215,215,0.22)';ctx.beginPath();ctx.arc(vx,c.y,19,0,Math.PI*2);ctx.fill();
       ctx.fillStyle='#5dd';ctx.font='bold 12px Arial';ctx.textAlign='center';ctx.fillText(c.motion.dir>0?'›':'‹',vx,c.y-22);
     }
   }
@@ -1707,6 +1746,28 @@ function drL2(){
         ctx.fillStyle='#333';ctx.font='bold 11px "PingFang SC","Microsoft YaHei",Arial,sans-serif';
         ctx.fillText('-1 ❤',bx,by+14);
       }
+    }
+    else if(ob.type==='toilet'){
+      const cx=ox+ob.w/2;
+      if(ob.jet>0.02){ // 冲水：整根水柱都是危险区
+        const top=l2ToiletTop(ob),jh=ob.y+18-top;
+        ctx.fillStyle='rgba(90,180,255,0.28)';ctx.fillRect(cx-13,top,26,jh);
+        ctx.fillStyle='rgba(150,220,255,'+(0.42+0.18*Math.sin(af*0.5))+')';ctx.fillRect(cx-7,top,14,jh);
+        ctx.fillStyle='#e8fbff';ctx.fillRect(cx-3,top,6,jh);
+        for(let i=0;i<4;i++){
+          const sy=top+((af*6+i*23)%Math.max(24,jh));
+          ctx.fillStyle='rgba(255,255,255,0.7)';ctx.beginPath();ctx.arc(cx-9+((i*13+af*3)%18),sy,2.5,0,Math.PI*2);ctx.fill();
+        }
+      }
+      ctx.fillStyle='#e9eef5';ctx.fillRect(cx-18,ob.y-2,36,22);      // 水箱
+      ctx.fillStyle='#cfd8e3';ctx.fillRect(cx-18,ob.y-2,36,4);
+      ctx.fillStyle='#9aa7b5';ctx.fillRect(cx-6,ob.y+17,12,5);        // 冲水钮
+      ctx.fillStyle='#f4f8fc';ctx.fillRect(ox+6,ob.y+20,ob.w-12,ob.h-20); // 桶身
+      ctx.fillStyle='#dbe4ee';ctx.fillRect(ox+6,ob.y+20,ob.w-12,5);
+      ctx.fillStyle='#fff';ctx.beginPath();ctx.ellipse(cx,ob.y+22,ob.w/2-6,10,0,0,Math.PI*2);ctx.fill(); // 马桶圈
+      ctx.fillStyle='#9fb0c2';ctx.beginPath();ctx.ellipse(cx,ob.y+22,ob.w/2-15,5,0,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle='#c8d2de';ctx.fillRect(ox+10,ob.y+ob.h-8,ob.w-20,8); // 底座
+      if(ob.warn&&af%8<4){ctx.fillStyle='#fd4';ctx.fillRect(cx-3,ob.y-11,6,6);}
     }
     else if(ob.type==='elevator'){
       const half=Math.max(0,(ob.w-ob.gap)/2);
