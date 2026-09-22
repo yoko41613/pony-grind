@@ -18,7 +18,7 @@ canvas{display:block;flex-shrink:0}
 <script>
 // ===== CONSTANTS =====
 let W=480, H=720; const BASE_W=480, BASE_H=720;
-const P={"t":null,"1":"#e8d5b7","2":"#c4956a","3":"#8b5e3c","4":"#4a2c17","5":"#ffffff","6":"#222222","7":"#ff4444","8":"#44dd44","9":"#ffaa00","a":"#44aaff","b":"#ffdd44","c":"#999999","d":"#dd88aa","e":"#664400","f":"#cc8844","g":"#00ccaa","h":"#ff8844","x":"#1a1a2e","y":"#111111","z":"#888888","i":"#39a0ff","j":"#6613d7","k":"#b0b0b0","l":"#ffcc00","m":"#aa0000","n":"#00aa55","o":"#ff6600","p":"#7d00ff","q":"#0099cc","r":"#c0c0c0"};
+const P={"t":null,"1":"#e8d5b7","2":"#c4956a","3":"#8b5e3c","4":"#4a2c17","5":"#ffffff","6":"#222222","7":"#ff4444","8":"#44dd44","9":"#ffaa00","a":"#44aaff","b":"#ffdd44","c":"#999999","d":"#dd88aa","e":"#664400","f":"#cc8844","g":"#00ccaa","h":"#ff8844","x":"#1a1a2e","y":"#111111","z":"#888888","i":"#39a0ff","j":"#6613d7","k":"#b0b0b0","l":"#ffcc00","m":"#aa0000","n":"#00aa55","o":"#ff6600","p":"#7d00ff","q":"#0099cc","r":"#c0c0c0","s":"#3d3d3d"};
 const JOKES=[
   '"你上班，所以你在上班。"',
   '"加班和不加班，结果都要下班。"',
@@ -75,6 +75,18 @@ burger:["tttooooooott","ttoooooooooo","tooo33333ooo","t7777777777t","t8888888888
 milktea:["tttttt8ttttt","ttttt88ttttt","ttttt8tttttt","ttiiiiiiiitt","tiiiiiiiiiit","tiii3333iiit","tiii3i3iiiit","tiiiiiiiiiit","tiii3i3iiiit","tiiiiiiiiiit","ttiiiiiiiitt"],
 popcorn:["ttt1tt1tt1tt","tt11111111tt","t1111111111t","t7y7y7y7y7yt","t7y7y7y7y7yt","t7y7y7y7y7yt","t7y7y7y7y7yt","tt7y7y7y7ytt"],
 blackpot:["tttttttttttttt","tttzzzzzzzzttt","ttzk666666kztt","tkkz6z6666zkkt","kkkz666666zkkk","tkkz666666zkkt","ttzk666666kztt","tttzz6666zzttt","ttttzzzzzztttt","tttttttttttttt"],
+// v4.8: 双耳黑炒锅（L2 天降锅专用）——黑锅体 + 右侧暗灰高光 + 小白反光 + 两只方环锅耳
+wok:["tttttt"+"yyyyyyyyyyyy"+"tttttt",
+"ttt"+"yyyyyyyyyyyy"+"ssssss"+"ttt",
+"yyy"+"yyyyyyyyyyyy"+"sssss"+"y"+"yyy",
+"yty"+"yyyyyyyyyyyyy"+"sssss"+"yty",
+"yty"+"yyyyyyyyyyyyyy"+"ssss"+"yty",
+"yyy"+"yyyyyyyyyyyyyyy"+"ss"+"y"+"yyy",
+"tttt"+"yyyyyyyyyyyy"+"sss"+"k"+"tttt",
+"ttttt"+"yyyyyyyyyyy"+"ss"+"k"+"ttttt",
+"tttttt"+"yyyyyyyyyyy"+"z"+"tttttt",
+"ttttt"+"yyyyyyyyyyyyyy"+"ttttt",
+"tttttttttttttttttttttttt"],
 stain:["ttt33333tttt","t333333333tt","33333333333t","t33333333333","tt333333333t","tttt33333ttt"],
 phone:["ttt666666ttt","tt6aaaaaa6tt","t6aaaaaaaa6t","t6aa5555aa6t","t6aa5cc5aa6t","t6aa5555aa6t","t6aaaaaaaa6t","tt66666666tt","ttt6tttt6ttt"],
 whiteboard:["tttttttttttt","kkkkkkkkkkkk","k5555555555k","k5555555555k","k5555555555k","k5555555555k","k5555555k66k","k5555555kkkk","kkkkkkkkkkkk","tttttttttttt"],
@@ -1321,11 +1333,19 @@ function genL2(){
     if(t==='elevator')l2.obs.push({x:ox,y:l2.gy-110,type:'elevator',w:64,h:110,ph:Math.floor(Math.random()*150),gap:56,open:true});
     else if(t==='hr')l2.obs.push({x:ox,y:l2.gy-58,type:'hr',w:46,h:58,ph:0,bx:ox,dir:Math.random()<0.5?1:-1,spd:1.2+st*0.5,bubbleT:0});
     else if(t==='toilet')l2.obs.push({x:ox,y:l2.gy-54,type:'toilet',w:58,h:54,ph:Math.floor(Math.random()*160),jet:0,warn:false});
-    else{l2.obs.push({x:ox,y:-70,type:'fallpot',w:54,h:42,vy:0,state:'wait',targetY:l2.gy-42,ph:Math.floor(Math.random()*40)});potCount++;}
+    else{l2.obs.push({x:ox,y:-70,type:'fallpot',w:54,h:42,vy:0,state:'wait',targetY:l2.gy-42,ph:Math.floor(Math.random()*40),trigD:200+Math.floor(Math.random()*160),trigT:150+Math.floor(Math.random()*130)});potCount++;}
     ox+=(200-st*20)+Math.random()*(150-st*16);
     if(Math.random()<0.22)ox+=100+Math.random()*70; // 偶尔来一小段连障碍
   }
-  if(potCount===0)l2.obs.push({x:Math.min(lw-1050,900+Math.floor(Math.random()*400)+st*160),y:-70,type:'fallpot',w:54,h:42,vy:0,state:'wait',targetY:l2.gy-42,ph:0});
+  // v4.8: 每一关保底 3 口天降锅——沿关卡扫描空档补位（随机撒点在障碍密集时会全部被拒）
+  for(let gx=480;potCount<3&&gx<lw-860;gx+=36){
+    const px2=gx+Math.floor(Math.random()*36);
+    if(laserZ.find(z=>px2+130>z.x-100&&px2<z.x+z.w+100))continue;
+    if(l2.obs.some(o=>Math.abs(o.x-px2)<100))continue;
+    l2.obs.push({x:px2,y:-70,type:'fallpot',w:54,h:42,vy:0,state:'wait',targetY:l2.gy-42,ph:Math.floor(Math.random()*80),trigD:200+Math.floor(Math.random()*160),trigT:150+Math.floor(Math.random()*130)});
+    potCount++;
+  }
+  if(potCount===0)l2.obs.push({x:Math.min(lw-1050,900+Math.floor(Math.random()*400)+st*160),y:-70,type:'fallpot',w:54,h:42,vy:0,state:'wait',targetY:l2.gy-42,ph:0,trigD:280,trigT:200});
   l2.p.x=60;l2.p.y=250;l2.p.vx=0;l2.p.vy=0;l2.p.h=44;
 }
 function l2UpdPlats(){
@@ -1600,7 +1620,8 @@ function uL2(){
     if(ob.type==='fallpot'){
       if(ob.state==='wait'){
         ob.ph++;
-        if((l2.p.x>ob.x-300&&l2.p.x<ob.x+180)||ob.ph>190){ob.state='fall';ob.vy=1.5;}
+        // v4.8: 掉落时机每口锅随机——触发距离 200~360、超时兜底 150~280 帧
+        if((l2.p.x>ob.x-(ob.trigD||300)&&l2.p.x<ob.x+180)||ob.ph>(ob.trigT||190)){ob.state='fall';ob.vy=1.5;}
       }else if(ob.state==='fall'){
         ob.y+=ob.vy*(l2.slowT>0?0.7:1);ob.vy+=0.58;
         if(ob.y>=ob.targetY){ob.y=ob.targetY;ob.vy=0;ob.state='landed';ob.landT=115;shake=7;spP(ob.x+ob.w/2,ob.y+ob.h,8,'#666',l2.part,7,3,24);}
@@ -1859,7 +1880,7 @@ function drL2(){
         ctx.fillStyle='rgba(255,60,40,'+pulse+')';ctx.beginPath();ctx.ellipse(ox+ob.w/2,ob.targetY+ob.h-2,30,9,0,0,Math.PI*2);ctx.fill();
         ctx.strokeStyle='#f44';ctx.lineWidth=2;ctx.beginPath();ctx.arc(ox+ob.w/2,ob.targetY+ob.h-2,18+4*Math.sin(af*0.18),0,Math.PI*2);ctx.stroke();
       }
-      if(ob.state!=='wait')ds(ctx,S.blackpot,ox,ob.y,ob.w,ob.h,false);
+      if(ob.state!=='wait')ds(ctx,S.wok,ox,ob.y,ob.w,ob.h,false); // v4.8: 换双耳黑炒锅
     }
     else if(ob.type==='hr'){
       // HR patrol: bumping into HR = 1 life lost, HR pops a speech bubble
