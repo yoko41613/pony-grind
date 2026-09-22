@@ -18,7 +18,7 @@ canvas{display:block;flex-shrink:0}
 <script>
 // ===== CONSTANTS =====
 let W=480, H=720; const BASE_W=480, BASE_H=720;
-const P={"t":null,"1":"#e8d5b7","2":"#c4956a","3":"#8b5e3c","4":"#4a2c17","5":"#ffffff","6":"#222222","7":"#ff4444","8":"#44dd44","9":"#ffaa00","a":"#44aaff","b":"#ffdd44","c":"#999999","d":"#dd88aa","e":"#664400","f":"#cc8844","g":"#00ccaa","h":"#ff8844","x":"#1a1a2e","y":"#111111","z":"#888888","i":"#39a0ff","j":"#6613d7","k":"#b0b0b0","l":"#ffcc00","m":"#aa0000","n":"#00aa55","o":"#ff6600","p":"#7d00ff","q":"#0099cc","r":"#c0c0c0","s":"#3d3d3d"};
+const P={"t":null,"1":"#e8d5b7","2":"#c4956a","3":"#8b5e3c","4":"#4a2c17","5":"#ffffff","6":"#222222","7":"#ff4444","8":"#44dd44","9":"#ffaa00","a":"#44aaff","b":"#ffdd44","c":"#999999","d":"#dd88aa","e":"#664400","f":"#cc8844","g":"#00ccaa","h":"#ff8844","x":"#1a1a2e","y":"#111111","z":"#888888","i":"#39a0ff","j":"#6613d7","k":"#b0b0b0","l":"#ffcc00","m":"#aa0000","n":"#00aa55","o":"#ff6600","p":"#7d00ff","q":"#0099cc","r":"#c0c0c0","s":"#3d3d3d","u":"#ee6d5f"};
 const JOKES=[
   '"你上班，所以你在上班。"',
   '"加班和不加班，结果都要下班。"',
@@ -87,6 +87,22 @@ wok:["tttttt"+"yyyyyyyyyyyy"+"tttttt",
 "tttttt"+"yyyyyyyyyyy"+"z"+"tttttt",
 "ttttt"+"yyyyyyyyyyyyyy"+"ttttt",
 "tttttttttttttttttttttttt"],
+// v4.9: 红皮鞋（第 3 关）——碰了就穿脚上，沉重的很
+shoe:["tt"+"yyyyy"+"ttttttt",
+"ty7777y"+"ttttttt",
+"tyu777y"+"ttttttt",
+"ty7c77y"+"ttttttt",
+"ty7777y"+"ttttttt",
+"tyu777y"+"ttttttt",
+"tyu777y"+"ttttttt",
+"ty7777y"+"ttttttt",
+"tyy7777yy"+"ttttt",
+"ty7777777y"+"tttt",
+"ty77777777y"+"ttt",
+"ty777777777y"+"tt",
+"tyyyyyyyyyyyyy",
+"yyyyyyyyyyyyyy",
+"yyyyytyyyytyyt"],
 stain:["ttt33333tttt","t333333333tt","33333333333t","t33333333333","tt333333333t","tttt33333ttt"],
 phone:["ttt666666ttt","tt6aaaaaa6tt","t6aaaaaaaa6t","t6aa5555aa6t","t6aa5cc5aa6t","t6aa5555aa6t","t6aaaaaaaa6t","tt66666666tt","ttt6tttt6ttt"],
 whiteboard:["tttttttttttt","kkkkkkkkkkkk","k5555555555k","k5555555555k","k5555555555k","k5555555555k","k5555555k66k","k5555555kkkk","kkkkkkkkkkkk","tttttttttttt"],
@@ -1185,7 +1201,7 @@ function rL2(){
   // 每一关都随机：三关背景色调顺序洗牌；标语每关/每次随机；地图布局由 genL2 随机生成
   const bgOrder=[0,1,2];
   for(let i=2;i>0;i--){const j=Math.floor(Math.random()*(i+1));const t=bgOrder[i];bgOrder[i]=bgOrder[j];bgOrder[j]=t;}
-  l2={stage:0,bgOrder:bgOrder,posters:shuffledPosters(),p:{x:60,y:250,vx:0,vy:0,w:34,h:44,gnd:false,face:1},grav:0.5,jumpV:-16*jb,lives:3+el,score:0,big:false,horse:false,shield:0,slowT:0,doorT:0,boostT:0,burdenT:0,inv:0,coffeeT:0,go:false,won:false,cam:0,part:[],floats:[],bossT:0,bossDone:false,overSaved:false,winSaved:false,heartGiven:false,piesEaten:0,piesTotal:0};
+  l2={stage:0,bgOrder:bgOrder,posters:shuffledPosters(),p:{x:60,y:250,vx:0,vy:0,w:34,h:44,gnd:false,face:1},grav:0.5,jumpV:-16*jb,lives:3+el,score:0,big:false,horse:false,shield:0,slowT:0,doorT:0,boostT:0,burdenT:0,inv:0,coffeeT:0,shoeT:0,mailBag:[],go:false,won:false,cam:0,part:[],floats:[],bossT:0,bossDone:false,overSaved:false,winSaved:false,heartGiven:false,piesEaten:0,piesTotal:0};
   genL2();
 }
 // v4.5: 通用洗牌——用于道具类型池，保证每局出现的顺序都不一样
@@ -1260,7 +1276,7 @@ function genL2(){
   l2.colls=[];
   l2.lids=[];
   const rr=(a,b)=>a+Math.random()*(b-a);
-  const lidRate=rr(0.10,0.24),coffeeRate=rr(0.07,0.20),mailRate=rr(0.05,0.12),pieRate=rr(0.34,0.56); // v4.7: 台阶上混进神秘邮件
+  const lidRate=st>0?rr(0.10,0.24):0,coffeeRate=rr(0.07,0.20),mailRate=rr(0.05,0.12),shoeRate=st===2?rr(0.06,0.12):0,pieRate=rr(0.34,0.56); // v4.9: 第 1 关不出马桶；第 3 关台阶上混进红皮鞋
   const heartIdx=1+Math.floor(Math.random()*Math.max(1,plats.length-2));
   let pieCount=0;
   for(let i=1;i<plats.length;i++){
@@ -1273,7 +1289,8 @@ function genL2(){
     }
     else if(r2<lidRate+coffeeRate)l2.colls.push({x:pl.x+rr(16,Math.max(20,pl.w-16)),y:pl.y-rr(30,64),type:'coffee',collected:false});
     else if(r2<lidRate+coffeeRate+mailRate)l2.colls.push({x:pl.x+rr(16,Math.max(20,pl.w-16)),y:pl.y-rr(30,64),type:'mail',collected:false});
-    else if(r2<lidRate+coffeeRate+mailRate+pieRate){l2.colls.push({x:pl.x+rr(16,Math.max(20,pl.w-16)),y:pl.y-rr(30,64),type:'pancake',collected:false});pieCount++;}
+    else if(st===2&&r2<lidRate+coffeeRate+mailRate+shoeRate)l2.colls.push({x:pl.x+rr(16,Math.max(20,pl.w-16)),y:pl.y-rr(30,64),type:'shoe',collected:false}); // v4.9: 第 3 关限定
+    else if(r2<lidRate+coffeeRate+mailRate+shoeRate+pieRate){l2.colls.push({x:pl.x+rr(16,Math.max(20,pl.w-16)),y:pl.y-rr(30,64),type:'pancake',collected:false});pieCount++;}
     // 整局只有 1 颗红心，藏在随机某块台阶上
     if(!l2.heartGiven&&i>=heartIdx&&pl.x>lw*0.30){
       l2.colls.push({x:pl.x+pl.w/2,y:pl.y-40,type:'redheart',collected:false});
@@ -1289,7 +1306,7 @@ function genL2(){
     pieCount++;
   }
   // 地面往返道具：类型整池打乱，位置随机且互相拉开距离
-  const rewardTypes=shuf(['headset','folder','clockout','milktea','coffee','mail']); // v4.7: 神秘邮件混进地面道具池
+  const rewardTypes=shuf(st===2?['headset','folder','clockout','milktea','coffee','mail','shoe']:['headset','folder','clockout','milktea','coffee','mail']); // v4.9: 第 3 关地面也刷红皮鞋
   const rewardCount=2+st+Math.floor(Math.random()*2);
   const placedRx=[];
   for(let i=0;i<rewardCount;i++){
@@ -1471,11 +1488,9 @@ function l2Collect(c){
     spP(c.x,c.y,9,'#fa0',l2.part);
     l2.floats.push({x:c.x,y:c.y-6,txt:'☕ 提神加速!!',t:60});
   }
-  else if(c.type==='mail'){ // v4.7: 神秘邮件——拆开随机开出一件道具，好坏全看运气
-    const good=['redheart','horseshoe','milktea','headset','pancake'];
-    const pick=Math.random()<0.55
-      ?good[Math.floor(Math.random()*good.length)]
-      :(Math.random()<0.5?'burden':'deduct');
+  else if(c.type==='mail'){ // v4.9: 拆邮件=从洗乱的 7 种结果里依次抽，抽完重洗——随机且不会连续重复
+    if(!l2.mailBag||!l2.mailBag.length)l2.mailBag=shuf(['redheart','horseshoe','milktea','headset','pancake','burden','deduct']);
+    const pick=l2.mailBag.pop();
     if(pick==='burden'){l2.burdenT=330;l2.inv=Math.max(l2.inv,42);sh();
       spP(c.x,c.y,8,'#555',l2.part,7,5,26);
       l2.floats.push({x:c.x,y:c.y-6,txt:'📧 拆出黑锅…背上了',t:70});}
@@ -1483,6 +1498,11 @@ function l2Collect(c){
       spP(c.x,c.y,6,'#f44',l2.part);
       l2.floats.push({x:c.x,y:c.y-6,txt:'📧 拆出罚单 -30 分',t:70});}
     else l2Collect({type:pick,x:c.x,y:c.y,collected:false});
+  }
+  else if(c.type==='shoe'){ // v4.9: 红皮鞋——穿到脚上，沉重的很，减速几秒
+    l2.shoeT=270;l2.score+=10;sc();
+    spP(c.x,c.y,9,'#f66',l2.part);
+    l2.floats.push({x:c.x,y:c.y-6,txt:'👟 穿上红皮鞋…好沉',t:70});
   }
 }
 function l2Stomp(b){
@@ -1533,12 +1553,12 @@ function uL2(){
   if(l2.go||l2.won)return;
   l2.inv=Math.max(0,l2.inv-1);shake=Math.max(0,shake-1);
   l2.slowT=Math.max(0,l2.slowT-1);l2.doorT=Math.max(0,l2.doorT-1);l2.boostT=Math.max(0,l2.boostT-1);l2.burdenT=Math.max(0,l2.burdenT-1);
-  l2.coffeeT=Math.max(0,l2.coffeeT-1); // v4.7: 咖啡加速倒计时
+  l2.coffeeT=Math.max(0,l2.coffeeT-1);l2.shoeT=Math.max(0,l2.shoeT-1); // v4.9: 咖啡加速 / 红皮鞋减速倒计时
   for(const f of l2.floats){f.y-=0.8;f.t--;}
   l2.floats=l2.floats.filter(f=>f.t>0);
   // Input
   if(inp.tapT>0){inp.tapT--;if(inp.tapT===0)inp.tap=false;}
-  const runSpd=((l2.boostT>0?5.5:4.5)+(l2.coffeeT>0?1.7:0))*(l2.burdenT>0?0.58:1); // v4.7: 咖啡提速
+  const runSpd=((l2.boostT>0?5.5:4.5)+(l2.coffeeT>0?1.7:0))*(l2.burdenT>0?0.58:1)*(l2.shoeT>0?0.6:1); // v4.7: 咖啡提速 / v4.9: 红皮鞋拖慢
   if(inp.keys['ArrowLeft']||inp.keys['a']){l2.p.vx=-runSpd;l2.p.face=-1;}
   else if(inp.keys['ArrowRight']||inp.keys['d']){l2.p.vx=runSpd;l2.p.face=1;}
   else l2.p.vx*=0.8;
@@ -1862,7 +1882,7 @@ function drL2(){
   for(const c of l2.colls){
     if(c.collected)continue;const vx=c.x-bx;
     if(vx<-20||vx>W+20)continue;
-    const spr=c.type==='pancake'?S.pancake:c.type==='horseshoe'?S.horseshoe:c.type==='redheart'?S.heart:c.type==='headset'?S.headphone:c.type==='folder'?S.papers:c.type==='clockout'?S.clockout:c.type==='milktea'?S.coffee:c.type==='coffee'?S.coffee:c.type==='mail'?S.mail:S.coin;
+    const spr=c.type==='pancake'?S.pancake:c.type==='horseshoe'?S.horseshoe:c.type==='redheart'?S.heart:c.type==='headset'?S.headphone:c.type==='folder'?S.papers:c.type==='clockout'?S.clockout:c.type==='milktea'?S.coffee:c.type==='coffee'?S.coffee:c.type==='mail'?S.mail:c.type==='shoe'?S.shoe:S.coin;
     ds(ctx,spr,vx-16,c.y-16,32,32,false);
     if(c.type==='pancake'){ctx.fillStyle='#0002';ctx.fillRect(vx-9,c.y+15,18,3);}
     // v4.5: 道具不再带属性光晕（金色/红色/青色半透明底），好坏自己试
@@ -2019,6 +2039,12 @@ function drL2(){
   const pw=l2.big?l2.p.w+22:l2.p.w+8;
   const ph2=l2.big?l2.p.h+20:l2.p.h+8;
   ds(ctx,spr,l2.p.x-bx,l2.p.y-8,pw,ph2,l2.p.face<0);
+  // v4.9: 红皮鞋穿在脚上（前后脚各一只）
+  if(l2.shoeT>0){
+    const bY=l2.p.y+l2.p.h-15;
+    ds(ctx,S.shoe,l2.p.x-bx-2,bY,13,15,l2.p.face<0);
+    ds(ctx,S.shoe,l2.p.x-bx+pw-11,bY,13,15,l2.p.face<0);
+  }
   if(l2.burdenT>0){
     const potX=l2.p.x-bx+(l2.p.face<0?18:8),potY=l2.p.y+8;
     ds(ctx,S.blackpot,potX,potY,30,23,l2.p.face<0);
@@ -2051,7 +2077,7 @@ function drL2(){
   ctx.fillText('分数:'+l2.score,95,48);
   ctx.fillText('💰'+save.coins,95,71);
   ctx.fillStyle='#a0704a';ctx.font='bold 13px "PingFang SC","Microsoft YaHei",Arial,sans-serif';
-  ctx.fillText((l2.big?'🥞':'')+(l2.horse?' 🐴':'')+(l2.shield?' 📁':'')+(l2.slowT?' 🎧':'')+(l2.doorT?' 🪪':'')+(l2.boostT?' 🧋':'')+(l2.burdenT?' ⚫':'')+(l2.coffeeT?' ☕':''),95,94);
+  ctx.fillText((l2.big?'🥞':'')+(l2.horse?' 🐴':'')+(l2.shield?' 📁':'')+(l2.slowT?' 🎧':'')+(l2.doorT?' 🪪':'')+(l2.boostT?' 🧋':'')+(l2.burdenT?' ⚫':'')+(l2.coffeeT?' ☕':'')+(l2.shoeT?' 👟':''),95,94);
   ctx.fillStyle='#f44';ctx.font='bold 15px "PingFang SC","Microsoft YaHei",Arial,sans-serif';
   ctx.fillText('❤'.repeat(l2.lives),W-90,25);
   // progress
