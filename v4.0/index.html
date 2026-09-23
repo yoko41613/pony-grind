@@ -1276,7 +1276,8 @@ function genL2(){
   l2.colls=[];
   l2.lids=[];
   const rr=(a,b)=>a+Math.random()*(b-a);
-  const lidRate=st>0?rr(0.10,0.24):0,coffeeRate=rr(0.07,0.20),mailRate=rr(0.05,0.12),shoeRate=st===2?rr(0.06,0.12):0,pieRate=rr(0.34,0.56); // v4.9: 第 1 关不出马桶；第 3 关台阶上混进红皮鞋
+  const lidRate=st>0?rr(0.10,0.24):0,coffeeRate=rr(0.07,0.20),mailRate=rr(0.05,0.12),shoeRate=st===2?rr(0.06,0.12):0,extraRate=st===2?rr(0.10,0.18):0,pieRate=rr(0.34,0.56); // v4.10: 第 3 关台阶上会刷出全套道具
+  const extraPool=['headset','folder','clockout','milktea']; // 第 3 关专属：补齐台阶上没出现过的道具
   const heartIdx=1+Math.floor(Math.random()*Math.max(1,plats.length-2));
   let pieCount=0;
   for(let i=1;i<plats.length;i++){
@@ -1290,7 +1291,8 @@ function genL2(){
     else if(r2<lidRate+coffeeRate)l2.colls.push({x:pl.x+rr(16,Math.max(20,pl.w-16)),y:pl.y-rr(30,64),type:'coffee',collected:false});
     else if(r2<lidRate+coffeeRate+mailRate)l2.colls.push({x:pl.x+rr(16,Math.max(20,pl.w-16)),y:pl.y-rr(30,64),type:'mail',collected:false});
     else if(st===2&&r2<lidRate+coffeeRate+mailRate+shoeRate)l2.colls.push({x:pl.x+rr(16,Math.max(20,pl.w-16)),y:pl.y-rr(30,64),type:'shoe',collected:false}); // v4.9: 第 3 关限定
-    else if(r2<lidRate+coffeeRate+mailRate+shoeRate+pieRate){l2.colls.push({x:pl.x+rr(16,Math.max(20,pl.w-16)),y:pl.y-rr(30,64),type:'pancake',collected:false});pieCount++;}
+    else if(st===2&&r2<lidRate+coffeeRate+mailRate+shoeRate+extraRate)l2.colls.push({x:pl.x+rr(16,Math.max(20,pl.w-16)),y:pl.y-rr(30,64),type:extraPool[Math.floor(Math.random()*extraPool.length)],collected:false}); // v4.10: 第 3 关道具合集
+    else if(r2<lidRate+coffeeRate+mailRate+shoeRate+extraRate+pieRate){l2.colls.push({x:pl.x+rr(16,Math.max(20,pl.w-16)),y:pl.y-rr(30,64),type:'pancake',collected:false});pieCount++;}
     // 整局只有 1 颗红心，藏在随机某块台阶上
     if(!l2.heartGiven&&i>=heartIdx&&pl.x>lw*0.30){
       l2.colls.push({x:pl.x+pl.w/2,y:pl.y-40,type:'redheart',collected:false});
@@ -1306,8 +1308,8 @@ function genL2(){
     pieCount++;
   }
   // 地面往返道具：类型整池打乱，位置随机且互相拉开距离
-  const rewardTypes=shuf(st===2?['headset','folder','clockout','milktea','coffee','mail','shoe']:['headset','folder','clockout','milktea','coffee','mail']); // v4.9: 第 3 关地面也刷红皮鞋
-  const rewardCount=2+st+Math.floor(Math.random()*2);
+  const rewardTypes=shuf(st===2?['headset','folder','clockout','milktea','coffee','mail','shoe','pancake']:['headset','folder','clockout','milktea','coffee','mail']); // v4.10: 第 3 关是道具合集——全部道具都会出现
+  const rewardCount=st===2?5+Math.floor(Math.random()*2):2+st+Math.floor(Math.random()*2); // 第 3 关地面道具更多
   const placedRx=[];
   for(let i=0;i<rewardCount;i++){
     let rx=0,ok=false;
@@ -1361,6 +1363,22 @@ function genL2(){
     if(l2.obs.some(o=>Math.abs(o.x-px2)<100))continue;
     l2.obs.push({x:px2,y:-70,type:'fallpot',w:54,h:42,vy:0,state:'wait',targetY:l2.gy-42,ph:Math.floor(Math.random()*80),trigD:200+Math.floor(Math.random()*160),trigT:150+Math.floor(Math.random()*130)});
     potCount++;
+  }
+  // v4.10: 第 3 关是合集——马桶和电梯各保底 1 个，缺谁补谁
+  if(st===2){
+    const need=[];
+    if(!l2.obs.some(o=>o.type==='toilet'))need.push('toilet');
+    if(!l2.obs.some(o=>o.type==='elevator'))need.push('elevator');
+    for(const nt of need){
+      for(let gx=520;gx<lw-880;gx+=36){
+        const px2=gx+Math.floor(Math.random()*36);
+        if(laserZ.find(z=>px2+130>z.x-100&&px2<z.x+z.w+100))continue;
+        if(l2.obs.some(o=>Math.abs(o.x-px2)<110))continue;
+        if(nt==='toilet')l2.obs.push({x:px2,y:l2.gy-54,type:'toilet',w:58,h:54,ph:Math.floor(Math.random()*160),jet:0,warn:false});
+        else l2.obs.push({x:px2,y:l2.gy-110,type:'elevator',w:64,h:110,ph:Math.floor(Math.random()*150),gap:56,open:true});
+        break;
+      }
+    }
   }
   if(potCount===0)l2.obs.push({x:Math.min(lw-1050,900+Math.floor(Math.random()*400)+st*160),y:-70,type:'fallpot',w:54,h:42,vy:0,state:'wait',targetY:l2.gy-42,ph:0,trigD:280,trigT:200});
   l2.p.x=60;l2.p.y=250;l2.p.vx=0;l2.p.vy=0;l2.p.h=44;
@@ -2039,11 +2057,11 @@ function drL2(){
   const pw=l2.big?l2.p.w+22:l2.p.w+8;
   const ph2=l2.big?l2.p.h+20:l2.p.h+8;
   ds(ctx,spr,l2.p.x-bx,l2.p.y-8,pw,ph2,l2.p.face<0);
-  // v4.9: 红皮鞋穿在脚上（前后脚各一只）
+  // v4.10: 红皮鞋穿在小马前后腿上（靴子包住小腿，对应设定图）
   if(l2.shoeT>0){
-    const bY=l2.p.y+l2.p.h-15;
-    ds(ctx,S.shoe,l2.p.x-bx-2,bY,13,15,l2.p.face<0);
-    ds(ctx,S.shoe,l2.p.x-bx+pw-11,bY,13,15,l2.p.face<0);
+    const bY=l2.p.y+l2.p.h-20,flip=l2.p.face<0;
+    ds(ctx,S.shoe,l2.p.x-bx+pw*0.17,bY,14,19,flip);
+    ds(ctx,S.shoe,l2.p.x-bx+pw*0.55,bY,14,19,flip);
   }
   if(l2.burdenT>0){
     const potX=l2.p.x-bx+(l2.p.face<0?18:8),potY=l2.p.y+8;
