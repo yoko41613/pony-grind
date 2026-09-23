@@ -1227,6 +1227,32 @@ function genL2(){
   // v4.2: 激光区必须能"贴地通过"——这些区间不放任何逼你起跳的东西
   const laserZ=l2.zones.filter(z=>z.type!=='air');
   const groundZ=l2.zones.filter(z=>z.type==='ground');
+
+  // v4.11: 统一的障碍构造函数——后面补位的时候也用它，避免同一种障碍参数写得到处都是
+  const mkObs=(t,x)=>{
+    if(t==='elevator')return {x:x,y:l2.gy-110,type:'elevator',w:64,h:110,ph:Math.floor(Math.random()*150),gap:56,open:true};
+    if(t==='hr')return {x:x,y:l2.gy-58,type:'hr',w:46,h:58,ph:0,bx:x,dir:Math.random()<0.5?1:-1,spd:1.2+st*0.5,bubbleT:0};
+    if(t==='toilet')return {x:x,y:l2.gy-54,type:'toilet',w:58,h:54,ph:Math.floor(Math.random()*160),jet:0,warn:false};
+    return {x:x,y:-70,type:'fallpot',w:54,h:42,vy:0,state:'wait',targetY:l2.gy-42,ph:Math.floor(Math.random()*80),trigD:200+Math.floor(Math.random()*160),trigT:150+Math.floor(Math.random()*130)};
+  };
+  // v4.11: 把整条赛道切成 4 段——每段都必须有自己的障碍和道具，不许前重后轻、后半段空荡荡
+  const playA=430,playB=lw-700,SEGN=4;
+  const segOf=x=>Math.max(0,Math.min(SEGN-1,Math.floor((x-playA)/((playB-playA)/SEGN))));
+  const segRange=i=>[playA+(playB-playA)*i/SEGN,playA+(playB-playA)*(i+1)/SEGN];
+  // 在 [a,b] 里找一个落点。⚠️ 激光区的缓冲绝对不能放宽（贴太近会让"激光区段必须能贴地过"失效），
+  //                        只能放宽"和别的障碍挨多近"这一项；实在挤不下就放弃这一段的补位。
+  const freeSlot=(a,b,t)=>{
+    const clr=(t==='hr'?200:120);
+    for(const near of [110,80,58]){
+      for(let i=0;i<40;i++){
+        const x=a+Math.random()*(b-a);
+        if(laserZ.find(z=>x+130>z.x-clr&&x<z.x+z.w+clr))continue;
+        if(l2.obs.some(o=>Math.abs(o.x-x)<near))continue;
+        return x;
+      }
+    }
+    return null;
+  };
   const plats=[{x:0,y:l2.gy,w:lw,h:40,mv:null,ground:true}];
   let px=250,lastY=l2.gy-180;
   while(px<lw-750){
@@ -1277,7 +1303,7 @@ function genL2(){
   l2.lids=[];
   const rr=(a,b)=>a+Math.random()*(b-a);
   const lidRate=st>0?rr(0.10,0.24):0,coffeeRate=rr(0.07,0.20),mailRate=rr(0.05,0.12),shoeRate=st===2?rr(0.06,0.12):0,extraRate=st===2?rr(0.10,0.18):0,pieRate=rr(0.34,0.56); // v4.10: 第 3 关台阶上会刷出全套道具
-  const extraPool=['headset','folder','clockout','milktea']; // 第 3 关专属：补齐台阶上没出现过的道具
+  const extraPool=['clockout','milktea']; // v4.11: 第 3 关专属（耳机、文件夹不进第 3 关）
   const heartIdx=1+Math.floor(Math.random()*Math.max(1,plats.length-2));
   let pieCount=0;
   for(let i=1;i<plats.length;i++){
@@ -1308,7 +1334,7 @@ function genL2(){
     pieCount++;
   }
   // 地面往返道具：类型整池打乱，位置随机且互相拉开距离
-  const rewardTypes=shuf(st===2?['headset','folder','clockout','milktea','coffee','mail','shoe','pancake']:['headset','folder','clockout','milktea','coffee','mail']); // v4.10: 第 3 关是道具合集——全部道具都会出现
+  const rewardTypes=shuf(st===2?['clockout','milktea','coffee','mail','shoe','pancake']:['headset','folder','clockout','milktea','coffee','mail']); // v4.11: 第 3 关不刷耳机和文件夹
   const rewardCount=st===2?5+Math.floor(Math.random()*2):2+st+Math.floor(Math.random()*2); // 第 3 关地面道具更多
   const placedRx=[];
   for(let i=0;i<rewardCount;i++){
@@ -1323,6 +1349,24 @@ function genL2(){
     placedRx.push(rx);
     const ry=Math.random()<0.5?l2.gy-42:l2.gy-150;
     l2.colls.push({x:rx,y:ry,type:rewardTypes[i%rewardTypes.length],collected:false,motion:{a:rx-70,b:rx+70,dir:Math.random()<0.5?1:-1,spd:0.75+st*0.16}});
+  }
+  // v4.11: 道具也得铺满全程——每段都补到最低数量，缺的就地补（优先放在该段的台阶上，没有台阶就悬空往返）
+  const minCollPerSeg=3+Math.floor(st*0.5);
+  const extraItemPool=st===2?['coffee','mail','shoe','clockout','milktea','pancake']:['coffee','mail','clockout','milktea','pancake']; // 不含耳机/文件夹
+  for(let i=0;i<SEGN;i++){
+    const [sa,sb]=segRange(i);
+    let have=l2.colls.filter(c=>c.x>=sa&&c.x<sb).length,tries=0;
+    while(have<minCollPerSeg&&tries++<14){
+      const cands=plats.filter(pl=>!pl.ground&&pl.x>=sa-20&&pl.x<sb);
+      let cx2,cy2;
+      if(cands.length){const pl=cands[Math.floor(Math.random()*cands.length)];cx2=pl.x+rr(16,Math.max(20,pl.w-16));cy2=pl.y-rr(30,64);}
+      else{cx2=sa+Math.random()*(sb-sa);cy2=Math.random()<0.5?l2.gy-42:l2.gy-150;}
+      cx2=Math.min(sb-24,Math.max(sa+16,cx2)); // 必须落在本段范围内，否则等于没补
+      const t=extraItemPool[Math.floor(Math.random()*extraItemPool.length)];
+      if(t==='pancake')pieCount++;
+      l2.colls.push({x:cx2,y:cy2,type:t,collected:false});
+      have++;
+    }
   }
   l2.piesTotal=pieCount;
   l2.piesEaten=0;
@@ -1349,38 +1393,54 @@ function genL2(){
     const clr=(t==='hr'?200:120);
     const lz=laserZ.find(z=>ox+130>z.x-clr&&ox<z.x+z.w+clr);
     if(lz){ox=lz.x+lz.w+clr;continue;} // 激光区让开，保证地面始终是可行解
-    if(t==='elevator')l2.obs.push({x:ox,y:l2.gy-110,type:'elevator',w:64,h:110,ph:Math.floor(Math.random()*150),gap:56,open:true});
-    else if(t==='hr')l2.obs.push({x:ox,y:l2.gy-58,type:'hr',w:46,h:58,ph:0,bx:ox,dir:Math.random()<0.5?1:-1,spd:1.2+st*0.5,bubbleT:0});
-    else if(t==='toilet')l2.obs.push({x:ox,y:l2.gy-54,type:'toilet',w:58,h:54,ph:Math.floor(Math.random()*160),jet:0,warn:false});
-    else{l2.obs.push({x:ox,y:-70,type:'fallpot',w:54,h:42,vy:0,state:'wait',targetY:l2.gy-42,ph:Math.floor(Math.random()*40),trigD:200+Math.floor(Math.random()*160),trigT:150+Math.floor(Math.random()*130)});potCount++;}
+    if(t==='fallpot')potCount++;
+    l2.obs.push(mkObs(t,ox));
     ox+=(200-st*20)+Math.random()*(150-st*16);
     if(Math.random()<0.22)ox+=100+Math.random()*70; // 偶尔来一小段连障碍
   }
-  // v4.8: 每一关保底 3 口天降锅——沿关卡扫描空档补位（随机撒点在障碍密集时会全部被拒）
-  for(let gx=480;potCount<3&&gx<lw-860;gx+=36){
-    const px2=gx+Math.floor(Math.random()*36);
-    if(laserZ.find(z=>px2+130>z.x-100&&px2<z.x+z.w+100))continue;
-    if(l2.obs.some(o=>Math.abs(o.x-px2)<100))continue;
-    l2.obs.push({x:px2,y:-70,type:'fallpot',w:54,h:42,vy:0,state:'wait',targetY:l2.gy-42,ph:Math.floor(Math.random()*80),trigD:200+Math.floor(Math.random()*160),trigT:150+Math.floor(Math.random()*130)});
-    potCount++;
+  // v4.11: 分段兜底——每一段都补齐到"最少障碍数"（第 1 关每段 2 个，后面每关 +1），后半段不再空场
+  const minObsPerSeg=2+st;
+  for(let i=0;i<SEGN;i++){
+    const [sa,sb]=segRange(i);
+    let have=l2.obs.filter(o=>o.x>=sa&&o.x<sb).length,tries=0;
+    while(have<minObsPerSeg&&tries++<12){
+      const t=pickType(null),x=freeSlot(sa,sb,t);
+      if(x===null)break;
+      if(t==='fallpot')potCount++;
+      l2.obs.push(mkObs(t,x));
+      have++;
+    }
   }
-  // v4.10: 第 3 关是合集——马桶和电梯各保底 1 个，缺谁补谁
+  // 每段至少 1 口天降锅
+  for(let i=0;i<SEGN;i++){
+    const [sa,sb]=segRange(i);
+    if(l2.obs.some(o=>o.type==='fallpot'&&o.x>=sa&&o.x<sb))continue;
+    const x=freeSlot(sa,sb,'fallpot');
+    if(x!==null){l2.obs.push(mkObs('fallpot',x));potCount++;}
+  }
+  // v4.11: 第 3 关是合集——马桶和电梯前后两半都要有，缺谁就在那一半补谁
   if(st===2){
-    const need=[];
-    if(!l2.obs.some(o=>o.type==='toilet'))need.push('toilet');
-    if(!l2.obs.some(o=>o.type==='elevator'))need.push('elevator');
-    for(const nt of need){
-      for(let gx=520;gx<lw-880;gx+=36){
-        const px2=gx+Math.floor(Math.random()*36);
-        if(laserZ.find(z=>px2+130>z.x-100&&px2<z.x+z.w+100))continue;
-        if(l2.obs.some(o=>Math.abs(o.x-px2)<110))continue;
-        if(nt==='toilet')l2.obs.push({x:px2,y:l2.gy-54,type:'toilet',w:58,h:54,ph:Math.floor(Math.random()*160),jet:0,warn:false});
-        else l2.obs.push({x:px2,y:l2.gy-110,type:'elevator',w:64,h:110,ph:Math.floor(Math.random()*150),gap:56,open:true});
-        break;
+    for(const want of ['toilet','elevator']){
+      for(let half=0;half<2;half++){
+        const halfA=playA+half*(playB-playA)/2,halfB=half?playB:playA+(playB-playA)/2;
+        if(l2.obs.some(o=>o.type===want&&o.x>=halfA&&o.x<halfB))continue;
+        const x=freeSlot(halfA,halfB,want);
+        if(x!==null)l2.obs.push(mkObs(want,x));
       }
     }
   }
-  if(potCount===0)l2.obs.push({x:Math.min(lw-1050,900+Math.floor(Math.random()*400)+st*160),y:-70,type:'fallpot',w:54,h:42,vy:0,state:'wait',targetY:l2.gy-42,ph:0,trigD:280,trigT:200});
+  if(potCount===0)l2.obs.push(mkObs('fallpot',Math.min(lw-1050,900+Math.floor(Math.random()*400)+st*160)));
+  // v4.11: 前后平衡——后半段明显比前半段空就往后半段补，避免越跑越没内容
+  const midX=playA+(playB-playA)/2;
+  for(let t2=0;t2<24;t2++){
+    const front=l2.obs.filter(o=>o.x>=playA&&o.x<midX).length;
+    const back=l2.obs.filter(o=>o.x>=midX&&o.x<playB).length;
+    if(back>=front*0.8)break;
+    const t=pickType(null),x=freeSlot(midX,playB,t);
+    if(x===null)break;
+    if(t==='fallpot')potCount++;
+    l2.obs.push(mkObs(t,x));
+  }
   l2.p.x=60;l2.p.y=250;l2.p.vx=0;l2.p.vy=0;l2.p.h=44;
 }
 function l2UpdPlats(){
@@ -1507,7 +1567,7 @@ function l2Collect(c){
     l2.floats.push({x:c.x,y:c.y-6,txt:'☕ 提神加速!!',t:60});
   }
   else if(c.type==='mail'){ // v4.9: 拆邮件=从洗乱的 7 种结果里依次抽，抽完重洗——随机且不会连续重复
-    if(!l2.mailBag||!l2.mailBag.length)l2.mailBag=shuf(['redheart','horseshoe','milktea','headset','pancake','burden','deduct']);
+    if(!l2.mailBag||!l2.mailBag.length)l2.mailBag=shuf(l2.stage===2?['redheart','horseshoe','milktea','clockout','pancake','burden','deduct']:['redheart','horseshoe','milktea','headset','pancake','burden','deduct']); // v4.11: 第 3 关连邮件里也抽不到耳机
     const pick=l2.mailBag.pop();
     if(pick==='burden'){l2.burdenT=330;l2.inv=Math.max(l2.inv,42);sh();
       spP(c.x,c.y,8,'#555',l2.part,7,5,26);
