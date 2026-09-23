@@ -623,7 +623,7 @@ const L1_BANNER=['','',''];
 const L1_GOAL=[10800,12600,14400];
 const L1_LV=['第1关','第2关','第3关'];
 const L1_DESC=['办公室','会议室','停车场'];
-const L1_ITEMS=[['badge','coffee','headset','milktea','tel'],['burger','fish','mail'],['clockout','popcorn']]; // v4.12: 第 1 关新增座机电话（负面），第 2 关新增邮件（随机）
+const L1_ITEMS=[['badge','coffee','headset','milktea','tel','burger'],['fish','mail'],['clockout','popcorn']]; // v4.13: 汉堡从第 2 关挪到第 1 关
 // 运势测试语录：根据得分和剩余生命随机调侃
 const L1_LUCK={
   god:['你今天踩了狗屎运才能通关吧','运气也是实力，你这实力藏不住了','今日宜下班，宜摸鱼，宜通关','这运气，买彩票去吧','老板看了都羡慕你的走位'],
@@ -692,7 +692,7 @@ function l1TryPlace(t,w,h,lane,sx){
   return ok;
 }
 // v4.3: 开局预热用的温和障碍（三关一致，保证开局就有东西要躲，但不会一上来就劝退）
-const L1_OPEN=[{t:'papers',w:52,h:44},{t:'phone',w:42,h:46},{t:'stain',w:58,h:22},{t:'whiteboard',w:58,h:44}];
+const L1_OPEN=[{t:'papers',w:52,h:44}]; // v4.13: 手机/咖啡渍/白板已删，开局预热只剩文件堆
 function rL1(){
   let stBoost=false,stSlow=false,stInv=false;
   if(save.items.coffee>0){save.items.coffee--;stBoost=true;}
@@ -792,7 +792,7 @@ function uL1(){
     }
     else if(r<0.76){
       const pools=[
-        [{t:'papers',w:52,h:44,p:0.18},{t:'printer',w:56,h:52,p:0.14},{t:'hr',w:44,h:60,p:0.13},{t:'phone',w:42,h:46,p:0.16},{t:'stain',w:58,h:22,p:0.15},{t:'whiteboard',w:58,h:44,p:0.12},{t:'blackpot',w:POT_W,h:POT_H,p:0.12}],
+        [{t:'papers',w:52,h:44,p:0.32},{t:'printer',w:56,h:52,p:0.24},{t:'hr',w:44,h:60,p:0.22},{t:'blackpot',w:POT_W,h:POT_H,p:0.22}], // v4.13: 删 手机/咖啡渍/白板，剩余按原比例缩放
         [{t:'desk',w:84,h:58,p:0.15},{t:'slider',w:44,h:54,p:0.18},{t:'notebook',w:40,h:40,p:0.11},{t:'boss',w:52,h:58,p:0.09},{t:'blackpot',w:POT_W,h:POT_H,p:0.16},{t:'eraser',w:48,h:28,p:0.13},{t:'papers',w:52,h:44,p:0.11}],
         [{t:'car',w:96,h:54,p:0.28},{t:'cone',w:34,h:44,p:0.26},{t:'boss_car',w:84,h:54,p:0.13},{t:'whiteboard',w:58,h:44,p:0.13},{t:'blackpot',w:POT_W,h:POT_H,p:0.15}]
       ];
@@ -829,7 +829,7 @@ function uL1(){
     }
     else{ // 两道封锁、一道放行；安全车道持续变化，始终保证可通过
       const pools2=[
-        [{t:'papers',w:52,h:44},{t:'phone',w:42,h:46},{t:'stain',w:58,h:22}],
+        [{t:'papers',w:52,h:44}], // v4.13: 手机/咖啡渍已删，第 1 关封锁模式只剩文件堆
         [{t:'blackpot',w:POT_W,h:POT_H},{t:'slider',w:44,h:54},{t:'eraser',w:48,h:28}],
         [{t:'cone',w:34,h:44},{t:'car',w:96,h:54},{t:'whiteboard',w:58,h:44}]
       ];
