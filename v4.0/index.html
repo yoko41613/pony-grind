@@ -623,7 +623,7 @@ const L1_BANNER=['','',''];
 const L1_GOAL=[10800,12600,14400];
 const L1_LV=['第1关','第2关','第3关'];
 const L1_DESC=['办公室','会议室','停车场'];
-const L1_ITEMS=[['badge','coffee','headset','milktea','tel','burger'],['fish','mail'],['clockout','popcorn']]; // v4.13: 汉堡从第 2 关挪到第 1 关
+const L1_ITEMS=[['badge','headset','milktea','tel','burger'],['coffee','pancake','fish','mail'],['clockout','popcorn']]; // v4.14: 咖啡挪到第 2 关，汉堡换成大饼（变大效果沿用）
 // 运势测试语录：根据得分和剩余生命随机调侃
 const L1_LUCK={
   god:['你今天踩了狗屎运才能通关吧','运气也是实力，你这实力藏不住了','今日宜下班，宜摸鱼，宜通关','这运气，买彩票去吧','老板看了都羡慕你的走位'],
@@ -793,7 +793,7 @@ function uL1(){
     else if(r<0.76){
       const pools=[
         [{t:'papers',w:52,h:44,p:0.32},{t:'printer',w:56,h:52,p:0.24},{t:'hr',w:44,h:60,p:0.22},{t:'blackpot',w:POT_W,h:POT_H,p:0.22}], // v4.13: 删 手机/咖啡渍/白板，剩余按原比例缩放
-        [{t:'desk',w:84,h:58,p:0.15},{t:'slider',w:44,h:54,p:0.18},{t:'notebook',w:40,h:40,p:0.11},{t:'boss',w:52,h:58,p:0.09},{t:'blackpot',w:POT_W,h:POT_H,p:0.16},{t:'eraser',w:48,h:28,p:0.13},{t:'papers',w:52,h:44,p:0.11}],
+        [{t:'slider',w:44,h:54,p:0.23},{t:'notebook',w:40,h:40,p:0.14},{t:'boss',w:52,h:58,p:0.12},{t:'blackpot',w:POT_W,h:POT_H,p:0.21},{t:'whiteboard',w:58,h:44,p:0.17},{t:'papers',w:52,h:44,p:0.13}], // v4.14: 删 会议桌、板擦换白板，剩余按原比例缩放
         [{t:'car',w:96,h:54,p:0.28},{t:'cone',w:34,h:44,p:0.26},{t:'boss_car',w:84,h:54,p:0.13},{t:'whiteboard',w:58,h:44,p:0.13},{t:'blackpot',w:POT_W,h:POT_H,p:0.15}]
       ];
       const pool=pools[l1.stage];
@@ -830,7 +830,7 @@ function uL1(){
     else{ // 两道封锁、一道放行；安全车道持续变化，始终保证可通过
       const pools2=[
         [{t:'papers',w:52,h:44}], // v4.13: 手机/咖啡渍已删，第 1 关封锁模式只剩文件堆
-        [{t:'blackpot',w:POT_W,h:POT_H},{t:'slider',w:44,h:54},{t:'eraser',w:48,h:28}],
+        [{t:'blackpot',w:POT_W,h:POT_H},{t:'slider',w:44,h:54},{t:'whiteboard',w:58,h:44}], // v4.14: 板擦换白板
         [{t:'cone',w:34,h:44},{t:'car',w:96,h:54},{t:'whiteboard',w:58,h:44}]
       ];
       const pool2=pools2[l1.stage];
@@ -932,6 +932,7 @@ function uL1(){
       else if(c.type==='coffee'){l1.score+=10;sc();spP(cx2+c.w/2,c.y,5,'#fd4',l1.part);l1.boostT=240;}
       else if(c.type==='badge'){l1.score+=20;sw();spP(cx2+c.w/2,c.y,7,'#6ff',l1.part);l1.inv=Math.max(l1.inv,100);}
       else if(c.type==='burger'){l1.score+=15;sg();spP(cx2+c.w/2,c.y,7,'#fd4',l1.part);l1.bigT=180;}
+      else if(c.type==='pancake'){l1.score+=15;sg();spP(cx2+c.w/2,c.y,7,'#fd4',l1.part);l1.bigT=180;} // v4.14: 大饼=第 2 关版变大道具
       else if(c.type==='milktea'){l1.score+=15;l1.lives=Math.min(5,l1.lives+1);sw();spP(cx2+c.w/2,c.y,9,'#f8b',l1.part,7,7,28);}
       else if(c.type==='popcorn'){l1.score+=15;l1.jumpBoostT=300;sg();spP(cx2+c.w/2,c.y,10,'#fff',l1.part,8,8,30);}
       else if(c.type==='horseshoe'){l1.score+=80;l1.lives=Math.min(5,l1.lives+1);l1.inv=180;sw();spP(cx2+c.w/2,c.y,14,'#fd4',l1.part,9,9,34);}
@@ -1037,6 +1038,7 @@ function drL1(){
     else if(c.type==='clockout')spr=S.clockout;
     else if(c.type==='badge')spr=S.badge;
     else if(c.type==='burger')spr=S.burger;
+    else if(c.type==='pancake')spr=S.pancake;
     else if(c.type==='milktea')spr=S.milktea;
     else if(c.type==='tel')spr=S.tel;
     else if(c.type==='mail')spr=S.mail;
