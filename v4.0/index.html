@@ -61,7 +61,7 @@ horse_coin:["tttttbbbttttt","tt1bbbbbbb1tt","t1bbb33ebbb1t","tbbb3333zbbbt","tbb
 horseshoe:["tttttbbbttttt","tt1bbbbbbb1tt","t1bbb33ebbb1t","tbbb3333zbbbt","tbb33fbb33bb1","bbb33bbb33bbb","bbb33bbb33bbb","bbb33bbb33bbb","tbbe3fbb33bb5","tb333fbb333bt","t1bbbbbbbbbbt","tt1bbbbbbbbtt","tttttbbb1tttt"],
 heart:["tt7tt7tt","t777777t","77777777","77777777","t777777t","t777777t","tt7777tt","ttt77ttt"],
 barrier:["tttt9llll9tttt","tttt9tttt9tttt","tttt9llll9tttt","tt9llllllll9tt","tt9l999999l9tt","tt9llllllll9tt","tt9l999999l9tt","tt9llllllll9tt","tttt9llll9tttt","tttt9llll9tttt","tt9llllllll9tt","tt9eeeeeeee9tt"],
-skateboard:["yyttttttttttttyy","tyyyyyyyyyyyyyyt","tyyyyyyyyyyyyyyt","tttttttttttttttt","tt9ltttttttt9ltt","tt9ltttttttt9ltt"],
+skateboard:["tttttttttttttttttt","txxttttttttttttxxt","tooxxttttttttxxoot","t66ooxxxxxxxxoo66t","t6666oooooooo6666t","ttttt66666666ttttt","tttttkkttttkkttttt","ttttt66tttt66ttttt","tttt6bb6tt6bb6tttt","tttt6bb6tt6bb6tttt","ttttt66tttt66ttttt"],
 sunglass:["tyyyyyyyyyyyyyyt","ty6k6666yy6k666t","ty666666yy66666t","tyyyyyyyyyyyyyyt"],
 envelope:["tttt","t77t","7bb7","t77t"],
 coin:["tt99tt","t9999t","999999","99yy99","999999","t9999t","tt99tt"],
@@ -695,7 +695,8 @@ function l1TryPlace(t,w,h,lane,sx){
   return ok;
 }
 // v4.3: 开局预热用的温和障碍（三关一致，保证开局就有东西要躲，但不会一上来就劝退）
-const L1_OPEN=[{t:'papers',w:52,h:44}]; // v4.13: 手机/咖啡渍/白板已删，开局预热只剩文件堆
+// v4.16: 开局预热也按关取池，第 3 关不再出现文件堆（文件夹）
+const L1_OPEN=[[{t:'papers',w:52,h:44}],[{t:'papers',w:52,h:44}],[{t:'cone',w:34,h:44},{t:'car',w:96,h:54}]];
 function rL1(){
   let stBoost=false,stSlow=false,stInv=false;
   if(save.items.coffee>0){save.items.coffee--;stBoost=true;}
@@ -711,8 +712,9 @@ function l1Start(st){
   l1.goal=L1_GOAL[st];l1.win=false;l1.winT=0;l1.sel=false;
   // v4.3: 开局预热——第一组障碍直接摆在眼前（约 300px 后就要做选择），不再有空场
   {
-    const o1=L1_OPEN[Math.floor(Math.random()*L1_OPEN.length)];
-    const o2=L1_OPEN[Math.floor(Math.random()*L1_OPEN.length)];
+    const OPEN=L1_OPEN[l1.stage]; // v4.16: 按关取预热池
+    const o1=OPEN[Math.floor(Math.random()*OPEN.length)];
+    const o2=OPEN[Math.floor(Math.random()*OPEN.length)];
     const ln1=Math.floor(Math.random()*3);
     const ln2=(ln1+1+Math.floor(Math.random()*2))%3;
     l1TryPlace(o1.t,o1.w,o1.h,ln1,430);
