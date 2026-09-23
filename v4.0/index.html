@@ -18,7 +18,7 @@ canvas{display:block;flex-shrink:0}
 <script>
 // ===== CONSTANTS =====
 let W=480, H=720; const BASE_W=480, BASE_H=720;
-const P={"t":null,"1":"#e8d5b7","2":"#c4956a","3":"#8b5e3c","4":"#4a2c17","5":"#ffffff","6":"#222222","7":"#ff4444","8":"#44dd44","9":"#ffaa00","a":"#44aaff","b":"#ffdd44","c":"#999999","d":"#dd88aa","e":"#664400","f":"#cc8844","g":"#00ccaa","h":"#ff8844","x":"#1a1a2e","y":"#111111","z":"#888888","i":"#39a0ff","j":"#6613d7","k":"#b0b0b0","l":"#ffcc00","m":"#aa0000","n":"#00aa55","o":"#ff6600","p":"#7d00ff","q":"#0099cc","r":"#c0c0c0","s":"#3d3d3d","u":"#ee6d5f"};
+const P={"t":null,"1":"#e8d5b7","2":"#c4956a","3":"#8b5e3c","4":"#4a2c17","5":"#ffffff","6":"#222222","7":"#ff4444","8":"#44dd44","9":"#ffaa00","a":"#44aaff","b":"#ffdd44","c":"#999999","d":"#dd88aa","e":"#664400","f":"#cc8844","g":"#00ccaa","h":"#ff8844","x":"#1a1a2e","y":"#111111","z":"#888888","i":"#39a0ff","j":"#6613d7","k":"#b0b0b0","l":"#ffcc00","m":"#aa0000","n":"#00aa55","o":"#ff6600","p":"#7d00ff","q":"#0099cc","r":"#c0c0c0","s":"#3d3d3d","u":"#ee6d5f","v":"#a6d9f7"};
 const JOKES=[
   '"你上班，所以你在上班。"',
   '"加班和不加班，结果都要下班。"',
@@ -43,7 +43,7 @@ pony_chubby:["tttttttttytttttttttttttttttttt","ttttttyyzyzytttttttttttttttttt","
 pony_fat:["tttttttttytttttttttttttttttttt","ttttttyyzyzytttttttttttttttttt","ttttttyyyyyyzttttttttttttttttt","ttttttyyyyyzzytttttttttttttttt","ttttttyyyyyyyzzttttttttttttttt","ttttyyy55yyyzzzttttttttttttttt","ttttyyyzyyyyyyyttttttttttttttt","ttyyyyyyyyyyyzzttttttttttttttt","ttyyyyyyyyyyyyyttttttttttttttt","ttttyttyyyyyyzzttttttttttttttt","tttttttyyyyyyzztttyyyyyttttttt","tttttttyyyyyyyytyyyyyyyyyttttt","ttttttyyyyyyyyyyyyyzzzyyyttttt","ttttttyyyyyyyyyyyyzzzzzyyytttt","tttttyyyyyyyyyyyyyzyyyzyyytttt","tttttyyyyyyyyyyyyyzyyyzyyytttt","yttttyyyyyyyyyyyyyzzyzzyyyttty","yytttyyyyyyyyyyyyyyyyyyyyyttyy","yyyttyyyyyyyyyyyyyyyyyyyyytyyy","yyyyyyyyyyyyyyyyyyyyyyyyyyyyyy","yyyyyyyyyyyyyyyyyyyyyyyyyyyyyy","tyyyyyyyyyyyyyyyyyyyyyyyyyyyyt","ttyyyyyyyyyyyyyyyyyyyyyyyyyytt","ttttyyyyyyyyyyyyyyyyyyyyyytttt","tttttttyyyyyyyyyyyyyyyyttttttt","ttttttttttyyyyyyyyyytttttttttt"],
 pony_hit:["tttttttttytttttttttttttttttttt","ttttttyyzyzytttttttttttttttttt","ttttttyyyyyyzttttttttttttttttt","ttttttyyyyyzzytttttttttttttttt","ttttttyyyyyyyzzttttttttttttttt","ttttyyy55yyyzzzttttttttttttttt","ttttyyyzyyyyyyyttttttttttttttt","ttyyyyyyyyyyyzzttttttttttttttt","ttyyyyyyyyyyyyyttttttttttttttt","ttttyttyyyyyyzzttttttttttttttt","tttttttyyyyyyzztttyyyyyttttttt","tttttttyyyyyyyytyyyyyyyyyttttt","ttttttyyyyyyyyyyyyyzzzyyyttttt","ttttttyyyyyyyyyyyyzzzzzyyytttt","tttttyyyyyyyyyyyyyzyyyzyyytttt","tttttyyyyyyyyyyyyyzyyyzyyytttt","yttttyyyyyyyyyyyyyzzyzzyyyttty","yytttyyyyyyyyyyyyyyyyyyyyyttyy","yyyttyyyyyyyyyyyyyyyyyyyyytyyy","yyyyyyyyyyyyyyyyyyyyyyyyyyyyyy","yyyyyyyyyyyyyyyyyyyyyyyyyyyyyy","tyyyyyyyyyyyyyyyyyyyyyyyyyyyyt","ttyyyyyyyyyyyyyyyyyyyyyyyyyytt","ttttyyyyyyyyyyyyyyyyyyyyyytttt","tttttttyyyyyyyyyyyyyyyyttttttt","ttttttttttyyyyyyyyyytttttttttt"],
 headphone:["tttzyyyyttt","ttyyyyyyytt","tyytttttyyt","ty6tttttryt","ty6tttttryt","666ztttzz66","666ztttzz66","666ztttzz66","666ztttzz66","t66tttttz6t"],
-papers:["qqqqqqqqqq5tt","qqqqqqqqqqttt","qqqqqqqqqqttt","qqqqqqqqqq2ll","qqqttttaqqbll","qqq5555aqq2ll","qqqqqqqqqq2l9","qqq5555aqq2ll","qqqttttaqqbl9","qqqqqqqqqq29l","qqqqqqqqqq299","qqqqqqqqqq2l9","qqqqqqqqqq2ll","qqqqqqqqqqbll","tttllllllllll","tttllllllllll"],
+papers:["tteeeeeetttttt","tteeeeeeeeeett","tte55555555ett","tte55555555ett","teeeeeeeeeeeet","te9999999999et","te9999999999et","te9999999999et","te9999999999et","te9999999999et","teeeeeeeeeeeet"],
 printer:["ttttt6y6ttttt","ttyct666ttytt","t6yctttttty6t","6666666666666","6666666666zz6","6666666666zc6","6666666666666","666yyyyyyy666","6666ttttty666","tyy6tttttyyyt","ttkyyyyyyyttt"],
 hr:["tttoooooooof1tt","tfftttttttttfht","tfotyyyyyytthft","tzzzzzzzzzzzzct","tzzm77mm777zzct","czz77777777zzzc","zzzzzzzzzzzzzzz","zzzzttzzzttczzz","zzzzzzzzzzzzzzz","zzzzzzzzzzzzzzz","zzzzzzzzzzzzzzz","t4yytty66tt664t","t6yyttyyytt6y4t","t6y6ttyyytt6y4t"],
 coffee:["tkyyyyyyt","tryyyyyyt","y4eeeeeey","ye3fff3fy","ye3ff3ffy","ye32tf3fy","ye3t1tffy","ye33tt3fy","ye333333y","y4333333y","y6yyyyyyy","yyyyyyyyy"],
@@ -69,12 +69,12 @@ corn:["8b8b","b8b8","tt8t","tt8t","tt8t","tt8t"],
 tomato:["tttt","t77t","7777","t77t","tttt"],
 guy:["t6t6t6tt","tttttttt","ttxxxxxt","txxxxxxt","txxxxxxt","txxxxxxt","tx7777xt","txxxxxxt","txxxxxxt","ttxxxxxt","t4t44t4t","t4t44t4t"],
 offcard:["taaaaaat","a5555att","a55a5att","a5555att","a5555att","taaaaaat"],
-fish:["ttttttiiiiittt","ttttiiiiiiiiit","ttiiiiiiiiiiit","tiiiiiiiiiiiii","tiiiii55iiiiii","ttiiiiiiiiiiit","tttttttttttttt"],
-badge:["ttttt11ttttt","tttt1111tttt","ttttt11ttttt","ttaaaaaaaaat","ta55555555at","ta55a55555at","ta55555555at","ta55555555at","ta55555555at","ttaaaaaaaaat"],
+fish:["ttttyyyyyttttttt","ttyvyvyvyvyttttt","ttyvvvvvvvvyttyy","yvvyvvvvvvvytyvy","yvvvvvyvvvvyyvty","yvvvvvyvvvvyyvty","yvvvvvyvvvvyyvvy","tyvvvvvvvvyttyyy","tttyvvvvvvyttyyy","ttttyyyyyttttttt"],
+badge:["ttttttaaaattttt","ttttttaaaattttt","ttttttaaaattttt","tttttyyyyyytttt","tttttyy55yytttt","tyyyyyyyyyyyyyt","ty55555555555yt","ty55yy555kkk5yt","ty55yy555kkk5yt","ty5yyyy555555yt","ty5yyyy55kkk5yt","ty5yyyy55kkk5yt","ty55555555555yt","ty55555555555yt","tyyyyyyyyyyyyyt"],
 burger:["tttooooooott","ttoooooooooo","tooo33333ooo","t7777777777t","t8888888888t","t4444444444t","ttoooooooooo","tttyyyyyyttt"],
-milktea:["tttttt8ttttt","ttttt88ttttt","ttttt8tttttt","ttiiiiiiiitt","tiiiiiiiiiit","tiii3333iiit","tiii3i3iiiit","tiiiiiiiiiit","tiii3i3iiiit","tiiiiiiiiiit","ttiiiiiiiitt"],
+milktea:["ttttyyyytttt","ttttyyyytttt","tttyyyyyyttt","tty555555ytt","ty55555555yt","ttyf11112ytt","ttyf51112ytt","ttyf11112ytt","ttyf1y112ytt","ttyfy11y2ytt","ttyf1yy12ytt","tty333333ytt"],
 popcorn:["ttt1tt1tt1tt","tt11111111tt","t1111111111t","t7y7y7y7y7yt","t7y7y7y7y7yt","t7y7y7y7y7yt","t7y7y7y7y7yt","tt7y7y7y7ytt"],
-blackpot:["tttttttttttttt","tttzzzzzzzzttt","ttzk666666kztt","tkkz6z6666zkkt","kkkz666666zkkk","tkkz666666zkkt","ttzk666666kztt","tttzz6666zzttt","ttttzzzzzztttt","tttttttttttttt"],
+blackpot:["ttttyyyyyyyytttt","ttyyyyyyyzzz5ytt","tyyyyyyyyyzzz5yt","yyyyyyyyyyyzzyyy","ytyyyyyyyyyyyyty","yyyyyyyyyyyyyyyy","ttttyyyyyyyytttt","tttttyyyyyyttttt","tttttttttttttttt"],
 // v4.8: 双耳黑炒锅（L2 天降锅专用）——黑锅体 + 右侧暗灰高光 + 小白反光 + 两只方环锅耳
 wok:["tttttt"+"yyyyyyyyyyyy"+"tttttt",
 "ttt"+"yyyyyyyyyyyy"+"ssssss"+"ttt",
@@ -105,6 +105,7 @@ shoe:["tt"+"yyyyy"+"ttttttt",
 "yyyyytyyyytyyt"],
 stain:["ttt33333tttt","t333333333tt","33333333333t","t33333333333","tt333333333t","tttt33333ttt"],
 phone:["ttt666666ttt","tt6aaaaaa6tt","t6aaaaaaaa6t","t6aa5555aa6t","t6aa5cc5aa6t","t6aa5555aa6t","t6aaaaaaaa6t","tt66666666tt","ttt6tttt6ttt"],
+tel:["tyyyytttttttttttt","tyssytttttttttttt","tyyyyyyyyyyyyyyyt","ttsytyyyyyyyy77yt","ttsytyyyryryryyyt","ttsytyyyyyyyyyyyt","ttsytyyyryryryyyt","ttsytyyyyyyyyyyyt","tyyyyyyyryryryyyt","tyssyyyyyyyyyyyyt","tyyyyyyyyyyyyyyyt","ttttttttttttttttt"],
 whiteboard:["tttttttttttt","kkkkkkkkkkkk","k5555555555k","k5555555555k","k5555555555k","k5555555555k","k5555555k66k","k5555555kkkk","kkkkkkkkkkkk","tttttttttttt"],
 eraser:["tttttttttttt","ttt777777ttt","tt77777777tt","t7777777777t","t6666666666t","tt66666666tt"],
 // v4.7: 马桶（黑描边白瓷，参考玩家给的图案）——合盖 / 掀盖（桶口露蓝水）两种状态
@@ -622,7 +623,7 @@ const L1_BANNER=['','',''];
 const L1_GOAL=[10800,12600,14400];
 const L1_LV=['第1关','第2关','第3关'];
 const L1_DESC=['办公室','会议室','停车场'];
-const L1_ITEMS=[['badge','coffee','headset','milktea'],['burger','fish'],['clockout','popcorn']];
+const L1_ITEMS=[['badge','coffee','headset','milktea','tel'],['burger','fish','mail'],['clockout','popcorn']]; // v4.12: 第 1 关新增座机电话（负面），第 2 关新增邮件（随机）
 // 运势测试语录：根据得分和剩余生命随机调侃
 const L1_LUCK={
   god:['你今天踩了狗屎运才能通关吧','运气也是实力，你这实力藏不住了','今日宜下班，宜摸鱼，宜通关','这运气，买彩票去吧','老板看了都羡慕你的走位'],
@@ -715,7 +716,7 @@ function l1Start(st){
     l1TryPlace(o2.t,o2.w,o2.h,ln2,640);
   }
   l1.banner='';l1.bannerT=0;
-  l1.bigT=0;l1.boostT=0;l1.inv=0;l1.slowT=0;l1.jumpBoostT=0;l1.dizzyT=0;l1.stumbleT=0;l1.chairRide=null;l1.chairRideT=0;l1.rideX=0;l1.burdenT=0;l1.floats=[];
+  l1.bigT=0;l1.boostT=0;l1.inv=0;l1.slowT=0;l1.jumpBoostT=0;l1.dizzyT=0;l1.stumbleT=0;l1.chairRide=null;l1.chairRideT=0;l1.rideX=0;l1.burdenT=0;l1.floats=[];l1.callT=0;l1.mailBag=[];
   l1.patternN=0;l1.lastSafe=1;l1.heartGiven=false;
   if(!continuing){l1.score=0;l1.lives=3;l1.horseGiven=false;l1.boostT=l1.startBoost;l1.slowT=l1.startSlow;l1.inv=l1.startInv;}
   l1.luckLine='';
@@ -749,7 +750,7 @@ function uL1(){
   }
   shake=Math.max(0,shake-1);l1.inv=Math.max(0,l1.inv-1);
   l1.boostT=Math.max(0,l1.boostT-1);l1.bigT=Math.max(0,l1.bigT-1);l1.slowT=Math.max(0,l1.slowT-1);l1.jumpBoostT=Math.max(0,l1.jumpBoostT-1);l1.bannerT=Math.max(0,l1.bannerT-1);
-  l1.dizzyT=Math.max(0,l1.dizzyT-1);l1.stumbleT=Math.max(0,l1.stumbleT-1);l1.burdenT=Math.max(0,l1.burdenT-1);
+  l1.dizzyT=Math.max(0,l1.dizzyT-1);l1.stumbleT=Math.max(0,l1.stumbleT-1);l1.burdenT=Math.max(0,l1.burdenT-1);l1.callT=Math.max(0,l1.callT-1);
   for(const f of l1.floats){f.y-=0.8;f.t--;}
   l1.floats=l1.floats.filter(f=>f.t>0);
   if(l1.chairRideT>0){
@@ -757,7 +758,7 @@ function uL1(){
     if(l1.chairRideT===0){if(l1.chairRide)l1.chairRide.dead=true;l1.chairRide=null;}
   }else l1.rideX*=0.82;
   l1.bs=Math.min(5.0,2.05+l1.stage*0.4+l1.dist*0.00013); // v4.2: 整体提速（起步 ~+17%，封顶提高）
-  l1.spd=(l1.bs+(l1.boostT>0?1.5:0))*(l1.slowT>0?0.5:1)*(l1.burdenT>0?0.34:1); // v4.1: 背锅后超级慢
+  l1.spd=(l1.bs+(l1.boostT>0?1.5:0))*(l1.slowT>0?0.5:1)*(l1.burdenT>0?0.34:1)*(l1.callT>0?0.5:1); // v4.1: 背锅后超级慢; v4.12: 接电话分心减速
   l1.coinT++;
   if(l1.coinT>=600){l1.coinT=0;save.coins+=10;sv(save);}
   // Input
@@ -937,6 +938,20 @@ function uL1(){
       else if(c.type==='headset'||c.type==='fish'){l1.score+=10;sc();spP(cx2+c.w/2,c.y,5,'#6ff',l1.part);l1.slowT=240;}
       else if(c.type==='pie'){l1.score+=20;sg();spP(cx2+c.w/2,c.y,8,'#fd4',l1.part);l1.bigT=180;}
       else if(c.type==='clockout'){l1.score+=15;sw();spP(cx2+c.w/2,c.y,6,'#4af',l1.part);l1.inv=300;}
+      else if(c.type==='tel'){ // v4.12: 座机电话——老板来电，被迫接电话，减速几秒
+        l1.callT=270;sh();spP(cx2+c.w/2,c.y,7,'#f44',l1.part);
+        l1.floats.push({x:cx2,y:c.y-8,txt:'📞 老板来电！接一下…',t:70});
+      }
+      else if(c.type==='mail'){ // v4.12: 邮件——和 L2 一样拆开随机开出一件道具（好坏随机，洗牌袋不连续重复）
+        if(!l1.mailBag||!l1.mailBag.length)l1.mailBag=shuf(['score','score','life','inv','boost','burden','deduct']);
+        const pick=l1.mailBag.pop();
+        if(pick==='score'){l1.score+=20;sw();spP(cx2+c.w/2,c.y,7,'#fd4',l1.part);l1.floats.push({x:cx2,y:c.y-8,txt:'📧 拆出 +20 分',t:60});}
+        else if(pick==='life'){l1.lives=Math.min(5,l1.lives+1);sw();spP(cx2+c.w/2,c.y,9,'#f8b',l1.part,7,7,28);l1.floats.push({x:cx2,y:c.y-8,txt:'📧 拆出 +1 条命',t:60});}
+        else if(pick==='inv'){l1.inv=Math.max(l1.inv,240);sw();l1.floats.push({x:cx2,y:c.y-8,txt:'📧 拆出无敌护体',t:60});}
+        else if(pick==='boost'){l1.boostT=Math.max(l1.boostT,240);sw();l1.floats.push({x:cx2,y:c.y-8,txt:'📧 拆出提速！',t:60});}
+        else if(pick==='burden'){l1.burdenT=330;l1.inv=Math.max(l1.inv,42);sh();spP(cx2+c.w/2,c.y,8,'#555',l1.part,7,5,26);l1.floats.push({x:cx2,y:c.y-8,txt:'📧 拆出黑锅…背上了',t:70});}
+        else{l1.score=Math.max(0,l1.score-30);sh();spP(cx2+c.w/2,c.y,6,'#f44',l1.part);l1.floats.push({x:cx2,y:c.y-8,txt:'📧 拆出罚单 -30 分',t:70});}
+      }
     }
   }
   }
@@ -1023,6 +1038,8 @@ function drL1(){
     else if(c.type==='badge')spr=S.badge;
     else if(c.type==='burger')spr=S.burger;
     else if(c.type==='milktea')spr=S.milktea;
+    else if(c.type==='tel')spr=S.tel;
+    else if(c.type==='mail')spr=S.mail;
     else if(c.type==='popcorn')spr=S.popcorn;
     else if(c.type==='horseshoe')spr=S.horseshoe;
     ds(ctx,spr,cx2,c.y,c.w,c.h,false);
@@ -1048,6 +1065,11 @@ function drL1(){
     const bx=ponyX-pw2*0.16,by=ponyY+ph2*0.10;
     ctx.save();ctx.translate(bx+bw2/2,by+bh2/2);ctx.rotate(Math.sin(af*0.22)*0.06);
     ds(ctx,S.blackpot,-bw2/2,-bh2/2,bw2,bh2,false);ctx.restore();
+  }
+  if(l1.callT>0){ // v4.12: 接电话中——头顶座机晃动 + 通话波纹
+    ds(ctx,S.tel,ponyX+pw2/2-13,ponyY-24+Math.sin(af*0.25)*2,26,18,false);
+    ctx.strokeStyle='rgba(244,68,68,'+(0.5+0.4*Math.sin(af*0.3))+')';ctx.lineWidth=2;
+    for(let i=1;i<=2;i++){ctx.beginPath();ctx.arc(ponyX+pw2/2+14,ponyY-14,4+i*4+Math.sin(af*0.3)*1.5,-0.9,0.9);ctx.stroke();}
   }
   if(l1.dizzyT>0){
     ctx.globalAlpha=0.9;const hx=ponyX+25,hy=ponyY-6;
