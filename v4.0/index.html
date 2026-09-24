@@ -115,7 +115,16 @@ skateboard:[
 "ttyyttttttttttttyytt"
 ],
 exit:["nnnnnnnnnnnnnnnn","n88888888888888n","n85555588888888n","n85888588888888n","n85888588888888n","n85888588888588n","n85888585555558n","n85888588888588n","n85888588888888n","n85888588888888n","n88888888888888n","nnnnnnnnnnnnnnnn"],
-sunglass:["tyyyyyyyyyyyyyyt","ty6k6666yy6k666t","ty666666yy66666t","tyyyyyyyyyyyyyyt"],
+// v4.20g: 墨镜重新设计——黑色粗框、深色镜片、鼻梁和高光，轮廓更像真正的太阳镜。
+sunglass:[
+"tt66666tt66666tt",
+"t6yyyy6tt6yyyy6t",
+"6ykkkky66ykkkky6",
+"6ykk5ky66yk5kky6",
+"6yyyyyy66yyyyyy6",
+"t666666tt666666t",
+"ttt66tttttt66ttt"
+],
 envelope:["tttt","t77t","7bb7","t77t"],
 coin:["tt99tt","t9999t","999999","99yy99","999999","t9999t","tt99tt"],
 cooler:["tttttt","tggggt","g5gg5g","gggggg","tggggt","ttcctt","ttcctt","ttcctt"],
@@ -747,19 +756,26 @@ const L1_ITEMS=[
   ['skateboard','skateboard','popcorn','popcorn','sunglass','exit']
 ];
 const L1_FLOW=[
-  {single:0.72,item:0.14,bonusEvery:2}, // 第1关：奖励更常见，适合熟悉操作
-  {single:0.74,item:0.12,bonusEvery:3}, // 第2关：奖励收紧，随机邮件比重提高
-  {single:0.76,item:0.10,bonusEvery:3}  // 第3关：奖励最少，但保留强力逃生/加速
+  {single:0.72,item:0.14,bonusChance:0.42}, // 第1关：奖励较多，但是否出现完全随机
+  {single:0.74,item:0.12,bonusChance:0.34}, // 第2关：奖励收紧
+  {single:0.76,item:0.10,bonusChance:0.30}  // 第3关：奖励最少
 ];
-function pickL1Item(stage){
+function l1ItemCanSpawn(type,x){
+  // 同款约一屏内不重复；更大范围内最多同时存在 2 个。
+  const same=l1.coll.filter(c=>!c.collected&&c.type===type);
+  if(same.some(c=>Math.abs(c.x0-x)<520))return false;
+  if(same.filter(c=>Math.abs(c.x0-x)<1200).length>=2)return false;
+  return true;
+}
+function pickL1Item(stage,x){
   const pool=L1_ITEMS[stage];
-  let choices=pool;
-  if(l1.lastItemType){
-    const alt=pool.filter(t=>t!==l1.lastItemType);
-    if(alt.length)choices=alt;
-  }
+  const recent=l1.itemHistory||[];
+  let choices=pool.filter(t=>!recent.includes(t)&&l1ItemCanSpawn(t,x));
+  if(!choices.length)choices=pool.filter(t=>l1ItemCanSpawn(t,x));
+  if(!choices.length)return '';
   const type=choices[Math.floor(Math.random()*choices.length)];
   l1.lastItemType=type;
+  l1.itemHistory=[type,...recent.filter(t=>t!==type)].slice(0,2);
   return type;
 }
 // 运势测试语录：根据得分和剩余生命随机调侃
@@ -838,7 +854,7 @@ function rL1(){
   if(save.items.headset>0){save.items.headset--;stSlow=true;}
   if(save.items.offcard>0){save.items.offcard--;stInv=true;}
   sv(save);
-  l1={py:H*0.66,pl:1,pvy:0,jump:false,gnd:true,inv:0,startInv:stInv?180:0,score:0,dist:0,cam:0,bs:2,spd:2,lives:3,obs:[],coll:[],part:[],gy:H*0.88,ly:[H*0.52,H*0.66,H*0.80],st:0,si:46,go:false,goSaved:false,boostT:0,startBoost:stBoost?180:0,bigT:0,slowT:0,startSlow:stSlow?180:0,jumpBoostT:0,dizzyT:0,stumbleT:0,chairRide:null,chairRideT:0,rideX:0,coinT:0,stage:0,goal:L1_GOAL[0],win:false,winT:0,winSaved:false,banner:'',bannerT:0,sel:true,cont:false,tip:'',tipT:0,heartGiven:false,horseGiven:false,patternN:0,lastSafe:1,luckLine:'',burdenT:0,floats:[],lastItemType:'',potShake:0};
+  l1={py:H*0.66,pl:1,pvy:0,jump:false,gnd:true,inv:0,startInv:stInv?180:0,score:0,dist:0,cam:0,bs:2,spd:2,lives:3,obs:[],coll:[],part:[],gy:H*0.88,ly:[H*0.52,H*0.66,H*0.80],st:0,si:46,go:false,goSaved:false,boostT:0,startBoost:stBoost?180:0,bigT:0,slowT:0,startSlow:stSlow?180:0,jumpBoostT:0,dizzyT:0,stumbleT:0,chairRide:null,chairRideT:0,rideX:0,coinT:0,stage:0,goal:L1_GOAL[0],win:false,winT:0,winSaved:false,banner:'',bannerT:0,sel:true,cont:false,tip:'',tipT:0,heartGiven:false,horseGiven:false,patternN:0,lastSafe:1,luckLine:'',burdenT:0,floats:[],lastItemType:'',itemHistory:[],potShake:0};
 }
 function l1Start(st){
   const continuing=l1.cont;
@@ -857,7 +873,7 @@ function l1Start(st){
   }
   l1.banner='';l1.bannerT=0;
   l1.bigT=0;l1.boostT=0;l1.inv=0;l1.slowT=0;l1.jumpBoostT=0;l1.dizzyT=0;l1.stumbleT=0;l1.chairRide=null;l1.chairRideT=0;l1.rideX=0;l1.burdenT=0;l1.floats=[];l1.callT=0;l1.mailBag=[];l1.shoeT=0;l1.ghostT=0; // v4.15: 红靴减速 / 墨镜影身
-  l1.patternN=0;l1.lastSafe=1;l1.heartGiven=false;l1.lastItemType='';l1.potShake=0;
+  l1.patternN=0;l1.lastSafe=1;l1.heartGiven=false;l1.lastItemType='';l1.itemHistory=[];l1.potShake=0;
   if(!continuing){l1.score=0;l1.lives=3;l1.horseGiven=false;l1.boostT=l1.startBoost;l1.slowT=l1.startSlow;l1.inv=l1.startInv;}
   l1.luckLine='';
   l1.cont=false;
@@ -946,9 +962,10 @@ function uL1(){
         if(!l1LaneBlocked(lane,sx,sel.t,sel.w)&&l1TryPlace(sel.t,sel.w,sel.h,lane,sx))break;
       }
     }
-    else if(r<flow.single+flow.item){ // v4.20: 各关独立控制奖励频率，避免前后关体感一样
-      const type=pickL1Item(l1.stage);
-      const ix=l1.dist+W+60;
+    else if(r<flow.single+flow.item){
+      const ix=l1.dist+W+50+Math.floor(Math.random()*130);
+      const type=pickL1Item(l1.stage,ix);
+      if(!type)return;
       // v4.3: 道具只落在"前后 200px 完全净空"的车道上——不再出现"为了吃道具必须撞障碍"的坑位
       const cand=[0,1,2].sort(()=>Math.random()-0.5);
       let ilane=-1;
@@ -982,12 +999,11 @@ function uL1(){
       const sx1=l1.dist+W+80,sx2=sx1+34+l1.stage*12;
       if(!l1LaneBlocked(lanes[0],sx1,a.t,a.w))l1TryPlace(a.t,a.w,a.h,lanes[0],sx1);
       if(!l1LaneBlocked(lanes[1],sx2,b.t,b.w))l1TryPlace(b.t,b.w,b.h,lanes[1],sx2);
-      if(l1.patternN%flow.bonusEvery===0){
-        const rt=pickL1Item(l1.stage);
-        const ix2=sx1+30;
-        // v4.3: 安全车道也必须前后 200px 净空才放道具
-        if(l1LaneFree(safe,ix2-200,ix2+200)&&!l1.obs.some(o=>o.lane===safe&&(o.t==='car'||o.t==='boss_car'))){
-          l1.coll.push({x0:ix2,y:l1.ly[safe]-30,type:rt,w:34,h:34,collected:false,fromLane:safe,toLane:safe,phase:0});
+      if(Math.random()<flow.bonusChance){
+        const ix2=sx1+35+Math.floor(Math.random()*120);
+        const rt=pickL1Item(l1.stage,ix2);
+        if(rt&&l1LaneFree(safe,ix2-200,ix2+200)&&!l1.obs.some(o=>o.lane===safe&&(o.t==='car'||o.t==='boss_car'))){
+          l1.coll.push({x0:ix2,y:l1.ly[safe]-30,type:rt,w:34,h:34,collected:false,fromLane:safe,toLane:safe,phase:Math.random()*6.28});
         }
       }
     }
@@ -1023,8 +1039,8 @@ function uL1(){
     // v4.1: 锅还在半空（离本车道落点较远）时不判定，避免穿过上方车道误伤
     if(o.t==='blackpot'&&!o.landed&&o.y<l1.ly[o.lane]-70)continue;
     if(px<ox+o.w&&px+pw>ox&&py<o.y+o.h&&py+ph>o.y){
-      if(o.t==='blackpot'&&l1.inv<=0){ // 被锅砸中：背在背上，慢到离谱
-        o.dead=true;l1.burdenT=330;l1.inv=Math.max(l1.inv,50);sh();
+      if(o.t==='blackpot'){ // v4.20g: 所有黑锅一碰就背上并减速，不受变大/无敌状态豁免
+        o.dead=true;l1.burdenT=Math.max(l1.burdenT,330);l1.inv=Math.max(l1.inv,50);sh();
         spP(px+pw/2,py+10,12,'#555',l1.part,8,8,32);
         l1.floats.push({x:px+pw/2,y:py-26,txt:'这锅你背了',t:70});
         continue;
@@ -1519,14 +1535,28 @@ function genL2(){
     return use[Math.floor(Math.random()*use.length)];
   };
 
-  // 台阶道具：第1关偏基础奖励；第2关开始出现马桶；第3关才加入红鞋和更多效果道具。
+  // v4.20g: 道具随机出现，但同类会自动错开，避免一屏同时刷很多个同款。
+  const canPlaceL2Item=(type,x)=>{
+    if(type==='horseshoe'||type==='redheart')return true;
+    const same=l2.colls.filter(c=>c.type===type);
+    const nearGap=type==='pancake'?380:500;
+    if(same.some(c=>Math.abs(c.x-x)<nearGap))return false;
+    if(same.filter(c=>Math.abs(c.x-x)<1250).length>=2)return false;
+    return true;
+  };
+  const addL2Item=(c)=>{
+    if(!canPlaceL2Item(c.type,c.x))return false;
+    l2.colls.push(c);
+    return true;
+  };
+
+  // 台阶道具：每块台阶独立随机，类型也随机；同类过近时本次留空。
   for(let i=1;i<plats.length;i++){
     const pl=plats[i];
     if(pl===hp)continue;
     const r2=Math.random();
     let type='';
     if(r2<lidRate){
-      // v4.20c: 第2关台阶马桶整关最多 1 个，并且只允许出现在前半段。
       const allowLid=!(st===1&&(stage2LidCount>=1||pl.x>=itemMidX));
       if(allowLid&&!pl.mv&&!pl.rail&&pl.w>=70){
         l2.lids.push(mkLid(pl,rr(10,pl.w-54)));
@@ -1539,55 +1569,50 @@ function genL2(){
     else if(st===2&&r2<lidRate+coffeeRate+mailRate+shoeRate+extraRate)type=pickNoRepeat(extraPool,lastPlatformItem);
     else if(r2<lidRate+coffeeRate+mailRate+shoeRate+extraRate+pieRate)type='pancake';
 
-    // 避免连续两块台阶出现同一种普通道具；重复时这次直接留空，形成呼吸感。
-    if(type&&type===lastPlatformItem)type='';
-    if(type){
-      l2.colls.push({x:pl.x+rr(16,Math.max(20,pl.w-16)),y:pl.y-rr(30,64),type,collected:false});
-      lastPlatformItem=type;
-      if(type==='pancake')pieCount++;
+    if(type&&type!==lastPlatformItem){
+      const cx=pl.x+rr(16,Math.max(20,pl.w-16));
+      if(addL2Item({x:cx,y:pl.y-rr(30,64),type,collected:false}))lastPlatformItem=type;
     }
 
-    // 整局仍只有 1 颗红心。
     if(!l2.heartGiven&&i>=heartIdx&&pl.x>lw*0.30){
-      l2.colls.push({x:pl.x+pl.w/2,y:pl.y-40,type:'redheart',collected:false});
+      addL2Item({x:pl.x+pl.w/2,y:pl.y-40,type:'redheart',collected:false});
       l2.heartGiven=true;
     }
   }
 
-  // BOSS 必需马蹄：固定保留，不参与普通道具降频。
+  // BOSS 必需马蹄固定保留。
   l2.colls.push({x:hp.x+hp.w/2,y:hp.y-34,type:'horseshoe',collected:false,pl:hp});
 
-  // BOSS 前只留 1~2 个大饼补给，不再随机堆到 3 个。
+  // BOSS 前补给也随机，但大饼不会挤在一起。
   const preCount=flow.preBoss[0]+Math.floor(Math.random()*(flow.preBoss[1]-flow.preBoss[0]+1));
   for(let i=0;i<preCount;i++){
-    l2.colls.push({x:bp.x-rr(150,300)-i*86,y:rr(430,550),type:'pancake',collected:false});
-    pieCount++;
+    const px2=bp.x-rr(180,320)-i*390;
+    addL2Item({x:px2,y:rr(430,550),type:'pancake',collected:false});
   }
 
-  // 地面往返奖励：数量固定在更窄范围，同一批尽量不重复。
+  // 地面移动奖励：每次独立随机抽类型，位置随机，且同类/整体都保留间距。
   const rewardPool=st===2
     ?['pancake','coffee','mail','shoe','clockout','milktea']
     :['headset','folder','pancake','coffee','mail','clockout','milktea'];
-  const rewardTypes=shuf(rewardPool);
   const rewardCount=flow.ground[0]+Math.floor(Math.random()*(flow.ground[1]-flow.ground[0]+1));
   const placedRx=[];
+  let rewardLast='';
   for(let i=0;i<rewardCount;i++){
-    let rx=0,ok=false;
-    for(let t=0;t<24;t++){
-      rx=rr(520,lw-1500);
+    let placed=false;
+    for(let t=0;t<36&&!placed;t++){
+      const rx=rr(520,lw-1500);
       if(laserZ.some(z=>rx+90>z.x-60&&rx-90<z.x+z.w+60))continue;
-      if(placedRx.some(p=>Math.abs(p-rx)<300))continue;
-      ok=true;break;
+      if(placedRx.some(p=>Math.abs(p-rx)<320))continue;
+      const type=pickNoRepeat(rewardPool,rewardLast);
+      if(!canPlaceL2Item(type,rx))continue;
+      const ry=Math.random()<0.5?l2.gy-42:l2.gy-150;
+      if(addL2Item({x:rx,y:ry,type,collected:false,motion:{a:rx-70,b:rx+70,dir:Math.random()<0.5?1:-1,spd:0.75+st*0.16}})){
+        placedRx.push(rx);rewardLast=type;placed=true;
+      }
     }
-    if(!ok)continue;
-    placedRx.push(rx);
-    const ry=Math.random()<0.5?l2.gy-42:l2.gy-150;
-    const type=rewardTypes[i%rewardTypes.length];
-    l2.colls.push({x:rx,y:ry,type,collected:false,motion:{a:rx-70,b:rx+70,dir:Math.random()<0.5?1:-1,spd:0.75+st*0.16}});
-    if(type==='pancake')pieCount++;
   }
 
-  // v4.20b: 第2关后半段只保底 1 个普通道具，避免后半程和障碍叠得太满。
+  // 分段保底：只保证“有东西”，不会为了补数量强行堆同款。
   const minCollForSeg=i=>(st===1&&i>=2)?1:flow.minSeg;
   const extraItemPool=st===2
     ?['pancake','coffee','mail','shoe','clockout','milktea']
@@ -1596,7 +1621,7 @@ function genL2(){
     const [sa,sb]=segRange(i);
     const minCollPerSeg=minCollForSeg(i);
     let have=l2.colls.filter(c=>c.x>=sa&&c.x<sb).length,tries=0;
-    while(have<minCollPerSeg&&tries++<12){
+    while(have<minCollPerSeg&&tries++<24){
       const cands=plats.filter(pl=>!pl.ground&&pl.x>=sa-20&&pl.x<sb);
       let cx2,cy2;
       if(cands.length){
@@ -1607,12 +1632,12 @@ function genL2(){
       }
       cx2=Math.min(sb-24,Math.max(sa+16,cx2));
       const type=pickNoRepeat(extraItemPool,lastFillItem);
-      lastFillItem=type;
-      if(type==='pancake')pieCount++;
-      l2.colls.push({x:cx2,y:cy2,type,collected:false});
-      have++;
+      if(addL2Item({x:cx2,y:cy2,type,collected:false})){
+        lastFillItem=type;have++;
+      }
     }
   }
+  pieCount=l2.colls.filter(c=>c.type==='pancake').length;
   l2.piesTotal=pieCount;
   l2.piesEaten=0;
   // v4.5: 障碍池按关配置——第 2 关马桶登场（顶替电梯），第 3 关马桶 + 电梯混合
@@ -2045,7 +2070,7 @@ function uL2(){
         ob.landT--;if(ob.landT<=0){ob.dead=true;continue;}
       }
       if(ob.state!=='wait'&&l2.p.x+l2.p.w>ob.x+5&&l2.p.x<ob.x+ob.w-5&&l2.p.y+l2.p.h>ob.y+3&&l2.p.y<ob.y+ob.h-3){
-        l2.burdenT=360;l2.inv=Math.max(l2.inv,42);ob.dead=true;shake=13;sh();
+        l2.burdenT=Math.max(l2.burdenT,360);l2.inv=Math.max(l2.inv,42);ob.dead=true;shake=13;sh();
         spP(l2.p.x+17,l2.p.y+10,12,'#555',l2.part,8,8,32);
         l2.floats.push({x:l2.p.x+17,y:l2.p.y-24,txt:'这锅你背了',t:62});
       }
