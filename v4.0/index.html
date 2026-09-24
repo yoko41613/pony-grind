@@ -61,7 +61,8 @@ horse_coin:["tttttbbbttttt","tt1bbbbbbb1tt","t1bbb33ebbb1t","tbbb3333zbbbt","tbb
 horseshoe:["tttttbbbttttt","tt1bbbbbbb1tt","t1bbb33ebbb1t","tbbb3333zbbbt","tbb33fbb33bb1","bbb33bbb33bbb","bbb33bbb33bbb","bbb33bbb33bbb","tbbe3fbb33bb5","tb333fbb333bt","t1bbbbbbbbbbt","tt1bbbbbbbbtt","tttttbbb1tttt"],
 heart:["tt7tt7tt","t777777t","77777777","77777777","t777777t","t777777t","tt7777tt","ttt77ttt"],
 barrier:["tttt9llll9tttt","tttt9tttt9tttt","tttt9llll9tttt","tt9llllllll9tt","tt9l999999l9tt","tt9llllllll9tt","tt9l999999l9tt","tt9llllllll9tt","tttt9llll9tttt","tttt9llll9tttt","tt9llllllll9tt","tt9eeeeeeee9tt"],
-skateboard:["tttttttttttttttttt","txxttttttttttttxxt","tooxxttttttttxxoot","t66ooxxxxxxxxoo66t","t6666oooooooo6666t","ttttt66666666ttttt","tttttkkttttkkttttt","ttttt66tttt66ttttt","tttt6bb6tt6bb6tttt","tttt6bb6tt6bb6tttt","ttttt66tttt66ttttt"],
+skateboard:["tttttttttttttttttttt","txxttttttttttttttxxt","tooxxttttttttttxxoot","t66ooxxxxxxxxxxoo66t","tttttoo9o9o9o9ottttt","ttttt7777777777ttttt","tttttkkttttttkkttttt","tttt666tttttt666tttt","ttt6bbb6tttt6bbb6ttt","ttt6b5b6tttt6b5b6ttt","ttt6bbb6tttt6bbb6ttt","tttt666tttttt666tttt"],
+exit:["nnnnnnnnnnnnnnnn","n88888888888888n","n85555588888888n","n85888588888888n","n85888588888888n","n85888588888588n","n85888585555558n","n85888588888588n","n85888588888888n","n85888588888888n","n88888888888888n","nnnnnnnnnnnnnnnn"],
 sunglass:["tyyyyyyyyyyyyyyt","ty6k6666yy6k666t","ty666666yy66666t","tyyyyyyyyyyyyyyt"],
 envelope:["tttt","t77t","7bb7","t77t"],
 coin:["tt99tt","t9999t","999999","99yy99","999999","t9999t","tt99tt"],
@@ -626,7 +627,7 @@ const L1_BANNER=['','',''];
 const L1_GOAL=[10800,12600,14400];
 const L1_LV=['第1关','第2关','第3关'];
 const L1_DESC=['办公室','会议室','停车场'];
-const L1_ITEMS=[['badge','headset','milktea','tel','burger'],['coffee','pancake','fish','mail'],['clockout','popcorn','sunglass','skateboard']]; // v4.14: 咖啡挪到第 2 关，汉堡换成大饼; v4.15: 第 3 关新增墨镜（影身无敌）/滑板（加速）
+const L1_ITEMS=[['badge','headset','milktea','tel','burger'],['coffee','pancake','fish','mail'],['clockout','popcorn','sunglass','skateboard','exit']]; // v4.14: 咖啡挪到第 2 关，汉堡换成大饼; v4.15: 第 3 关新增墨镜（影身无敌）/滑板（加速）; v4.17: 第 3 关新增安全出口（无敌 240 帧）
 // 运势测试语录：根据得分和剩余生命随机调侃
 const L1_LUCK={
   god:['你今天踩了狗屎运才能通关吧','运气也是实力，你这实力藏不住了','今日宜下班，宜摸鱼，宜通关','这运气，买彩票去吧','老板看了都羡慕你的走位'],
@@ -914,7 +915,7 @@ function uL1(){
       }else if(o.t==='shoe'&&l1.inv<=0){ // v4.15: 红靴子——踩到就穿上，速度变慢（不掉命）
         o.dead=true;l1.shoeT=270;shake=6;sh();
         spP(px+pw/2,py+ph/2,10,'#e66',l1.part,8,8,26);
-        l1.floats.push({x:px+pw/2,y:py-26,txt:'👟 穿上红靴，慢！',t:70});
+        l1.floats.push({x:px+pw/2,y:py-26,txt:'👟 鞋太小，穿不下',t:70}); // v4.17: 红靴语录
       }else if(o.t==='slider'&&!o.ridden&&l1.chairRideT<=0&&l1.inv<=0){
         // 坐上椅子后固定向画面左侧倒退，不再随机前后移动。
         o.ridden=true;o.riding=true;o.rideScreenV=-0.75;
@@ -946,11 +947,12 @@ function uL1(){
       else if(c.type==='sunglass'){l1.score+=15;sw();spP(cx2+c.w/2,c.y,7,'#9ad',l1.part);l1.inv=Math.max(l1.inv,240);l1.ghostT=240;l1.floats.push({x:cx2+c.w/2,y:c.y-6,txt:'🕶 影身！无敌穿过一切',t:70});} // v4.15: 墨镜=隐身无敌
       else if(c.type==='skateboard'){l1.score+=10;sc();spP(cx2+c.w/2,c.y,7,'#fd4',l1.part);l1.boostT=240;l1.floats.push({x:cx2+c.w/2,y:c.y-6,txt:'🛹 滑起来！',t:70});} // v4.15: 滑板=和咖啡相同加速
       else if(c.type==='milktea'){l1.score+=15;l1.lives=Math.min(5,l1.lives+1);sw();spP(cx2+c.w/2,c.y,9,'#f8b',l1.part,7,7,28);}
-      else if(c.type==='popcorn'){l1.score+=15;l1.jumpBoostT=300;sg();spP(cx2+c.w/2,c.y,10,'#fff',l1.part,8,8,30);}
+      else if(c.type==='popcorn'){l1.score+=10;l1.jumpBoostT=300;sg();spP(cx2+c.w/2,c.y,10,'#fff',l1.part,8,8,30);} // v4.17: +15 → +10 分（跳跃增强保留）
       else if(c.type==='horseshoe'){l1.score+=80;l1.lives=Math.min(5,l1.lives+1);l1.inv=180;sw();spP(cx2+c.w/2,c.y,14,'#fd4',l1.part,9,9,34);}
       else if(c.type==='headset'||c.type==='fish'){l1.score+=10;sc();spP(cx2+c.w/2,c.y,5,'#6ff',l1.part);l1.slowT=240;}
       else if(c.type==='pie'){l1.score+=20;sg();spP(cx2+c.w/2,c.y,8,'#fd4',l1.part);l1.bigT=180;}
       else if(c.type==='clockout'){l1.score+=15;sw();spP(cx2+c.w/2,c.y,6,'#4af',l1.part);l1.inv=300;}
+      else if(c.type==='exit'){l1.score+=10;sw();spP(cx2+c.w/2,c.y,7,'#4d8',l1.part);l1.inv=Math.max(l1.inv,240);l1.floats.push({x:cx2+c.w/2,y:c.y-6,txt:'🚪 安全出口！无敌一会儿',t:70});} // v4.17: 安全出口=无敌 240 帧
       else if(c.type==='tel'){ // v4.12: 座机电话——老板来电，被迫接电话，减速几秒
         l1.callT=270;sh();spP(cx2+c.w/2,c.y,7,'#f44',l1.part);
         l1.floats.push({x:cx2,y:c.y-8,txt:'📞 老板来电！接一下…',t:70});
@@ -1059,6 +1061,7 @@ function drL1(){
     else if(c.type==='tel')spr=S.tel;
     else if(c.type==='mail')spr=S.mail;
     else if(c.type==='popcorn')spr=S.popcorn;
+    else if(c.type==='exit')spr=S.exit; // v4.17: 安全出口绿牌
     else if(c.type==='horseshoe')spr=S.horseshoe;
     ds(ctx,spr,cx2,c.y,c.w,c.h,false);
   }
