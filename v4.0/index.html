@@ -746,7 +746,7 @@ function rL1(){
   if(save.items.headset>0){save.items.headset--;stSlow=true;}
   if(save.items.offcard>0){save.items.offcard--;stInv=true;}
   sv(save);
-  l1={py:H*0.66,pl:1,pvy:0,jump:false,gnd:true,inv:0,startInv:stInv?180:0,score:0,dist:0,cam:0,bs:2,spd:2,lives:3,obs:[],coll:[],part:[],gy:H*0.88,ly:[H*0.52,H*0.66,H*0.80],st:0,si:46,go:false,goSaved:false,boostT:0,startBoost:stBoost?180:0,bigT:0,slowT:0,startSlow:stSlow?180:0,jumpBoostT:0,dizzyT:0,stumbleT:0,chairRide:null,chairRideT:0,rideX:0,coinT:0,stage:0,goal:L1_GOAL[0],win:false,winT:0,winSaved:false,banner:'',bannerT:0,sel:true,cont:false,tip:'',tipT:0,heartGiven:false,horseGiven:false,patternN:0,lastSafe:1,luckLine:'',burdenT:0,floats:[],lastItemType:''};
+  l1={py:H*0.66,pl:1,pvy:0,jump:false,gnd:true,inv:0,startInv:stInv?180:0,score:0,dist:0,cam:0,bs:2,spd:2,lives:3,obs:[],coll:[],part:[],gy:H*0.88,ly:[H*0.52,H*0.66,H*0.80],st:0,si:46,go:false,goSaved:false,boostT:0,startBoost:stBoost?180:0,bigT:0,slowT:0,startSlow:stSlow?180:0,jumpBoostT:0,dizzyT:0,stumbleT:0,chairRide:null,chairRideT:0,rideX:0,coinT:0,stage:0,goal:L1_GOAL[0],win:false,winT:0,winSaved:false,banner:'',bannerT:0,sel:true,cont:false,tip:'',tipT:0,heartGiven:false,horseGiven:false,patternN:0,lastSafe:1,luckLine:'',burdenT:0,floats:[],lastItemType:'',potShake:0};
 }
 function l1Start(st){
   const continuing=l1.cont;
@@ -765,7 +765,7 @@ function l1Start(st){
   }
   l1.banner='';l1.bannerT=0;
   l1.bigT=0;l1.boostT=0;l1.inv=0;l1.slowT=0;l1.jumpBoostT=0;l1.dizzyT=0;l1.stumbleT=0;l1.chairRide=null;l1.chairRideT=0;l1.rideX=0;l1.burdenT=0;l1.floats=[];l1.callT=0;l1.mailBag=[];l1.shoeT=0;l1.ghostT=0; // v4.15: 红靴减速 / 墨镜影身
-  l1.patternN=0;l1.lastSafe=1;l1.heartGiven=false;l1.lastItemType='';
+  l1.patternN=0;l1.lastSafe=1;l1.heartGiven=false;l1.lastItemType='';l1.potShake=0;
   if(!continuing){l1.score=0;l1.lives=3;l1.horseGiven=false;l1.boostT=l1.startBoost;l1.slowT=l1.startSlow;l1.inv=l1.startInv;}
   l1.luckLine='';
   l1.cont=false;
@@ -796,7 +796,7 @@ function uL1(){
   }else{
     l1.dist+=l1.bs*0.45;l1.cam+=l1.bs*0.45;
   }
-  shake=Math.max(0,shake-1);l1.inv=Math.max(0,l1.inv-1);
+  shake=Math.max(0,shake-1);l1.potShake=Math.max(0,(l1.potShake||0)-1);l1.inv=Math.max(0,l1.inv-1);
   l1.shoeT=Math.max(0,l1.shoeT-1);l1.ghostT=Math.max(0,l1.ghostT-1); // v4.15
   l1.boostT=Math.max(0,l1.boostT-1);l1.bigT=Math.max(0,l1.bigT-1);l1.slowT=Math.max(0,l1.slowT-1);l1.jumpBoostT=Math.max(0,l1.jumpBoostT-1);l1.bannerT=Math.max(0,l1.bannerT-1);
   l1.dizzyT=Math.max(0,l1.dizzyT-1);l1.stumbleT=Math.max(0,l1.stumbleT-1);l1.burdenT=Math.max(0,l1.burdenT-1);l1.callT=Math.max(0,l1.callT-1);
@@ -917,7 +917,7 @@ function uL1(){
       if(!o.landed){ // v4.1: 从天上砸下来
         o.vy+=0.55;o.y+=o.vy;
         const gy=l1.ly[o.lane];
-        if(o.y>=gy){o.y=gy;o.vy=0;o.landed=true;o.landT=130;shake=6;spP(o.x0+o.sw-l1.dist+o.w/2,gy+o.h,8,'#666',l1.part,7,3,24);}
+        if(o.y>=gy){o.y=gy;o.vy=0;o.landed=true;o.landT=130;l1.potShake=7;spP(o.x0+o.sw-l1.dist+o.w/2,gy+o.h,8,'#666',l1.part,7,3,24);}
       }else{o.landT--;if(o.landT<=0){o.dead=true;spP(o.x0+o.sw-l1.dist+o.w/2,o.y+o.h/2,6,'#888',l1.part,5,3,20);}}
     }
     else if(o.t==='car'||o.t==='boss_car')o.sw-=o.vspd;
@@ -932,7 +932,7 @@ function uL1(){
     if(o.t==='blackpot'&&!o.landed&&o.y<l1.ly[o.lane]-70)continue;
     if(px<ox+o.w&&px+pw>ox&&py<o.y+o.h&&py+ph>o.y){
       if(o.t==='blackpot'&&l1.inv<=0){ // 被锅砸中：背在背上，慢到离谱
-        o.dead=true;l1.burdenT=330;l1.inv=Math.max(l1.inv,50);shake=13;sh();
+        o.dead=true;l1.burdenT=330;l1.inv=Math.max(l1.inv,50);sh();
         spP(px+pw/2,py+10,12,'#555',l1.part,8,8,32);
         l1.floats.push({x:px+pw/2,y:py-26,txt:'这锅你背了',t:70});
         continue;
@@ -950,19 +950,19 @@ function uL1(){
         if(l1.pl===0)l1.pl=1;
         else if(l1.pl===2)l1.pl=1;
         else l1.pl=Math.random()<0.5?0:2;
-        l1.dizzyT=300;l1.stumbleT=34;l1.inv=Math.max(l1.inv,44);shake=7;sh();
+        l1.dizzyT=300;l1.stumbleT=34;l1.inv=Math.max(l1.inv,44);sh();
         spP(px+pw/2,py+ph/2,10,'#c87942',l1.part,8,4,26);
       }else if(o.t==='shoe'&&l1.inv<=0){ // v4.15: 红靴子——踩到就穿上，速度变慢（不掉命）
-        o.dead=true;l1.shoeT=270;shake=6;sh();
+        o.dead=true;l1.shoeT=270;sh();
         spP(px+pw/2,py+ph/2,10,'#e66',l1.part,8,8,26);
         l1.floats.push({x:px+pw/2,y:py-26,txt:'👟 鞋太小，穿不下',t:70}); // v4.17: 红靴语录
       }else if(o.t==='slider'&&!o.ridden&&l1.chairRideT<=0&&l1.inv<=0){
         // 坐上椅子后固定向画面左侧倒退，不再随机前后移动。
         o.ridden=true;o.riding=true;o.rideScreenV=-0.75;
         o.lane=l1.pl;o.y=l1.ly[l1.pl];l1.chairRide=o;l1.chairRideT=96;l1.inv=Math.max(l1.inv,104);
-        l1.jump=false;l1.gnd=true;l1.pvy=0;l1.py=l1.ly[l1.pl];shake=5;sh();
+        l1.jump=false;l1.gnd=true;l1.pvy=0;l1.py=l1.ly[l1.pl];sh();
       }else if(l1.inv<=0){
-        l1.lives--;l1.inv=60;shake=15;sh();
+        l1.lives--;l1.inv=60;sh();
         spP(px+pw/2,py+ph/2,8,'#f44',l1.part);
         if(l1.lives<=0){l1.go=true;return;}
       }
@@ -1024,7 +1024,9 @@ function uL1(){
 function drL1(){
   startBGM(3); // v4.1: 与菜单同款每帧守护，L1 全程不丢音乐
   if(l1.sel){drL1Sel();return;}
-  const sx=shake>0?(Math.random()-0.5)*shake:0,sy=shake>0?(Math.random()-0.5)*shake:0;
+  // v4.20d: L1 只在黑锅砸地时抖屏，其他碰撞/道具不再带动背景。
+  const ps=l1.potShake||0;
+  const sx=ps>0?(Math.random()-0.5)*ps:0,sy=ps>0?(Math.random()-0.5)*ps:0;
   ctx.save();ctx.translate(sx,sy);
   const stg=l1.stage;
   ctx.fillStyle=L1_BG[stg];ctx.fillRect(0,0,W,H);
