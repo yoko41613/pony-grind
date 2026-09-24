@@ -58,18 +58,20 @@ papers:[
 ],
 // v4.20f: 会议室闹钟——双铃机械闹钟，替代会议室文件夹。
 alarm:[
-"tt66tttttt66tt",
-"t6776tttt6776t",
-"tt6666666666tt",
-"t665555555566t",
-"66555555555566",
-"65555665555556",
-"65555565555556",
-"65556666665556",
-"65555565555556",
-"66555555555566",
-"t666666666666t",
-"tt66tttttt66tt"
+"ttt77tttttt77ttt",
+"tt777tttttt777tt",
+"ttt66tttttt66ttt",
+"tt666666666666tt",
+"t66555555555566t",
+"6655556556555566",
+"6555555655555556",
+"6555555666555556",
+"6555555666655556",
+"6555555556555556",
+"6655555555555566",
+"t66555555555566t",
+"tt666666666666tt",
+"tt66tttttttt66tt"
 ],
 // v4.20e: 文件夹重新设计——独立于“文件堆”，黄色硬壳 + 页签 + 白色标签，更容易一眼识别。
 folder:[
@@ -1030,8 +1032,8 @@ function uL1(){
       if(!o.landed){ // v4.1: 从天上砸下来
         o.vy+=0.55;o.y+=o.vy;
         const gy=l1.ly[o.lane];
-        if(o.y>=gy){o.y=gy;o.vy=0;o.landed=true;o.landT=130;l1.potShake=7;spP(o.x0+o.sw-l1.dist+o.w/2,gy+o.h,8,'#666',l1.part,7,3,24);}
-      }else{o.landT--;if(o.landT<=0){o.dead=true;spP(o.x0+o.sw-l1.dist+o.w/2,o.y+o.h/2,6,'#888',l1.part,5,3,20);}}
+        if(o.y>=gy){o.y=gy;o.vy=0;o.landed=true;l1.potShake=7;spP(o.x0+o.sw-l1.dist+o.w/2,gy+o.h,8,'#666',l1.part,7,3,24);}
+      } // v4.21b: 落地后一直留在地上，直到小马撞上背锅，或随赛道自然滚出画面。
     }
     else if(o.t==='car'||o.t==='boss_car')o.sw-=o.vspd;
     else if(o.t==='boss'){o.x0+=o.dir*o.spd;if(o.x0<o.origX-80||o.x0>o.origX+80)o.dir*=-1;}
@@ -2089,10 +2091,8 @@ function uL2(){
         }
       }else if(ob.state==='fall'){
         ob.y+=ob.vy*(l2.slowT>0?0.7:1);ob.vy+=0.58;
-        if(ob.y>=ob.targetY){ob.y=ob.targetY;ob.vy=0;ob.state='landed';ob.landT=115;shake=7;spP(ob.x+ob.w/2,ob.y+ob.h,8,'#666',l2.part,7,3,24);}
-      }else if(ob.state==='landed'){
-        ob.landT--;if(ob.landT<=0){ob.dead=true;continue;}
-      }
+        if(ob.y>=ob.targetY){ob.y=ob.targetY;ob.vy=0;ob.state='landed';shake=7;spP(ob.x+ob.w/2,ob.y+ob.h,8,'#666',l2.part,7,3,24);}
+      } // v4.21b: 落地锅不再计时消失，玩家回头时也还在原地。
       if(ob.state!=='wait'&&l2.p.x+l2.p.w>ob.x+5&&l2.p.x<ob.x+ob.w-5&&l2.p.y+l2.p.h>ob.y+3&&l2.p.y<ob.y+ob.h-3){
         l2.burdenT=Math.max(l2.burdenT,360);l2.inv=Math.max(l2.inv,42);ob.dead=true;shake=13;sh();
         spP(l2.p.x+17,l2.p.y+10,12,'#555',l2.part,8,8,32);
