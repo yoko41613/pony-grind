@@ -1655,14 +1655,14 @@ function rL2(){
 function shuf(a){const r=a.slice();for(let i=r.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));const t=r[i];r[i]=r[j];r[j]=t;}return r;}
 // v4.20: L2 道具密度按关卡分层，避免“台阶随机 + 地面奖励 + 分段补位”三层叠加后过密。
 const L2_ITEM_FLOW=[
-  // v4.21q: L2 改成单一“节奏器”生成。gap=普通奖励之间的横向间距；pool=本关道具权重。
-  {lid:[0,0],       gap:[680,820],pool:[
+  // v4.21s: 普通奖励最大间距压到接近一屏以内，避免整屏没有可互动内容。
+  {lid:[0,0],       gap:[430,520],pool:[
     {t:'pancake',w:34},{t:'coffee',w:26},{t:'folder',w:18},{t:'headset',w:14},{t:'clockout',w:8}
   ]},
-  {lid:[0.04,0.06], gap:[620,760],pool:[
+  {lid:[0.04,0.06], gap:[390,480],pool:[
     {t:'pancake',w:28},{t:'coffee',w:20},{t:'mail',w:20},{t:'headset',w:16},{t:'milktea',w:16}
   ]},
-  {lid:[0.10,0.14], gap:[560,700],pool:[
+  {lid:[0.10,0.14], gap:[360,450],pool:[
     {t:'pancake',w:24},{t:'coffee',w:15},{t:'mail',w:18},{t:'shoe',w:15},{t:'clockout',w:14},{t:'milktea',w:14}
   ]}
 ];
@@ -1839,7 +1839,7 @@ function genL2(){
 
   // 先生成“槽位”，保证整条路的空档稳定；地图越长，后面关卡自然会多一些道具。
   const slots=[];
-  let slotX=playA+rr(280,360);
+  let slotX=playA+rr(90,150); // v4.21s: 第一枚奖励更早进入视野
   let guardSlots=0;
   while(slotX<playB-180&&guardSlots++<40){
     slots.push(findSafeX(slotX,playA+120,playB-120));
@@ -2079,16 +2079,48 @@ function genL2(){
     }
   }
 
-  // v4.21r: 最终硬保险——无论前面哪一条随机/补位路径生成的黑锅，都按一整屏距离去重。
-  // 这样从任何相机位置看，视线范围内最多只有一个黑锅事件。
+  // v4.21s: 黑锅仍按一整屏距离硬去重，但过近的锅不再“直接删除”。
+  // 它会替换成 HR，保留原来的事件位，避免为了黑锅规则把整屏挖空。
   {
     const pots=l2.obs.filter(o=>o.type==='fallpot').sort((a,b)=>a.x-b.x);
-    const keep=new Set();
+    const replace=new Set();
     let last=-Infinity;
     for(const o of pots){
-      if(o.x-last>=FALLPOT_GAP){keep.add(o);last=o.x;}
+      if(o.x-last>=FALLPOT_GAP)last=o.x;
+      else replace.add(o);
     }
-    l2.obs=l2.obs.filter(o=>o.type!=='fallpot'||keep.has(o));
+    if(replace.size){
+      l2.obs=l2.obs.map(o=>replace.has(o)?mkObs('hr',o.x):o);
+    }
+  }
+
+  // v4.21s: 最终“视口空白检测”。
+  // 以约 3/4 屏为最大无事件距离扫描整条跑道；若某段既没有障碍也没有普通奖励/路线机关，
+  // 在中间补一个轻量奖励。不会补黑锅，也不会改变 BOSS 区。
+  {
+    const MAX_EMPTY=Math.round(W*0.74);
+    let guardFill=0;
+    while(guardFill++<24){
+      const anchors=[
+        playA-80,
+        ...l2.obs.filter(o=>o.x>=playA&&o.x<playB).map(o=>o.x),
+        ...l2.colls.filter(c=>!c.bossToken&&c.x>=playA&&c.x<playB).map(c=>c.x),
+        ...l2.zones.map(z=>z.x+z.w/2).filter(x=>x>=playA&&x<playB),
+        playB+40
+      ].sort((a,b)=>a-b);
+      let bestGap=0,bestA=0,bestB=0;
+      for(let i=1;i<anchors.length;i++){
+        const g=anchors[i]-anchors[i-1];
+        if(g>bestGap){bestGap=g;bestA=anchors[i-1];bestB=anchors[i];}
+      }
+      if(bestGap<=MAX_EMPTY)break;
+      let fx=(bestA+bestB)/2;
+      // 尽量避开危险区；实在避不开就让路线机关本身承担视觉内容，不硬塞。
+      const safe=findSafeX(fx,Math.max(playA+60,bestA+80),Math.min(playB-80,bestB-80));
+      if(inDanger(safe))break;
+      const fillType=weightedPick(flow.pool,'redheart');
+      placeScheduled(safe,fillType,guardFill);
+    }
   }
 
   l2.p.x=60;l2.p.y=250;l2.p.vx=0;l2.p.vy=0;l2.p.h=44;
