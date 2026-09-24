@@ -960,7 +960,7 @@ function rL1(){
   if(save.items.headset>0){save.items.headset--;stSlow=true;}
   if(save.items.offcard>0){save.items.offcard--;stInv=true;}
   sv(save);
-  l1={py:H*0.66,pl:1,pvy:0,jump:false,gnd:true,inv:0,startInv:stInv?180:0,score:0,dist:0,cam:0,bs:2,spd:2,lives:3,obs:[],coll:[],part:[],gy:H*0.88,ly:[H*0.52,H*0.66,H*0.80],st:0,si:46,go:false,goSaved:false,boostT:0,startBoost:stBoost?180:0,bigT:0,slowT:0,startSlow:stSlow?180:0,jumpBoostT:0,dizzyT:0,stumbleT:0,chairRide:null,chairRideT:0,rideX:0,coinT:0,stage:0,goal:L1_GOAL[0],win:false,winT:0,winSaved:false,banner:'',bannerT:0,sel:true,cont:false,tip:'',tipT:0,heartGiven:false,horseGiven:false,patternN:0,lastSafe:1,luckLine:'',burdenT:0,floats:[],lastItemType:'',itemHistory:[],potShake:0,nextRewardAt:0,lastRewardX:0,rewardDueSince:0,mailRewardPending:''};
+  l1={py:H*0.66,pl:1,pvy:0,jump:false,gnd:true,inv:0,startInv:stInv?180:0,score:0,dist:0,cam:0,bs:2,spd:2,lives:3,obs:[],coll:[],part:[],gy:H*0.88,ly:[H*0.52,H*0.66,H*0.80],st:0,si:46,go:false,goSaved:false,boostT:0,startBoost:stBoost?180:0,bigT:0,slowT:0,startSlow:stSlow?180:0,jumpBoostT:0,dizzyT:0,stumbleT:0,chairRide:null,chairRideT:0,rideX:0,coinT:0,stage:0,goal:L1_GOAL[0],win:false,winT:0,winSaved:false,banner:'',bannerT:0,sel:true,cont:false,tip:'',tipT:0,heartGiven:false,horseGiven:false,patternN:0,lastSafe:1,luckLine:'',burdenT:0,floats:[],lastItemType:'',itemHistory:[],potShake:0,nextRewardAt:0,lastRewardX:0,rewardDueSince:0};
 }
 function l1Start(st){
   const continuing=l1.cont;
@@ -983,7 +983,7 @@ function l1Start(st){
   l1.patternN=0;l1.lastSafe=1;l1.heartGiven=false;l1.lastItemType='';l1.itemHistory=[];l1.potShake=0;
   // v4.21l: 第二关奖励密度向第一关靠拢：更早、更持续，但同屏仍只允许 1 个正向奖励。
   l1.nextRewardAt=st===1?210+Math.floor(Math.random()*91):0;
-  l1.lastRewardX=0;l1.rewardDueSince=0;l1.mailRewardPending='';
+  l1.lastRewardX=0;l1.rewardDueSince=0;
   if(!continuing){l1.score=0;l1.lives=3;l1.horseGiven=false;l1.boostT=l1.startBoost;l1.slowT=l1.startSlow;l1.inv=l1.startInv;}
   l1.luckLine='';
   l1.cont=false;
@@ -1059,9 +1059,7 @@ function uL1(){
     if(!visibleReward&&l1.dist>=l1.nextRewardAt){
       if(!l1.rewardDueSince)l1.rewardDueSince=l1.dist;
       const force=l1.dist-l1.rewardDueSince>70;
-      const forcedType=l1.mailRewardPending||'';
-      if(l1PlaceStage2Reward(force,forcedType)){
-        l1.mailRewardPending='';
+      if(l1PlaceStage2Reward(force,'')){
         l1.nextRewardAt=l1.dist+285+Math.floor(Math.random()*96);
         l1.rewardDueSince=0;
       }
@@ -1232,15 +1230,25 @@ function uL1(){
         l1.floats.push({x:px+pw/2,y:py-26,txt:'来电话啦',t:72});
         continue;
       }
-      if(o.t==='mail'){ // v4.21m: 邮件奖励进入待发队列，不再塞到一两屏之外
+      if(o.t==='mail'){ // v4.21o: 邮件原地拆开，直接把邮件替换成随机奖励；不做重叠/间距判断
         o.dead=true;sw();spP(px+pw/2,py+ph/2,8,'#fff',l1.part,7,6,26);
-        const mailPool=['coffee','pancake','fish'];
+        const mailPool=['coffee','pancake','fish','milktea','headset','badge','burger','skateboard','popcorn','sunglass','exit','heart'];
         const item=mailPool[Math.floor(Math.random()*mailPool.length)];
-        l1.mailRewardPending=item;
-        l1.nextRewardAt=Math.min(l1.nextRewardAt,l1.dist+90);
-        l1.rewardDueSince=0;
-        const itemName=item==='coffee'?'咖啡':item==='pancake'?'大饼':'带鱼';
-        l1.floats.push({x:px+pw/2,y:py-26,txt:'邮件开出：'+itemName,t:78});
+        const iw=36,ih=36;
+        // 用邮件本身的世界坐标直接生成，完全跳过 l1ItemCanSpawn / l1LaneFree。
+        // pickupDelay 让玩家先看见“邮件 -> 道具”的替换，不会同一帧自动吃掉。
+        l1.coll.push({
+          x0:o.x0+(o.w-iw)/2+(o.sw||0),
+          y:o.y+(o.h-ih)/2,
+          type:item,w:iw,h:ih,collected:false,
+          fromLane:null,toLane:null,phase:0,
+          pickupDelay:14,fromMail:true
+        });
+        const itemNames={
+          coffee:'咖啡',pancake:'大饼',fish:'带鱼',milktea:'奶茶',headset:'耳机',badge:'工牌',
+          burger:'汉堡',skateboard:'滑板',popcorn:'爆米花',sunglass:'墨镜',exit:'安全出口',heart:'红心'
+        };
+        l1.floats.push({x:px+pw/2,y:py-26,txt:'邮件开出：'+(itemNames[item]||'随机道具'),t:78});
         continue;
       }
       if(o.t==='alarm'){
@@ -1289,6 +1297,7 @@ function uL1(){
       const wave=(Math.sin(l1.dist*0.016+c.phase)+1)/2;
       c.y=l1.ly[c.fromLane]+(l1.ly[c.toLane]-l1.ly[c.fromLane])*wave-30;
     }
+    if(c.pickupDelay>0){c.pickupDelay--;continue;}
     if(!c.collected&&px<cx2+c.w&&px+pw>cx2&&py<c.y+c.h&&py+ph>c.y){
       c.collected=true;
       if(c.type==='heart'){l1.lives=Math.min(5,l1.lives+1);sw();spP(cx2+c.w/2,c.y,8,'#f44',l1.part);}
