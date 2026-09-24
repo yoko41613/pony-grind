@@ -56,6 +56,35 @@ papers:[
 "6999999999996t",
 "t66666666666tt"
 ],
+// v4.21e: 第一关办公室电脑——按确认稿做成银灰像素笔记本，浅蓝屏幕 + 键盘 + 触控板。
+laptop:[
+"tt666666666666tt",
+"t6ssssssssssss6t",
+"t6svvvvvvvvvvs6t",
+"t6sv5vvvvvvvvs6t",
+"t6svvvvvvvvvvs6t",
+"t6svvvvvvvvvvs6t",
+"t6ssssssssssss6t",
+"t66666666666666t",
+"66kkkkkkkkkkkk66",
+"6k6k6k6k6k6k6k66",
+"6kkkkkcccckkkkk6",
+"t66666666666666t"
+],
+// v4.21e: 第一关办公室鼠标——按确认稿做成浅灰无线鼠标，黑色滚轮和块状阴影。
+mouse:[
+"tttt666666tttt",
+"tt66kkkkkk66tt",
+"t6kkkkkkkkkk6t",
+"6kkkk66kkkkkk6",
+"6kkk6yy6kkkkk6",
+"6kkk6yy6kkkkk6",
+"6kkkk66kkkkkk6",
+"6kkkkkkkkkkkk6",
+"t6kkkkkkkkkk6t",
+"tt6cccccccc6tt",
+"ttt66666666ttt"
+],
 // v4.20f: 会议室闹钟——双铃机械闹钟，替代会议室文件夹。
 alarm:[
 "ttt77tttttt77ttt",
@@ -856,7 +885,7 @@ function l1TryPlace(t,w,h,lane,sx){
 }
 // v4.3: 开局预热用的温和障碍（三关一致，保证开局就有东西要躲，但不会一上来就劝退）
 // v4.16: 开局预热也按关取池，第 3 关不再出现文件堆（文件夹）
-const L1_OPEN=[[{t:'papers',w:52,h:44}],[{t:'alarm',w:46,h:44}],[{t:'cone',w:34,h:44},{t:'car',w:96,h:54}]];
+const L1_OPEN=[[{t:'papers',w:52,h:44},{t:'laptop',w:58,h:44},{t:'mouse',w:40,h:32}],[{t:'alarm',w:46,h:44}],[{t:'cone',w:34,h:44},{t:'car',w:96,h:54}]];
 function rL1(){
   let stBoost=false,stSlow=false,stInv=false;
   if(save.items.coffee>0){save.items.coffee--;stBoost=true;}
@@ -962,7 +991,7 @@ function uL1(){
     }
     else if(r<flow.single){
       const pools=[
-        [{t:'papers',w:52,h:44,p:0.28},{t:'printer',w:56,h:52,p:0.23},{t:'hr',w:44,h:60,p:0.17},{t:'blackpot',w:POT_W,h:POT_H,p:0.18},{t:'tel',w:54,h:38,p:0.14}], // v4.21: 办公室以静态障碍为主，座机作为负面事件
+        [{t:'papers',w:52,h:44,p:0.12},{t:'laptop',w:58,h:44,p:0.09},{t:'mouse',w:40,h:32,p:0.07},{t:'printer',w:56,h:52,p:0.23},{t:'hr',w:44,h:60,p:0.17},{t:'blackpot',w:POT_W,h:POT_H,p:0.18},{t:'tel',w:54,h:38,p:0.14}], // v4.21: 办公室以静态障碍为主，座机作为负面事件
         [{t:'slider',w:44,h:54,p:0.23},{t:'notebook',w:40,h:40,p:0.14},{t:'boss',w:52,h:58,p:0.12},{t:'blackpot',w:POT_W,h:POT_H,p:0.21},{t:'whiteboard',w:58,h:44,p:0.17},{t:'alarm',w:46,h:44,p:0.13}], // v4.14: 删 会议桌、板擦换白板，剩余按原比例缩放
         [{t:'car',w:96,h:54,p:0.30},{t:'cone',w:34,h:44,p:0.27},{t:'barrier',w:56,h:46,p:0.14},{t:'shoe',w:42,h:38,p:0.14},{t:'blackpot',w:POT_W,h:POT_H,p:0.15}] // v4.15: 老板的车换黄色路障、白板换红靴子
       ];
@@ -998,7 +1027,7 @@ function uL1(){
     }
     else{ // 两道封锁、一道放行；安全车道持续变化，始终保证可通过
       const pools2=[
-        [{t:'papers',w:52,h:44}], // v4.13: 手机/咖啡渍已删，第 1 关封锁模式只剩文件堆
+        [{t:'papers',w:52,h:44},{t:'laptop',w:58,h:44},{t:'mouse',w:40,h:32}], // v4.21e: 文件夹/电脑/鼠标同效果，随机混排
         [{t:'blackpot',w:POT_W,h:POT_H},{t:'slider',w:44,h:54},{t:'whiteboard',w:58,h:44}], // v4.14: 板擦换白板
         [{t:'cone',w:34,h:44},{t:'car',w:96,h:54},{t:'shoe',w:42,h:38}] // v4.15: 白板换红靴子
       ];
@@ -1197,6 +1226,8 @@ function drL1(){
     const ox=o.x0+o.sw-l1.dist;if(ox<-80||ox>W+80)continue;
     if(o.t==='headset')ds(ctx,S.headphone,ox,o.y,o.w,o.h,false);
     else if(o.t==='papers')ds(ctx,S.papers,ox,o.y,o.w,o.h,false);
+    else if(o.t==='laptop')ds(ctx,S.laptop,ox,o.y,o.w,o.h,false);
+    else if(o.t==='mouse')ds(ctx,S.mouse,ox,o.y,o.w,o.h,false);
     else if(o.t==='tel')ds(ctx,S.tel,ox,o.y,o.w,o.h,false);
     else if(o.t==='alarm')ds(ctx,S.alarm,ox,o.y,o.w,o.h,false);
     else if(o.t==='printer')ds(ctx,S.printer,ox,o.y,o.w,o.h,false);
