@@ -1710,11 +1710,13 @@ function genL2(){
     if(t==='elevator')return {x:x,y:l2.gy-110,type:'elevator',w:64,h:110,ph:Math.floor(Math.random()*150),gap:56,open:true,late};
     if(t==='hr')return {x:x,y:l2.gy-58,type:'hr',w:46,h:58,ph:0,bx:x,dir:Math.random()<0.5?1:-1,spd:1.2+st*0.45,bubbleT:0,late};
     if(t==='toilet')return {x:x,y:l2.gy-54,type:'toilet',w:58,h:54,ph:Math.floor(Math.random()*160),jet:0,warn:false,late};
-    return {x:x,y:-70,type:'fallpot',w:54,h:42,vy:0,state:'wait',targetY:l2.gy-42,ph:0,armT:0,late,
-      trigD:(late?300:220)+Math.floor(Math.random()*120),trigT:(late?48:78)+Math.floor(Math.random()*(late?34:50))};
+    // v4.21r: 黑锅先保持隐藏；进入玩家视野右侧后才从画面顶部开始下落，保证玩家能亲眼看到掉落过程。
+    return {x:x,y:18,type:'fallpot',w:54,h:42,vy:0,state:'wait',targetY:l2.gy-42,ph:0,late};
   };
   // v4.11: 把整条赛道切成 4 段——每段都必须有自己的障碍和道具，不许前重后轻、后半段空荡荡
   const playA=430,playB=lw-700,SEGN=4;
+  // v4.21r: 两个黑锅至少隔开“一整屏 + 余量”，同一视野内绝不会同时出现两个黑锅。
+  const FALLPOT_GAP=W+120;
   const segOf=x=>Math.max(0,Math.min(SEGN-1,Math.floor((x-playA)/((playB-playA)/SEGN))));
   const segRange=i=>[playA+(playB-playA)*i/SEGN,playA+(playB-playA)*(i+1)/SEGN];
   // 在 [a,b] 里找一个落点。⚠️ 激光区的缓冲绝对不能放宽（贴太近会让"激光区段必须能贴地过"失效），
@@ -1727,7 +1729,7 @@ function genL2(){
         if(laserZ.find(z=>x+130>z.x-clr&&x<z.x+z.w+clr))continue;
         if(l2.obs.some(o=>Math.abs(o.x-x)<near))continue;
         if(l2.colls&&l2.colls.some(c=>Math.abs(c.x-x)<150))continue;
-        const sameGap=t==='toilet'?720:t==='elevator'?820:t==='fallpot'?520:t==='hr'?680:420;
+        const sameGap=t==='toilet'?720:t==='elevator'?820:t==='fallpot'?FALLPOT_GAP:t==='hr'?680:420;
         if(l2.obs.some(o=>o.type===t&&Math.abs(o.x-x)<sameGap))continue;
         return x;
       }
@@ -1852,7 +1854,8 @@ function genL2(){
   }
   slots.sort((a,b)=>a-b);
 
-  // 每关恰好 1 颗红心，直接占用中段的一个普通槽位，不额外增加密度。
+  // v4.21r: 每关 1 颗红心，但绝不直接放地上。
+  // 它占用中段的一个普通槽位，并放到附近台阶上方；站在台阶上还要再小跳一下才能碰到。
   let heartSlot=0;
   if(slots.length){
     const heartTarget=playA+(playB-playA)*0.50;
@@ -1861,11 +1864,29 @@ function genL2(){
 
   let lastType='';
   for(let i=0;i<slots.length;i++){
-    const type=i===heartSlot?'redheart':weightedPick(flow.pool,lastType);
+    if(i===heartSlot)continue;
+    const type=weightedPick(flow.pool,lastType);
     placeScheduled(slots[i],type,i);
-    if(type!=='redheart')lastType=type;
+    lastType=type;
   }
-  l2.heartGiven=slots.length>0;
+
+  if(slots.length){
+    const hx=slots[heartSlot];
+    let heartCands=plats.filter(pl=>pl!==hp&&!pl.ground&&Math.abs((pl.x+pl.w/2)-hx)<420&&!inDanger(pl.x+pl.w/2));
+    if(!heartCands.length)heartCands=plats.filter(pl=>pl!==hp&&!pl.ground&&Math.abs((pl.x+pl.w/2)-hx)<620);
+    if(!heartCands.length)heartCands=plats.filter(pl=>pl!==hp&&!pl.ground);
+    if(heartCands.length){
+      // 优先移动/稍高的平台；难度只提高一点，不做成极限跳。
+      heartCands.sort((a,b)=>{
+        const sa=(a.mv?120:0)+(l2.gy-a.y)*0.35-Math.abs((a.x+a.w/2)-hx)*0.18;
+        const sb=(b.mv?120:0)+(l2.gy-b.y)*0.35-Math.abs((b.x+b.w/2)-hx)*0.18;
+        return sb-sa;
+      });
+      const pl=heartCands[0];
+      l2.colls.push({x:pl.x+pl.w/2,y:pl.y-70,type:'redheart',collected:false,pl,plOffsetY:70});
+      l2.heartGiven=true;
+    }
+  }
 
   // BOSS 通行道具永远单独固定在最后的浮动平台；它不参与前面的普通随机。
   const bossTokenX=hp.x+hp.w/2;
@@ -1911,7 +1932,12 @@ function genL2(){
   let ox=430+Math.floor(Math.random()*90),potCount=0,guard=0;
   while(ox<lw-820&&guard++<400){
     const inAir=ox+130>airX-70&&ox<airX+airW+70;
-    const t=pickTypeAt(ox,inAir?['hr','fallpot']:null); // v4.20b: 第2关马桶受总量/后半段/间距限制
+    let t=pickTypeAt(ox,inAir?['hr','fallpot']:null); // v4.20b: 第2关马桶受总量/后半段/间距限制
+    // v4.21r: 初始连续生成也必须服从黑锅一屏间距；太近就换成其他障碍。
+    if(t==='fallpot'&&l2.obs.some(o=>o.type==='fallpot'&&Math.abs(o.x-ox)<FALLPOT_GAP)){
+      const fallbackAllow=inAir?['hr']:(st===0?['hr','elevator']:st===1?['hr','toilet']:['hr','elevator','toilet']);
+      t=pickTypeAt(ox,fallbackAllow);
+    }
     // v4.5: 按类型留缓冲——HR 会 ±60 巡逻，必须多留，否则刚出激光区就被它堵住
     const clr=(t==='hr'?200:120);
     const lz=laserZ.find(z=>ox+130>z.x-clr&&ox<z.x+z.w+clr);
@@ -2052,6 +2078,19 @@ function genL2(){
       }
     }
   }
+
+  // v4.21r: 最终硬保险——无论前面哪一条随机/补位路径生成的黑锅，都按一整屏距离去重。
+  // 这样从任何相机位置看，视线范围内最多只有一个黑锅事件。
+  {
+    const pots=l2.obs.filter(o=>o.type==='fallpot').sort((a,b)=>a.x-b.x);
+    const keep=new Set();
+    let last=-Infinity;
+    for(const o of pots){
+      if(o.x-last>=FALLPOT_GAP){keep.add(o);last=o.x;}
+    }
+    l2.obs=l2.obs.filter(o=>o.type!=='fallpot'||keep.has(o));
+  }
+
   l2.p.x=60;l2.p.y=250;l2.p.vx=0;l2.p.vy=0;l2.p.h=44;
 }
 function l2UpdPlats(){
@@ -2199,7 +2238,7 @@ function l2Collect(c){
   else if(c.type==='shoe'){ // v4.9: 红皮鞋——穿到脚上，沉重的很，减速几秒
     l2.shoeT=270;l2.score+=10;sc();
     spP(c.x,c.y,9,'#f66',l2.part);
-    l2.floats.push({x:c.x,y:c.y-6,txt:'👟 穿上红皮鞋…好沉',t:70});
+    l2.floats.push({x:c.x,y:c.y-6,txt:'鞋太小，穿不下',t:70});
   }
 }
 function l2Stomp(b){
@@ -2299,7 +2338,7 @@ function uL2(){
   // Collectibles
   for(const c of l2.colls){
     if(c.collected)continue;
-    if(c.pl){c.x=c.pl.x+c.pl.w/2;c.y=c.pl.y-34;} // horseshoe coin rides its floating platform
+    if(c.pl){c.x=c.pl.x+c.pl.w/2;c.y=c.pl.y-(c.plOffsetY||34);} // v4.21r: 红心可悬在平台上方，普通平台道具仍用 34
     if(c.motion){
       c.x+=c.motion.dir*c.motion.spd*(l2.slowT>0?0.62:1);
       if(c.x<=c.motion.a){c.x=c.motion.a;c.motion.dir=1;}
@@ -2342,13 +2381,14 @@ function uL2(){
     if(ob.dead)continue;
     if(ob.type==='fallpot'){
       if(ob.state==='wait'){
-        const ahead=ob.x-l2.p.x;
-        if(ahead<720&&ahead>-140)ob.armT=(ob.armT||0)+1;
-        if((ahead<(ob.trigD||300)&&ahead>-170)||(ob.armT||0)>(ob.trigT||90)){
-          ob.state='fall';ob.vy=1.65;
+        // v4.21r: 黑锅的落点先进入当前画面，再从顶部开始掉。
+        // 不再用“离玩家多少距离/等多少帧”偷偷触发，玩家一定能看到完整下落过程。
+        const screenX=ob.x-l2.cam;
+        if(screenX<W-55&&screenX>-20){
+          ob.state='fall';ob.y=18;ob.vy=1.25;
         }
       }else if(ob.state==='fall'){
-        ob.y+=ob.vy*(l2.slowT>0?0.7:1);ob.vy+=0.58;
+        ob.y+=ob.vy*(l2.slowT>0?0.7:1);ob.vy+=0.50;
         if(ob.y>=ob.targetY){ob.y=ob.targetY;ob.vy=0;ob.state='landed';shake=7;spP(ob.x+ob.w/2,ob.y+ob.h,8,'#666',l2.part,7,3,24);}
       } // v4.21b: 落地锅不再计时消失，玩家回头时也还在原地。
       if(ob.state!=='wait'&&l2.p.x+l2.p.w>ob.x+5&&l2.p.x<ob.x+ob.w-5&&l2.p.y+l2.p.h>ob.y+3&&l2.p.y<ob.y+ob.h-3){
