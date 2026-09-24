@@ -149,15 +149,16 @@ skateboard:[
 "ttyyttttttttttttyytt"
 ],
 exit:["nnnnnnnnnnnnnnnn","n88888888888888n","n85555588888888n","n85888588888888n","n85888588888888n","n85888588888588n","n85888585555558n","n85888588888588n","n85888588888888n","n85888588888888n","n88888888888888n","nnnnnnnnnnnnnnnn"],
-// v4.20g: 墨镜重新设计——黑色粗框、深色镜片、鼻梁和高光，轮廓更像真正的太阳镜。
+// v4.21p: 电影院 3D 眼镜——粗黑框 + 红/蓝双镜片，横向轮廓更明确。
 sunglass:[
-"tt66666tt66666tt",
-"t6yyyy6tt6yyyy6t",
-"6ykkkky66ykkkky6",
-"6ykk5ky66yk5kky6",
-"6yyyyyy66yyyyyy6",
-"t666666tt666666t",
-"ttt66tttttt66ttt"
+"tt666666tt666666tttt",
+"t666666666666666666t",
+"667777776666aaaaaa66",
+"667577776666a5aaaa66",
+"667777776666aaaaaa66",
+"t666666666666666666t",
+"tt6666tt6666tt6666tt",
+"tt66tttttttttttt66tt"
 ],
 envelope:["tttt","t77t","7bb7","t77t"],
 coin:["tt99tt","t9999t","999999","99yy99","999999","t9999t","tt99tt"],
@@ -230,6 +231,19 @@ shoe:["tt"+"yyyyy"+"ttttttt",
 "tyyyyyyyyyyyyy",
 "yyyyyyyyyyyyyy",
 "yyyyytyyyytyyt"],
+// v4.21p: 穿在马脚上的专用短靴。比地面道具更短更宽，贴合两只向上翘的脚。
+shoe_wear:[
+"tt6666tttttt",
+"t677776ttttt",
+"t677u76ttttt",
+"t677u76ttttt",
+"t677776ttttt",
+"t677776666tt",
+"t6777777766t",
+"t6777777776t",
+"66777777766t",
+"6666666666tt"
+],
 stain:["ttt33333tttt","t333333333tt","33333333333t","t33333333333","tt333333333t","tttt33333ttt"],
 phone:["ttt666666ttt","tt6aaaaaa6tt","t6aaaaaaaa6t","t6aa5555aa6t","t6aa5cc5aa6t","t6aa5555aa6t","t6aaaaaaaa6t","tt66666666tt","ttt6tttt6ttt"],
 tel:["tyyyytttttttttttt","tyssytttttttttttt","tyyyyyyyyyyyyyyyt","ttsytyyyyyyyy77yt","ttsytyyyryryryyyt","ttsytyyyyyyyyyyyt","ttsytyyyryryryyyt","ttsytyyyyyyyyyyyt","tyyyyyyyryryryyyt","tyssyyyyyyyyyyyyt","tyyyyyyyyyyyyyyyt","ttttttttttttttttt"],
@@ -793,12 +807,13 @@ const L1_DESC=['办公室','会议室','停车场'];
 const L1_ITEMS=[
   [{t:'badge',w:1.0},{t:'milktea',w:1.15},{t:'headset',w:0.70},{t:'burger',w:1.15}],
   [{t:'coffee',w:1.05},{t:'pancake',w:1.20},{t:'fish',w:0.75}],
-  [{t:'skateboard',w:1.20},{t:'popcorn',w:1.10},{t:'sunglass',w:0.58},{t:'exit',w:0.48}]
+  // v4.21p: 第3关重新配比——爆米花/紧急出口是主奖励，滑板次之，3D眼镜保持稀有但不再难遇到。
+  [{t:'skateboard',w:0.90},{t:'popcorn',w:1.55},{t:'sunglass',w:0.72},{t:'exit',w:1.35}]
 ];
 const L1_FLOW=[
   {single:0.74,item:0.11,bonusChance:0.24},
   {single:0.56,item:0.10,bonusChance:0.00}, // v4.21j: 第2关改为“切道关”，双道封锁明显增多
-  {single:0.77,item:0.09,bonusChance:0.18}
+  {single:0.70,item:0.16,bonusChance:0.34} // v4.21p: 第3关奖励整体更密，仍给双道封锁保留足够比例
 ];
 const L1_POSITIVE=new Set(['badge','milktea','headset','burger','coffee','pancake','fish','skateboard','popcorn','sunglass','exit','heart','horseshoe']);
 function l1ItemCanSpawn(type,x){
@@ -813,16 +828,18 @@ function l1ItemCanSpawn(type,x){
         return sx>-45&&sx<W+45;
       }))return false;
     }else{
-      if(active.some(c=>L1_POSITIVE.has(c.type)&&Math.abs(c.x0-x)<W+160))return false;
+      // v4.21p: 第3关奖励允许更紧凑地连续出现；第1关保持原来的稀疏节奏。
+      const anyGap=l1.stage===2?Math.max(520,Math.round(W*0.72)):W+160;
+      if(active.some(c=>L1_POSITIVE.has(c.type)&&Math.abs(c.x0-x)<anyGap))return false;
     }
   }
-  // 同款仍然保持错开，但第二关不再用超出屏幕的大范围去制造空档。
-  const sameGap=l1.stage===1?W-40:W+180;
+  // 同款仍然保持更大的错开距离，避免爆米花/出口连续贴脸重复。
+  const sameGap=l1.stage===1?W-40:(l1.stage===2?Math.max(700,Math.round(W*0.92)):W+180);
   if(active.filter(c=>c.type===type&&Math.abs(c.x0-x)<sameGap).length>=1)return false;
   return true;
 }
 function pickL1Item(stage,x){
-  const pool=L1_ITEMS[stage],recent=l1.itemHistory||[];
+  const pool=L1_ITEMS[stage],recent=stage===2?(l1.itemHistory||[]).slice(0,1):(l1.itemHistory||[]);
   let choices=pool.filter(it=>!recent.includes(it.t)&&l1ItemCanSpawn(it.t,x));
   if(!choices.length)choices=pool.filter(it=>l1ItemCanSpawn(it.t,x));
   if(!choices.length)return '';
@@ -1085,7 +1102,7 @@ function uL1(){
       const pools=[
         [{t:'papers',w:52,h:44,p:0.12},{t:'laptop',w:58,h:44,p:0.09},{t:'mouse',w:40,h:32,p:0.07},{t:'printer',w:56,h:52,p:0.23},{t:'hr',w:44,h:60,p:0.17},{t:'blackpot',w:POT_W,h:POT_H,p:0.18},{t:'tel',w:54,h:38,p:0.14}], // v4.21: 办公室以静态障碍为主，座机作为负面事件
         [{t:'slider',w:44,h:54,p:0.18},{t:'notebook',w:40,h:40,p:0.12},{t:'boss',w:52,h:58,p:0.10},{t:'blackpot',w:POT_W,h:POT_H,p:0.17},{t:'whiteboard',w:58,h:44,p:0.13},{t:'alarm',w:46,h:44,p:0.12},{t:'mail',w:42,h:34,p:0.18}], // v4.14: 删 会议桌、板擦换白板，剩余按原比例缩放
-        [{t:'car',w:96,h:54,p:0.30},{t:'cone',w:34,h:44,p:0.27},{t:'barrier',w:56,h:46,p:0.14},{t:'shoe',w:42,h:38,p:0.14},{t:'blackpot',w:POT_W,h:POT_H,p:0.15}] // v4.15: 老板的车换黄色路障、白板换红靴子
+        [{t:'car',w:96,h:54,p:0.27},{t:'cone',w:34,h:44,p:0.24},{t:'barrier',w:56,h:46,p:0.14},{t:'shoe',w:42,h:38,p:0.20},{t:'blackpot',w:POT_W,h:POT_H,p:0.15}] // v4.15: 老板的车换黄色路障、白板换红靴子
       ];
       const pool=pools[l1.stage];
       let rr=Math.random(),acc=0,sel=pool[pool.length-1];
@@ -1436,6 +1453,7 @@ function drL1(){
     else if(c.type==='exit')spr=S.exit; // v4.17: 安全出口绿牌
     else if(c.type==='horseshoe')spr=S.horseshoe;
     if(c.type==='skateboard')ds(ctx,spr,cx2-3,c.y+7,42,22,false);
+    else if(c.type==='sunglass')ds(ctx,spr,cx2-5,c.y+8,46,20,false); // v4.21p: 电影院眼镜保持横向比例
     else ds(ctx,spr,cx2,c.y,c.w,c.h,false);
   }
   // pony
@@ -1462,13 +1480,15 @@ function drL1(){
     ctx.strokeStyle='#7a4a20';ctx.lineWidth=3;
     ctx.beginPath();ctx.moveTo(ponyX+8,ponyY+24);ctx.lineTo(ponyX+42,ponyY+42);ctx.moveTo(ponyX+42,ponyY+24);ctx.lineTo(ponyX+8,ponyY+42);ctx.stroke();
   }
-  if(l1.shoeT>0){ // v4.20f: 停车场红靴按参考图——大号靴子贴在左右脚，两边外八字向外伸。
-    const bw3=Math.max(16,Math.round(pw2*0.36)),bh3=Math.round(bw3*15/14);
-    const footY=ponyY+ph2*0.73;
-    ctx.save();ctx.translate(baseX+pw2*0.13,footY+bh3/2);ctx.rotate(0.28);
-    ds(ctx,S.shoe,-bw3/2,-bh3/2,bw3,bh3,true);ctx.restore();
-    ctx.save();ctx.translate(baseX+pw2*0.87,footY+bh3/2);ctx.rotate(-0.28);
-    ds(ctx,S.shoe,-bw3/2,-bh3/2,bw3,bh3,false);ctx.restore();
+  if(l1.shoeT>0){ // v4.21p: 两只红靴直接套在左右两只翘起的脚端，参考确认图的位置/比例。
+    const bw3=Math.max(18,Math.round(pw2*0.40)),bh3=Math.round(bw3*10/12);
+    const footY=ponyY+ph2*0.66;
+    // 左脚端更靠外：鞋口接住腿，鞋头朝画面外侧。
+    ctx.save();ctx.translate(baseX+pw2*0.035,footY+bh3/2);ctx.rotate(0.18);
+    ds(ctx,S.shoe_wear,-bw3/2,-bh3/2,bw3,bh3,true);ctx.restore();
+    // 右脚镜像，保持两只靴子与马身左右对称。
+    ctx.save();ctx.translate(baseX+pw2*0.965,footY+bh3/2);ctx.rotate(-0.18);
+    ds(ctx,S.shoe_wear,-bw3/2,-bh3/2,bw3,bh3,false);ctx.restore();
   }
   if(l1.callT>0){ // v4.12: 接电话中——头顶座机晃动 + 通话波纹
     ds(ctx,S.tel,ponyX+pw2/2-13,ponyY-24+Math.sin(af*0.25)*2,26,18,false);
