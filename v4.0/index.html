@@ -1708,7 +1708,7 @@ function genL2(){
   const mkObs=(t,x)=>{
     const late=x>lw*0.52;
     if(t==='elevator')return {x:x,y:l2.gy-110,type:'elevator',w:64,h:110,ph:Math.floor(Math.random()*150),gap:56,open:true,late};
-    if(t==='hr')return {x:x,y:l2.gy-58,type:'hr',w:46,h:58,ph:0,bx:x,dir:Math.random()<0.5?1:-1,spd:1.2+st*0.45,bubbleT:0,late};
+    if(t==='hr')return {x:x,y:l2.gy-58,type:'hr',w:46,h:58,ph:0,bx:x,dir:Math.random()<0.5?1:-1,spd:1.2+st*0.45,range:120+st*15,bubbleT:0,late}; // v4.21t: HR 巡逻范围扩大
     if(t==='toilet')return {x:x,y:l2.gy-54,type:'toilet',w:58,h:54,ph:Math.floor(Math.random()*160),jet:0,warn:false,late};
     // v4.21r: 黑锅先保持隐藏；进入玩家视野右侧后才从画面顶部开始下落，保证玩家能亲眼看到掉落过程。
     return {x:x,y:18,type:'fallpot',w:54,h:42,vy:0,state:'wait',targetY:l2.gy-42,ph:0,late};
@@ -1722,14 +1722,14 @@ function genL2(){
   // 在 [a,b] 里找一个落点。⚠️ 激光区的缓冲绝对不能放宽（贴太近会让"激光区段必须能贴地过"失效），
   //                        只能放宽"和别的障碍挨多近"这一项；实在挤不下就放弃这一段的补位。
   const freeSlot=(a,b,t)=>{
-    const clr=(t==='hr'?200:120);
+    const clr=(t==='hr'?260:120);
     for(const near of [110,80,58]){
       for(let i=0;i<40;i++){
         const x=a+Math.random()*(b-a);
         if(laserZ.find(z=>x+130>z.x-clr&&x<z.x+z.w+clr))continue;
         if(l2.obs.some(o=>Math.abs(o.x-x)<near))continue;
         if(l2.colls&&l2.colls.some(c=>Math.abs(c.x-x)<150))continue;
-        const sameGap=t==='toilet'?720:t==='elevator'?820:t==='fallpot'?FALLPOT_GAP:t==='hr'?680:420;
+        const sameGap=t==='toilet'?720:t==='elevator'?820:t==='fallpot'?FALLPOT_GAP:t==='hr'?760:420;
         if(l2.obs.some(o=>o.type===t&&Math.abs(o.x-x)<sameGap))continue;
         return x;
       }
@@ -1822,19 +1822,28 @@ function genL2(){
     }
     return Math.max(minX,Math.min(maxX,target));
   };
+  const MIN_ITEM_GAP=190; // v4.21t: 普通道具最小横向间距，禁止同位置/挤成一团
+  const itemNear=x=>l2.colls.some(c=>!c.collected&&Math.abs(c.x-x)<MIN_ITEM_GAP);
   const placeScheduled=(x,type,index)=>{
-    // 奇偶交替：一枚在地面、一枚在台阶，避免“前半段全在台阶上”的感觉。
+    // 奇偶交替：一枚在地面、一枚在台阶；普通奖励优先静态台阶，避免移动后彼此撞到一起。
     const wantPlatform=index%2===1;
     if(wantPlatform){
-      const cands=plats.filter(pl=>pl!==hp&&!pl.ground&&!pl.rail&&Math.abs((pl.x+pl.w/2)-x)<230);
+      const cands=plats.filter(pl=>pl!==hp&&!pl.ground&&!pl.rail&&!pl.mv&&Math.abs((pl.x+pl.w/2)-x)<260&&!itemNear(pl.x+pl.w/2));
       if(cands.length){
         cands.sort((a,b)=>Math.abs((a.x+a.w/2)-x)-Math.abs((b.x+b.w/2)-x));
         const pl=cands[0];
         l2.colls.push({x:pl.x+pl.w/2,y:pl.y-34,type,collected:false,pl});
-        return;
+        return true;
       }
     }
-    l2.colls.push({x,y:l2.gy-40,type,collected:false});
+    // 地面位置也做硬间距；原位冲突时左右尝试挪开，而不是叠在一起。
+    for(const dx of [0,-90,90,-150,150]){
+      const gx=Math.max(playA+70,Math.min(playB-70,x+dx));
+      if(inDanger(gx)||itemNear(gx))continue;
+      l2.colls.push({x:gx,y:l2.gy-40,type,collected:false});
+      return true;
+    }
+    return false;
   };
 
   // 先生成“槽位”，保证整条路的空档稳定；地图越长，后面关卡自然会多一些道具。
@@ -1871,25 +1880,30 @@ function genL2(){
   }
 
   if(slots.length){
-    const hx=slots[heartSlot];
-    let heartCands=plats.filter(pl=>pl!==hp&&!pl.ground&&Math.abs((pl.x+pl.w/2)-hx)<420&&!inDanger(pl.x+pl.w/2));
-    if(!heartCands.length)heartCands=plats.filter(pl=>pl!==hp&&!pl.ground&&Math.abs((pl.x+pl.w/2)-hx)<620);
-    if(!heartCands.length)heartCands=plats.filter(pl=>pl!==hp&&!pl.ground);
-    if(heartCands.length){
-      // 优先移动/稍高的平台；难度只提高一点，不做成极限跳。
-      heartCands.sort((a,b)=>{
-        const sa=(a.mv?120:0)+(l2.gy-a.y)*0.35-Math.abs((a.x+a.w/2)-hx)*0.18;
-        const sb=(b.mv?120:0)+(l2.gy-b.y)*0.35-Math.abs((b.x+b.w/2)-hx)*0.18;
-        return sb-sa;
-      });
-      const pl=heartCands[0];
-      l2.colls.push({x:pl.x+pl.w/2,y:pl.y-70,type:'redheart',collected:false,pl,plOffsetY:70});
-      l2.heartGiven=true;
+    // v4.21t: 红心改成“二段台阶”路线，保证有一点难度但一定能拿到。
+    // 地面 -> 辅助台阶 -> 红心台阶；不再依赖随机平台高度，避免出现理论存在但实际上跳不上去。
+    let hx=slots[heartSlot];
+    for(const dx of [0,-90,90,-160,160]){
+      const test=Math.max(playA+170,Math.min(playB-170,hx+dx));
+      if(!inDanger(test)&&!itemNear(test)){hx=test;break;}
     }
+    const dir=(hx+140<playB)?1:-1;
+    const helperW=92,topW=104;
+    const helperX=hx-dir*105-helperW/2;
+    const topX=hx-topW/2;
+    const helper={x:helperX,y:l2.gy-96,w:helperW,h:14,mv:null,heartStep:true};
+    const heartPl={x:topX,y:l2.gy-188,w:topW,h:14,mv:null,heartStep:true};
+    plats.push(helper);plats.push(heartPl);
+    // 清掉红心路线附近的普通奖励，确保不会出现“两个道具贴在一起”。
+    l2.colls=l2.colls.filter(c=>c.bossToken||Math.abs(c.x-hx)>=MIN_ITEM_GAP);
+    l2.colls.push({x:hx,y:heartPl.y-46,type:'redheart',collected:false,pl:heartPl,plOffsetY:46});
+    l2.heartGiven=true;
   }
 
   // BOSS 通行道具永远单独固定在最后的浮动平台；它不参与前面的普通随机。
   const bossTokenX=hp.x+hp.w/2;
+  // v4.21t: BOSS 通行道具也清出自己的空间，避免和普通奖励落在同一位置。
+  l2.colls=l2.colls.filter(c=>c.type==='redheart'||Math.abs(c.x-bossTokenX)>=MIN_ITEM_GAP);
   l2.colls.push({x:bossTokenX,y:hp.y-34,type:l2.bossKey,collected:false,pl:hp,bossToken:true});
 
   let pieCount=l2.colls.filter(c=>c.type==='pancake').length;
@@ -1939,7 +1953,7 @@ function genL2(){
       t=pickTypeAt(ox,fallbackAllow);
     }
     // v4.5: 按类型留缓冲——HR 会 ±60 巡逻，必须多留，否则刚出激光区就被它堵住
-    const clr=(t==='hr'?200:120);
+    const clr=(t==='hr'?260:120);
     const lz=laserZ.find(z=>ox+130>z.x-clr&&ox<z.x+z.w+clr);
     if(lz){ox=lz.x+lz.w+clr;continue;} // 激光区让开，保证地面始终是可行解
     if(t==='fallpot')potCount++;
@@ -2432,7 +2446,9 @@ function uL2(){
     }
     if(ob.type==='hr'){
       ob.ph++;ob.x+=ob.dir*ob.spd*(l2.slowT>0?0.62:1);
-      if(ob.x<ob.bx-60||ob.x>ob.bx+60)ob.dir*=-1;
+      const hrRange=ob.range||120;
+      if(ob.x<ob.bx-hrRange){ob.x=ob.bx-hrRange;ob.dir=1;}
+      if(ob.x>ob.bx+hrRange){ob.x=ob.bx+hrRange;ob.dir=-1;}
       if(l2.inv<=0&&l2.p.x+l2.p.w>ob.x+4&&l2.p.x<ob.x+ob.w-4&&l2.p.y+l2.p.h>ob.y+4&&l2.p.y<ob.y+ob.h-4){
         ob.bubbleT=110; // HR被撞到：头顶弹「HR也是人」并掉一条命
         l2Hurt(true);
