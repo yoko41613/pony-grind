@@ -1074,6 +1074,13 @@ function drL1(){
   if(l1.ghostT>0)ctx.globalAlpha=0.45; // v4.15: 墨镜隐身——持续半透明（不是闪烁）
   const pw2=l1.bigT>0?64:50,ph2=l1.bigT>0?72:60;
   const ponyX=120+(l1.rideX||0),ponyY=l1.py-10-(ph2-60)/2-(l1.chairRideT>0?22:0);
+  const baseX=ponyX-(pw2-50)/2; // v4.18: 精灵实际左边缘（变大时整体左移），附加部件要跟着走
+  if(l1.burdenT>0){ // v4.18: 锅背在马背上——画在马身后层，立在背脊上方露出轮廓（双耳锅 16:9 真实比例）
+    const bw2=Math.round(pw2*0.50),bh2=Math.round(bw2*9/16);
+    const bx=baseX+pw2*0.46,by=ponyY+ph2*0.16+Math.sin(af*0.22)*1.5;
+    ctx.save();ctx.translate(bx+bw2/2,by+bh2/2);ctx.rotate(Math.sin(af*0.22)*0.06);
+    ds(ctx,S.blackpot,-bw2/2,-bh2/2,bw2,bh2,false);ctx.restore();
+  }
   if(l1.stumbleT>0){
     ctx.save();ctx.translate(ponyX+pw2/2,ponyY+ph2/2);ctx.rotate(Math.sin(af*0.8)*0.34);
     ds(ctx,spr,-pw2/2,-ph2/2,pw2,ph2,false);ctx.restore();
@@ -1082,11 +1089,11 @@ function drL1(){
     ctx.strokeStyle='#7a4a20';ctx.lineWidth=3;
     ctx.beginPath();ctx.moveTo(ponyX+8,ponyY+24);ctx.lineTo(ponyX+42,ponyY+42);ctx.moveTo(ponyX+42,ponyY+24);ctx.lineTo(ponyX+8,ponyY+42);ctx.stroke();
   }
-  if(l1.burdenT>0){ // 背在背上的锅
-    const bw2=Math.round(pw2*0.62),bh2=Math.round(bw2*10/14);
-    const bx=ponyX-pw2*0.16,by=ponyY+ph2*0.10;
-    ctx.save();ctx.translate(bx+bw2/2,by+bh2/2);ctx.rotate(Math.sin(af*0.22)*0.06);
-    ds(ctx,S.blackpot,-bw2/2,-bh2/2,bw2,bh2,false);ctx.restore();
+  if(l1.shoeT>0){ // v4.18: 红靴穿在前后蹄上，靴筒包住小腿
+    const bw3=Math.round(pw2*0.30),bh3=Math.round(bw3*15/14);
+    const by=ponyY+ph2*0.78;
+    ds(ctx,S.shoe,baseX+pw2*0.34,by,bw3,bh3,false);
+    ds(ctx,S.shoe,baseX+pw2*0.54,by,bw3,bh3,false);
   }
   if(l1.callT>0){ // v4.12: 接电话中——头顶座机晃动 + 通话波纹
     ds(ctx,S.tel,ponyX+pw2/2-13,ponyY-24+Math.sin(af*0.25)*2,26,18,false);
