@@ -44,6 +44,19 @@ pony_fat:["tttttttttytttttttttttttttttttt","ttttttyyzyzytttttttttttttttttt","ttt
 pony_hit:["tttttttttytttttttttttttttttttt","ttttttyyzyzytttttttttttttttttt","ttttttyyyyyyzttttttttttttttttt","ttttttyyyyyzzytttttttttttttttt","ttttttyyyyyyyzzttttttttttttttt","ttttyyy55yyyzzzttttttttttttttt","ttttyyyzyyyyyyyttttttttttttttt","ttyyyyyyyyyyyzzttttttttttttttt","ttyyyyyyyyyyyyyttttttttttttttt","ttttyttyyyyyyzzttttttttttttttt","tttttttyyyyyyzztttyyyyyttttttt","tttttttyyyyyyyytyyyyyyyyyttttt","ttttttyyyyyyyyyyyyyzzzyyyttttt","ttttttyyyyyyyyyyyyzzzzzyyytttt","tttttyyyyyyyyyyyyyzyyyzyyytttt","tttttyyyyyyyyyyyyyzyyyzyyytttt","yttttyyyyyyyyyyyyyzzyzzyyyttty","yytttyyyyyyyyyyyyyyyyyyyyyttyy","yyyttyyyyyyyyyyyyyyyyyyyyytyyy","yyyyyyyyyyyyyyyyyyyyyyyyyyyyyy","yyyyyyyyyyyyyyyyyyyyyyyyyyyyyy","tyyyyyyyyyyyyyyyyyyyyyyyyyyyyt","ttyyyyyyyyyyyyyyyyyyyyyyyyyytt","ttttyyyyyyyyyyyyyyyyyyyyyytttt","tttttttyyyyyyyyyyyyyyyyttttttt","ttttttttttyyyyyyyyyytttttttttt"],
 headphone:["tttzyyyyttt","ttyyyyyyytt","tyytttttyyt","ty6tttttryt","ty6tttttryt","666ztttzz66","666ztttzz66","666ztttzz66","666ztttzz66","t66tttttz6t"],
 papers:["tteeeeeetttttt","tteeeeeeeeeett","tte55555555ett","tte55555555ett","teeeeeeeeeeeet","te9999999999et","te9999999999et","te9999999999et","te9999999999et","te9999999999et","teeeeeeeeeeeet"],
+// v4.20e: 文件夹重新设计——独立于“文件堆”，黄色硬壳 + 页签 + 白色标签，更容易一眼识别。
+folder:[
+"tt666666tttttt",
+"t699999966tttt",
+"669999999666tt",
+"6999999999996t",
+"6bbbbbbbbbbb6t",
+"6b55555555bb6t",
+"6bbbbbbbbbbb6t",
+"6999999999996t",
+"6999999999996t",
+"t66666666666tt"
+],
 printer:["ttttt6y6ttttt","ttyct666ttytt","t6yctttttty6t","6666666666666","6666666666zz6","6666666666zc6","6666666666666","666yyyyyyy666","6666ttttty666","tyy6tttttyyyt","ttkyyyyyyyttt"],
 hr:["tttoooooooof1tt","tfftttttttttfht","tfotyyyyyytthft","tzzzzzzzzzzzzct","tzzm77mm777zzct","czz77777777zzzc","zzzzzzzzzzzzzzz","zzzzttzzzttczzz","zzzzzzzzzzzzzzz","zzzzzzzzzzzzzzz","zzzzzzzzzzzzzzz","t4yytty66tt664t","t6yyttyyytt6y4t","t6y6ttyyytt6y4t"],
 coffee:["tkyyyyyyt","tryyyyyyt","y4eeeeeey","ye3fff3fy","ye3ff3ffy","ye32tf3fy","ye3t1tffy","ye33tt3fy","ye333333y","y4333333y","y6yyyyyyy","yyyyyyyyy"],
@@ -61,7 +74,19 @@ horse_coin:["tttttbbbttttt","tt1bbbbbbb1tt","t1bbb33ebbb1t","tbbb3333zbbbt","tbb
 horseshoe:["tttttbbbttttt","tt1bbbbbbb1tt","t1bbb33ebbb1t","tbbb3333zbbbt","tbb33fbb33bb1","bbb33bbb33bbb","bbb33bbb33bbb","bbb33bbb33bbb","tbbe3fbb33bb5","tb333fbb333bt","t1bbbbbbbbbbt","tt1bbbbbbbbtt","tttttbbb1tttt"],
 heart:["tt7tt7tt","t777777t","77777777","77777777","t777777t","t777777t","tt7777tt","ttt77ttt"],
 barrier:["tttt9llll9tttt","tttt9tttt9tttt","tttt9llll9tttt","tt9llllllll9tt","tt9l999999l9tt","tt9llllllll9tt","tt9l999999l9tt","tt9llllllll9tt","tttt9llll9tttt","tttt9llll9tttt","tt9llllllll9tt","tt9eeeeeeee9tt"],
-skateboard:["ttttooooootttt","ttto444444ottt","bbbo444444obbb","b6bo444444ob6b","bbbo444444obbb","ttto444444ottt","ttto444444ottt","ttto444444ottt","ttto444444ottt","ttto444444ottt","ttto444444ottt","ttto444444ottt","ttto444444ottt","bbbo444444obbb","b6bo444444ob6b","bbbo444444obbb","ttto444444ottt","ttttooooootttt"],
+// v4.20e: 滑板重新设计——俯视横向板面，四轮和桥架清楚可见，不再像竖长条。
+skateboard:[
+"ttyyttttttttttttyytt",
+"ttrrttttttttttttrrtt",
+"tt6666666666666666tt",
+"t66oooooooooooooo66t",
+"66oo44oooooooo44oo66",
+"66oooooooooooooooo66",
+"t66oooooooooooooo66t",
+"tt6666666666666666tt",
+"ttrrttttttttttttrrtt",
+"ttyyttttttttttttyytt"
+],
 exit:["nnnnnnnnnnnnnnnn","n88888888888888n","n85555588888888n","n85888588888888n","n85888588888888n","n85888588888588n","n85888585555558n","n85888588888588n","n85888588888888n","n85888588888888n","n88888888888888n","nnnnnnnnnnnnnnnn"],
 sunglass:["tyyyyyyyyyyyyyyt","ty6k6666yy6k666t","ty666666yy66666t","tyyyyyyyyyyyyyyt"],
 envelope:["tttt","t77t","7bb7","t77t"],
@@ -172,14 +197,26 @@ mail:[
 "t6666666666666t"]
 };
 
+// v4.20e: 像素精灵预渲染缓存。原来每只精灵每帧都逐格 fillRect，物体一多容易掉帧。
+const SPR_CACHE=new WeakMap();
 function ds(ctx,spr,x,y,w,h,flip){
-  const pw=w/spr[0].length, ph=h/spr.length;
-  for(let r=0;r<spr.length;r++)for(let c=0;c<spr[r].length;c++){
-    const ch=spr[r][c]; if(ch==='t'||!P[ch])continue;
-    ctx.fillStyle=P[ch];
-    const dx=flip?x+(spr[0].length-1-c)*pw:x+c*pw;
-    ctx.fillRect(Math.round(dx),Math.round(y+r*ph),Math.ceil(pw),Math.ceil(ph));
+  if(!spr||!spr.length)return;
+  let bmp=SPR_CACHE.get(spr);
+  if(!bmp){
+    const sw=spr[0].length,sh=spr.length;
+    bmp=document.createElement('canvas');bmp.width=sw;bmp.height=sh;
+    const bctx=bmp.getContext('2d');bctx.imageSmoothingEnabled=false;
+    for(let r=0;r<sh;r++)for(let c=0;c<sw;c++){
+      const ch=spr[r][c];if(ch==='t'||!P[ch])continue;
+      bctx.fillStyle=P[ch];bctx.fillRect(c,r,1,1);
+    }
+    SPR_CACHE.set(spr,bmp);
   }
+  ctx.save();ctx.imageSmoothingEnabled=false;
+  if(flip){
+    ctx.translate(x+w,y);ctx.scale(-1,1);ctx.drawImage(bmp,0,0,w,h);
+  }else ctx.drawImage(bmp,x,y,w,h);
+  ctx.restore();
 }
 // v4.7: 摄像头的"镜头朝下"版——逆时针转 90°，挂在天花板/光柱顶垂直照射
 S.cctv_dn=(()=>{const H=S.cctv.length,W=S.cctv[0].length,out=[];for(let r=0;r<W;r++){let row='';for(let c=0;c<H;c++)row+=S.cctv[c][W-1-r];out.push(row);}return out;})();
@@ -1033,11 +1070,13 @@ function drL1(){
   // 每关始终使用自己的固定主题图，但随奔跑持续向左滚动。
   const bgImg=stg===0?IMG_L1P1:stg===1?IMG_L1P2:IMG_L1P3;
   if(bgImg&&bgImg.complete){
-    // v4.20: 背景只落在整数像素，并让相邻两张重叠 2px，消除滚动时的细缝。
-    const bgShift=-Math.floor((l1.cam*0.12)%W);
+    // v4.20e: 连续亚像素滚动，避免低速时“停几帧再跳 1px”的顿挫；2px 重叠继续消除接缝。
+    const bgShift=-((l1.cam*0.12)%W);
+    ctx.save();ctx.imageSmoothingEnabled=true;
     ctx.drawImage(bgImg,bgShift,0,W,H);
     ctx.drawImage(bgImg,bgShift+W-2,0,W,H);
-    if(bgShift> -2)ctx.drawImage(bgImg,bgShift-W+2,0,W,H);
+    if(bgShift>-2)ctx.drawImage(bgImg,bgShift-W+2,0,W,H);
+    ctx.restore();
   }else{
     ctx.fillStyle=L1_BG[stg];ctx.fillRect(0,0,W,H);
   }
@@ -1107,7 +1146,8 @@ function drL1(){
     else if(c.type==='popcorn')spr=S.popcorn;
     else if(c.type==='exit')spr=S.exit; // v4.17: 安全出口绿牌
     else if(c.type==='horseshoe')spr=S.horseshoe;
-    ds(ctx,spr,cx2,c.y,c.w,c.h,false);
+    if(c.type==='skateboard')ds(ctx,spr,cx2-3,c.y+7,42,22,false);
+    else ds(ctx,spr,cx2,c.y,c.w,c.h,false);
   }
   // pony
   let spr=S.pony_run1;
@@ -1133,11 +1173,12 @@ function drL1(){
     ctx.strokeStyle='#7a4a20';ctx.lineWidth=3;
     ctx.beginPath();ctx.moveTo(ponyX+8,ponyY+24);ctx.lineTo(ponyX+42,ponyY+42);ctx.moveTo(ponyX+42,ponyY+24);ctx.lineTo(ponyX+8,ponyY+42);ctx.stroke();
   }
-  if(l1.shoeT>0){ // v4.19: 红靴按参考图外八字穿在脚上——靴子加大，左靴翻面朝左、右靴朝右，向外倾探出身体两侧
-    const bw3=Math.round(pw2*0.34),bh3=Math.round(bw3*15/14);
-    ctx.save();ctx.translate(baseX+pw2*0.14,ponyY+ph2*0.86);ctx.rotate(0.42);
+  if(l1.shoeT>0){ // v4.20e: 两只鞋贴住左右脚，不再悬在身体外侧。
+    const bw3=Math.max(11,Math.round(pw2*0.24)),bh3=Math.round(bw3*15/14);
+    const footY=ponyY+ph2*0.79;
+    ctx.save();ctx.translate(baseX+pw2*0.31,footY+bh3/2);ctx.rotate(0.10);
     ds(ctx,S.shoe,-bw3/2,-bh3/2,bw3,bh3,true);ctx.restore();
-    ctx.save();ctx.translate(baseX+pw2*0.86,ponyY+ph2*0.86);ctx.rotate(-0.42);
+    ctx.save();ctx.translate(baseX+pw2*0.69,footY+bh3/2);ctx.rotate(-0.10);
     ds(ctx,S.shoe,-bw3/2,-bh3/2,bw3,bh3,false);ctx.restore();
   }
   if(l1.callT>0){ // v4.12: 接电话中——头顶座机晃动 + 通话波纹
@@ -2150,8 +2191,9 @@ function drL2(){
   for(const c of l2.colls){
     if(c.collected)continue;const vx=c.x-bx;
     if(vx<-20||vx>W+20)continue;
-    const spr=c.type==='pancake'?S.pancake:c.type==='horseshoe'?S.horseshoe:c.type==='redheart'?S.heart:c.type==='headset'?S.headphone:c.type==='folder'?S.papers:c.type==='clockout'?S.clockout:c.type==='milktea'?S.coffee:c.type==='coffee'?S.coffee:c.type==='mail'?S.mail:c.type==='shoe'?S.shoe:S.coin;
-    ds(ctx,spr,vx-16,c.y-16,32,32,false);
+    const spr=c.type==='pancake'?S.pancake:c.type==='horseshoe'?S.horseshoe:c.type==='redheart'?S.heart:c.type==='headset'?S.headphone:c.type==='folder'?S.folder:c.type==='clockout'?S.clockout:c.type==='milktea'?S.coffee:c.type==='coffee'?S.coffee:c.type==='mail'?S.mail:c.type==='shoe'?S.shoe:S.coin;
+    if(c.type==='folder')ds(ctx,spr,vx-18,c.y-14,36,28,false);
+    else ds(ctx,spr,vx-16,c.y-16,32,32,false);
     if(c.type==='pancake'){ctx.fillStyle='#0002';ctx.fillRect(vx-9,c.y+15,18,3);}
     // v4.5: 道具不再带属性光晕（金色/红色/青色半透明底），好坏自己试
     else if(c.motion){
@@ -2307,11 +2349,12 @@ function drL2(){
   const pw=l2.big?l2.p.w+22:l2.p.w+8;
   const ph2=l2.big?l2.p.h+20:l2.p.h+8;
   ds(ctx,spr,l2.p.x-bx,l2.p.y-8,pw,ph2,l2.p.face<0);
-  // v4.10: 红皮鞋穿在小马前后腿上（靴子包住小腿，对应设定图）
+  // v4.20e: 红鞋贴在左右两只脚上，位置跟角色尺寸同步。
   if(l2.shoeT>0){
-    const bY=l2.p.y+l2.p.h-20,flip=l2.p.face<0;
-    ds(ctx,S.shoe,l2.p.x-bx+pw*0.17,bY,14,19,flip);
-    ds(ctx,S.shoe,l2.p.x-bx+pw*0.55,bY,14,19,flip);
+    const shoeW=Math.max(10,Math.round(pw*0.23)),shoeH=Math.round(shoeW*15/14);
+    const bodyX=l2.p.x-bx,bodyY=l2.p.y-8,footY=bodyY+ph2*0.79;
+    ds(ctx,S.shoe,bodyX+pw*0.30-shoeW/2,footY,shoeW,shoeH,true);
+    ds(ctx,S.shoe,bodyX+pw*0.68-shoeW/2,footY,shoeW,shoeH,false);
   }
   if(l2.burdenT>0){
     const potX=l2.p.x-bx+(l2.p.face<0?18:8),potY=l2.p.y+8;
