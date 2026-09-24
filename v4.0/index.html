@@ -820,6 +820,46 @@ function pickL1Item(stage,x){
   l1.itemHistory=[pick,...recent.filter(t=>t!==pick)].slice(0,2);
   return pick;
 }
+// v4.21k: 第二关奖励保底放置器。普通模式找干净位置；强制模式会清掉屏幕外的一小段未来障碍，保证不空场。
+function l1PlaceStage2Reward(force=false){
+  if(l1.stage!==1)return false;
+  const tries=force?[0,90,180,270]:[0,90,180];
+  for(const off of tries){
+    const ix=l1.dist+W+65+off;
+    const lanes=shuf([0,1,2]);
+    const clear=force?145:190;
+    let lane=lanes.find(ln=>l1LaneFree(ln,ix-clear,ix+clear));
+    if(lane==null&&force){
+      // 选未来冲突最少的车道，并只清理还没进入画面的障碍。
+      const scores=lanes.map(ln=>{
+        const n=l1.obs.filter(o=>{
+          if(o.dead||o.lane!==ln)return false;
+          const ox=o.x0+(o.sw||0);
+          return ox>l1.dist+W-10&&ox>ix-155&&ox<ix+155;
+        }).length;
+        return {ln,n};
+      }).sort((a,b)=>a.n-b.n);
+      lane=scores[0].ln;
+      l1.obs=l1.obs.filter(o=>{
+        if(o.dead||o.lane!==lane)return true;
+        const ox=o.x0+(o.sw||0);
+        return !(ox>l1.dist+W-10&&ox>ix-155&&ox<ix+155);
+      });
+    }
+    if(lane==null)continue;
+    const type=pickL1Item(1,ix);
+    if(!type)return false;
+    let toLane=lane;
+    if(!force&&Math.random()<0.42){
+      const cand2=Math.max(0,Math.min(2,lane+(Math.random()<0.5?-1:1)));
+      if(l1LaneFree(cand2,ix-170,ix+170))toLane=cand2;
+    }
+    l1.coll.push({x0:ix,y:l1.ly[lane]-30,type,w:36,h:36,collected:false,fromLane:lane,toLane,phase:Math.random()*6.28,stage2Paced:true});
+    l1.lastRewardX=ix;
+    return true;
+  }
+  return false;
+}
 // 运势测试语录：根据得分和剩余生命随机调侃
 const L1_LUCK={
   god:['你今天踩了狗屎运才能通关吧','运气也是实力，你这实力藏不住了','今日宜下班，宜摸鱼，宜通关','这运气，买彩票去吧','老板看了都羡慕你的走位'],
@@ -904,7 +944,7 @@ function rL1(){
   if(save.items.headset>0){save.items.headset--;stSlow=true;}
   if(save.items.offcard>0){save.items.offcard--;stInv=true;}
   sv(save);
-  l1={py:H*0.66,pl:1,pvy:0,jump:false,gnd:true,inv:0,startInv:stInv?180:0,score:0,dist:0,cam:0,bs:2,spd:2,lives:3,obs:[],coll:[],part:[],gy:H*0.88,ly:[H*0.52,H*0.66,H*0.80],st:0,si:46,go:false,goSaved:false,boostT:0,startBoost:stBoost?180:0,bigT:0,slowT:0,startSlow:stSlow?180:0,jumpBoostT:0,dizzyT:0,stumbleT:0,chairRide:null,chairRideT:0,rideX:0,coinT:0,stage:0,goal:L1_GOAL[0],win:false,winT:0,winSaved:false,banner:'',bannerT:0,sel:true,cont:false,tip:'',tipT:0,heartGiven:false,horseGiven:false,patternN:0,lastSafe:1,luckLine:'',burdenT:0,floats:[],lastItemType:'',itemHistory:[],potShake:0,nextRewardAt:0};
+  l1={py:H*0.66,pl:1,pvy:0,jump:false,gnd:true,inv:0,startInv:stInv?180:0,score:0,dist:0,cam:0,bs:2,spd:2,lives:3,obs:[],coll:[],part:[],gy:H*0.88,ly:[H*0.52,H*0.66,H*0.80],st:0,si:46,go:false,goSaved:false,boostT:0,startBoost:stBoost?180:0,bigT:0,slowT:0,startSlow:stSlow?180:0,jumpBoostT:0,dizzyT:0,stumbleT:0,chairRide:null,chairRideT:0,rideX:0,coinT:0,stage:0,goal:L1_GOAL[0],win:false,winT:0,winSaved:false,banner:'',bannerT:0,sel:true,cont:false,tip:'',tipT:0,heartGiven:false,horseGiven:false,patternN:0,lastSafe:1,luckLine:'',burdenT:0,floats:[],lastItemType:'',itemHistory:[],potShake:0,nextRewardAt:0,lastRewardX:0,rewardDueSince:0};
 }
 function l1Start(st){
   const continuing=l1.cont;
@@ -926,7 +966,8 @@ function l1Start(st){
   l1.bigT=0;l1.boostT=0;l1.inv=0;l1.slowT=0;l1.jumpBoostT=0;l1.dizzyT=0;l1.stumbleT=0;l1.chairRide=null;l1.chairRideT=0;l1.rideX=0;l1.burdenT=0;l1.floats=[];l1.callT=0;l1.mailBag=[];l1.shoeT=0;l1.ghostT=0; // v4.15: 红靴减速 / 墨镜影身
   l1.patternN=0;l1.lastSafe=1;l1.heartGiven=false;l1.lastItemType='';l1.itemHistory=[];l1.potShake=0;
   // v4.21i: 第2关奖励节奏加快。首个约 420~560px，之后约 560~760px 一个。
-  l1.nextRewardAt=st===1?420+Math.floor(Math.random()*141):0;
+  l1.nextRewardAt=st===1?380+Math.floor(Math.random()*121):0;
+  l1.lastRewardX=0;l1.rewardDueSince=0;
   if(!continuing){l1.score=0;l1.lives=3;l1.horseGiven=false;l1.boostT=l1.startBoost;l1.slowT=l1.startSlow;l1.inv=l1.startInv;}
   l1.luckLine='';
   l1.cont=false;
@@ -991,6 +1032,19 @@ function uL1(){
   else if((inp.dt||inp.keys[' '])&&(l1.chairRideT>0||l1.stumbleT>0)){inp.dt=false;inp.keys[' ']=false;}
   l1.pvy+=0.5;l1.py+=l1.pvy;
   if(l1.py>=l1.ly[l1.pl]){l1.py=l1.ly[l1.pl];l1.pvy=0;l1.gnd=true;l1.jump=false;l1.jl=null;}
+  // v4.21k: 第二关空场看门狗——前方没有奖励且超期时，直接补一个，最大空档受控。
+  if(!raceOver&&l1.stage===1){
+    const upcoming=l1.coll.some(c=>!c.collected&&L1_POSITIVE.has(c.type)&&c.x0>=l1.dist-20&&c.x0<=l1.dist+W+220);
+    if(!upcoming&&l1.dist>=l1.nextRewardAt+150){
+      if(!l1.rewardDueSince)l1.rewardDueSince=l1.dist;
+      const force=l1.dist-l1.rewardDueSince>170;
+      if(l1PlaceStage2Reward(force)){
+        l1.nextRewardAt=l1.dist+500+Math.floor(Math.random()*151);
+        l1.rewardDueSince=0;
+      }
+    }else if(upcoming)l1.rewardDueSince=0;
+  }
+
   // Spawn (per-stage pools, only while race is active)
   if(!raceOver){l1.st++;if(l1.st>l1.si){l1.st=0;
     const spawnBase=[76,61,61][l1.stage],spawnMin=[30,25,24][l1.stage];
@@ -1021,26 +1075,36 @@ function uL1(){
       }
     }
     else if(l1.stage===1?l1.dist>=l1.nextRewardAt:r<flow.single+flow.item){
-      const ix=l1.dist+W+60+Math.floor(Math.random()*100);
-      const type=pickL1Item(l1.stage,ix);
-      if(!type)return;
-      // v4.3: 道具只落在"前后 200px 完全净空"的车道上——不再出现"为了吃道具必须撞障碍"的坑位
-      const cand=[0,1,2].sort(()=>Math.random()-0.5);
-      let ilane=-1;
-      // 车会一路移动，任何"当前净空"都不作数，直接排除有车的车道
-      for(const ln of cand){
-        if(l1.obs.some(o=>o.lane===ln&&(o.t==='car'||o.t==='boss_car')))continue;
-        if(l1LaneFree(ln,ix-200,ix+200)){ilane=ln;break;}
+      if(l1.stage===1){
+        if(!l1.rewardDueSince)l1.rewardDueSince=l1.dist;
+        const force=l1.dist-l1.rewardDueSince>170;
+        if(l1PlaceStage2Reward(force)){
+          l1.nextRewardAt=l1.dist+500+Math.floor(Math.random()*151);
+          l1.rewardDueSince=0;
+        }else{
+          // 放不下时很快重试，而不是重新等一整个奖励周期。
+          l1.nextRewardAt=l1.dist+70;
+        }
+      }else{
+        const ix=l1.dist+W+60+Math.floor(Math.random()*100);
+        const type=pickL1Item(l1.stage,ix);
+        if(type){
+          const cand=[0,1,2].sort(()=>Math.random()-0.5);
+          let ilane=-1;
+          for(const ln of cand){
+            if(l1.obs.some(o=>o.lane===ln&&(o.t==='car'||o.t==='boss_car')))continue;
+            if(l1LaneFree(ln,ix-200,ix+200)){ilane=ln;break;}
+          }
+          if(ilane>=0){
+            let toLane=ilane;
+            if(l1.stage>0&&Math.random()<0.58){
+              const cand2=Math.max(0,Math.min(2,ilane+(Math.random()<0.5?-1:1)));
+              if(l1LaneFree(cand2,ix-200,ix+200))toLane=cand2;
+            }
+            l1.coll.push({x0:ix,y:l1.ly[ilane]-30,type,w:36,h:36,collected:false,fromLane:ilane,toLane,phase:Math.random()*6.28});
+          }
+        }
       }
-      if(ilane<0)return; // 三条道都不干净就这次不放道具
-      let toLane=ilane;
-      // 道具会横移到相邻车道，那条道也必须净空
-      if(l1.stage>0&&Math.random()<0.58){
-        const cand2=Math.max(0,Math.min(2,ilane+(Math.random()<0.5?-1:1)));
-        if(l1LaneFree(cand2,ix-200,ix+200))toLane=cand2;
-      }
-      l1.coll.push({x0:ix,y:l1.ly[ilane]-30,type,w:36,h:36,collected:false,fromLane:ilane,toLane,phase:Math.random()*6.28});
-      if(l1.stage===1)l1.nextRewardAt=l1.dist+560+Math.floor(Math.random()*201);
     }
     else{ // 两道封锁、一道放行；安全车道持续变化，始终保证可通过
       const pools2=[
@@ -1142,7 +1206,7 @@ function uL1(){
         while(!l1ItemCanSpawn(item,spawnX)&&spawnX<l1.dist+W*3)spawnX+=W+180;
         const lane=l1.pl;
         l1.coll.push({x0:spawnX,y:l1.ly[lane]-30,type:item,w:36,h:36,collected:false,fromLane:lane,toLane:lane,phase:Math.random()*6.28,fromMail:true});
-        if(l1.stage===1)l1.nextRewardAt=Math.max(l1.nextRewardAt,l1.dist+460+Math.floor(Math.random()*161));
+        if(l1.stage===1){l1.nextRewardAt=Math.max(l1.nextRewardAt,l1.dist+420+Math.floor(Math.random()*121));l1.rewardDueSince=0;}
         const itemName=item==='coffee'?'咖啡':item==='pancake'?'大饼':'带鱼';
         l1.floats.push({x:px+pw/2,y:py-26,txt:'邮件开出：'+itemName,t:78});
         continue;
