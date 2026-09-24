@@ -1493,7 +1493,7 @@ function genL2(){
         const x=a+Math.random()*(b-a);
         if(laserZ.find(z=>x+130>z.x-clr&&x<z.x+z.w+clr))continue;
         if(l2.obs.some(o=>Math.abs(o.x-x)<near))continue;
-        const sameGap=t==='toilet'?720:t==='elevator'?620:t==='fallpot'?520:t==='hr'?420:420;
+        const sameGap=t==='toilet'?720:t==='elevator'?820:t==='fallpot'?520:t==='hr'?680:420;
         if(l2.obs.some(o=>o.type===t&&Math.abs(o.x-x)<sameGap))continue;
         return x;
       }
@@ -1781,6 +1781,42 @@ function genL2(){
       }
     }
   }
+
+  // v4.21c: 同类障碍按赛段均匀摊开，避免“前面没有、后面扎堆”。
+  const redistributeType=(type,target,requiredSegs,maxPerSeg=1)=>{
+    let arr=l2.obs.filter(o=>o.type===type).sort((a,b)=>a.x-b.x);
+    const keep=[],segCount=[0,0,0,0];
+    // 先保留每段第一个，超出的同类删除；仍保留随机位置。
+    for(const o of arr){
+      const sg=segOf(o.x);
+      if(segCount[sg]>=maxPerSeg)continue;
+      if(keep.length>=target)continue;
+      keep.push(o);segCount[sg]++;
+    }
+    // 把被删掉的同类从场景移除。
+    const keepSet=new Set(keep);
+    l2.obs=l2.obs.filter(o=>o.type!==type||keepSet.has(o));
+
+    const wanted=[...requiredSegs];
+    // 未指定的名额随机分给还没有该障碍的赛段。
+    const rest=shuf([0,1,2,3].filter(i=>!wanted.includes(i)));
+    while(wanted.length<target&&rest.length)wanted.push(rest.pop());
+
+    for(const sg of wanted){
+      if(l2.obs.some(o=>o.type===type&&segOf(o.x)===sg))continue;
+      const [sa,sb]=segRange(sg);
+      let x=freeSlot(sa+90,sb-90,type);
+      if(x===null)x=freeSlot(sa+40,sb-40,type);
+      if(x!==null)l2.obs.push(mkObs(type,x));
+    }
+  };
+
+  // 第1关电梯：3 个，前段必有 1 个，其余分散到别的段。
+  if(st===0)redistributeType('elevator',3,[0],1);
+  // 第2关 HR：4 段各 1 个，避免连续堆在一起。
+  if(st===1)redistributeType('hr',4,[0,1,2,3],1);
+  // 第3关也把电梯摊开，前半段和后半段至少各有一个。
+  if(st===2)redistributeType('elevator',3,[0,2],1);
 
   // v4.20b: 最终保险——第2关若随机链仍产生多余马桶，优先移除后半段多余项。
   if(st===1){
