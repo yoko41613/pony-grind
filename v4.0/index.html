@@ -750,9 +750,10 @@ const L1_GOAL=[10800,12600,14400];
 const L1_LV=['第1关','第2关','第3关'];
 const L1_DESC=['办公室','会议室','停车场'];
 // v4.20: L1 道具按关卡重新配比。重复项代表权重；负面/强力道具不再和普通奖励等概率。
+// v4.21: L1“可捡道具”只保留明确收益；电话/邮件不再伪装成奖励。
 const L1_ITEMS=[
-  ['badge','badge','milktea','milktea','headset','burger','tel'],
-  ['coffee','coffee','pancake','pancake','fish','mail','mail'],
+  ['badge','badge','milktea','milktea','headset','burger','burger'],
+  ['coffee','coffee','pancake','pancake','fish','fish'],
   ['skateboard','skateboard','popcorn','popcorn','sunglass','exit']
 ];
 const L1_FLOW=[
@@ -793,7 +794,7 @@ function pickL1LuckLine(score,lives){
 }
 // v4.3: 障碍生成工具提到全局——开局预热要复用，且保证三关的锅参数完全一致（同一尺寸、同一坠落高度）
 const POT_W=54,POT_H=42,POT_DROP=300;
-const L1_EXT={slider:62,desk:36,notebook:28,boss:80,hr:16,phone:28,whiteboard:16,alarm:14,blackpot:30,barrier:24,shoe:14}; // v4.15: 新增路障/靴子占位宽度
+const L1_EXT={slider:62,desk:36,notebook:28,boss:80,hr:16,phone:28,tel:22,whiteboard:16,alarm:14,blackpot:30,barrier:24,shoe:14}; // v4.15: 新增路障/靴子占位宽度
 function l1ExtOf(o){return o.t==='boss'?80:(o.amp||0);}
 function l1MkObs(t,w,h,lane,sx){
   const ob={t,w,h,x0:sx,lane,y:l1.ly[lane],sw:0};
@@ -914,7 +915,9 @@ function uL1(){
     l1.chairRideT--;
     if(l1.chairRideT===0){if(l1.chairRide)l1.chairRide.dead=true;l1.chairRide=null;}
   }else l1.rideX*=0.82;
-  l1.bs=Math.min(5.0,2.05+l1.stage*0.4+l1.dist*0.00013); // v4.2: 整体提速（起步 ~+17%，封顶提高）
+  // v4.21: 三关形成明确节奏——办公室稳、会议室中速干扰、停车场明显高速预判。
+  const stageBase=[2.00,2.35,3.00][l1.stage],stageCap=[4.20,4.65,5.25][l1.stage],stageRamp=[0.00011,0.00012,0.00014][l1.stage];
+  l1.bs=Math.min(stageCap,stageBase+l1.dist*stageRamp);
   l1.spd=(l1.bs+(l1.boostT>0?1.5:0))*(l1.slowT>0?0.5:1)*(l1.burdenT>0?0.34:1)*(l1.callT>0?0.5:1)*(l1.shoeT>0?0.6:1); // v4.1: 背锅后超级慢; v4.12: 接电话分心减速; v4.15: 红靴减速
   l1.coinT++;
   if(l1.coinT>=600){l1.coinT=0;save.coins+=10;sv(save);}
@@ -937,7 +940,9 @@ function uL1(){
   l1.pvy+=0.5;l1.py+=l1.pvy;
   if(l1.py>=l1.ly[l1.pl]){l1.py=l1.ly[l1.pl];l1.pvy=0;l1.gnd=true;l1.jump=false;l1.jl=null;}
   // Spawn (per-stage pools, only while race is active)
-  if(!raceOver){l1.st++;if(l1.st>l1.si){l1.st=0;l1.si=Math.max(24,72-l1.stage*7-l1.dist*0.0025);
+  if(!raceOver){l1.st++;if(l1.st>l1.si){l1.st=0;
+    const spawnBase=[76,68,61][l1.stage],spawnMin=[30,27,24][l1.stage];
+    l1.si=Math.max(spawnMin,spawnBase-l1.dist*0.0023);
     l1.patternN++;
     const r=Math.random(),flow=L1_FLOW[l1.stage];
     if(l1.stage===2&&!l1.horseGiven&&l1.dist>l1.goal*0.55){
@@ -949,7 +954,7 @@ function uL1(){
     }
     else if(r<flow.single){
       const pools=[
-        [{t:'papers',w:52,h:44,p:0.32},{t:'printer',w:56,h:52,p:0.24},{t:'hr',w:44,h:60,p:0.22},{t:'blackpot',w:POT_W,h:POT_H,p:0.22}], // v4.13: 删 手机/咖啡渍/白板，剩余按原比例缩放
+        [{t:'papers',w:52,h:44,p:0.28},{t:'printer',w:56,h:52,p:0.23},{t:'hr',w:44,h:60,p:0.17},{t:'blackpot',w:POT_W,h:POT_H,p:0.18},{t:'tel',w:54,h:38,p:0.14}], // v4.21: 办公室以静态障碍为主，座机作为负面事件
         [{t:'slider',w:44,h:54,p:0.23},{t:'notebook',w:40,h:40,p:0.14},{t:'boss',w:52,h:58,p:0.12},{t:'blackpot',w:POT_W,h:POT_H,p:0.21},{t:'whiteboard',w:58,h:44,p:0.17},{t:'alarm',w:46,h:44,p:0.13}], // v4.14: 删 会议桌、板擦换白板，剩余按原比例缩放
         [{t:'car',w:96,h:54,p:0.30},{t:'cone',w:34,h:44,p:0.27},{t:'barrier',w:56,h:46,p:0.14},{t:'shoe',w:42,h:38,p:0.14},{t:'blackpot',w:POT_W,h:POT_H,p:0.15}] // v4.15: 老板的车换黄色路障、白板换红靴子
       ];
@@ -1039,10 +1044,16 @@ function uL1(){
     // v4.1: 锅还在半空（离本车道落点较远）时不判定，避免穿过上方车道误伤
     if(o.t==='blackpot'&&!o.landed&&o.y<l1.ly[o.lane]-70)continue;
     if(px<ox+o.w&&px+pw>ox&&py<o.y+o.h&&py+ph>o.y){
-      if(o.t==='blackpot'){ // v4.20g: 所有黑锅一碰就背上并减速，不受变大/无敌状态豁免
+      if(o.t==='blackpot'){ // 所有黑锅一碰就背上并减速
         o.dead=true;l1.burdenT=Math.max(l1.burdenT,330);l1.inv=Math.max(l1.inv,50);sh();
         spP(px+pw/2,py+10,12,'#555',l1.part,8,8,32);
         l1.floats.push({x:px+pw/2,y:py-26,txt:'这锅你背了',t:70});
+        continue;
+      }
+      if(o.t==='tel'){ // v4.21: 电话是“随机事件/干扰”，不是奖励；不扣命，只让人分心减速。
+        o.dead=true;l1.callT=Math.max(l1.callT,240);sh();
+        spP(px+pw/2,py+ph/2,7,'#f66',l1.part);
+        l1.floats.push({x:px+pw/2,y:py-26,txt:'老板来电，先接一下…',t:72});
         continue;
       }
       if(o.t==='boss_car'&&(l1.boostT>0||l1.bigT>0||l1.inv>0)){
@@ -1092,7 +1103,7 @@ function uL1(){
       else if(c.type==='badge'){l1.score+=20;sw();spP(cx2+c.w/2,c.y,7,'#6ff',l1.part);l1.inv=Math.max(l1.inv,100);}
       else if(c.type==='burger'){l1.score+=15;sg();spP(cx2+c.w/2,c.y,7,'#fd4',l1.part);l1.bigT=180;}
       else if(c.type==='pancake'){l1.score+=15;sg();spP(cx2+c.w/2,c.y,7,'#fd4',l1.part);l1.bigT=180;} // v4.14: 大饼=第 2 关版变大道具
-      else if(c.type==='sunglass'){l1.score+=15;sw();spP(cx2+c.w/2,c.y,7,'#9ad',l1.part);l1.inv=Math.max(l1.inv,240);l1.ghostT=240;l1.floats.push({x:cx2+c.w/2,y:c.y-6,txt:'🕶 影身！无敌穿过一切',t:70});} // v4.15: 墨镜=隐身无敌
+      else if(c.type==='sunglass'){l1.score+=15;sw();spP(cx2+c.w/2,c.y,7,'#9ad',l1.part);l1.inv=Math.max(l1.inv,240);l1.ghostT=240;l1.floats.push({x:cx2+c.w/2,y:c.y-6,txt:'🕶 影身！普通障碍无视，黑锅除外',t:70});} // v4.15: 墨镜=隐身无敌
       else if(c.type==='skateboard'){l1.score+=10;sc();spP(cx2+c.w/2,c.y,7,'#fd4',l1.part);l1.boostT=240;l1.floats.push({x:cx2+c.w/2,y:c.y-6,txt:'🛹 滑起来！',t:70});} // v4.15: 滑板=和咖啡相同加速
       else if(c.type==='milktea'){l1.score+=15;l1.lives=Math.min(5,l1.lives+1);sw();spP(cx2+c.w/2,c.y,9,'#f8b',l1.part,7,7,28);}
       else if(c.type==='popcorn'){l1.score+=10;l1.jumpBoostT=300;sg();spP(cx2+c.w/2,c.y,10,'#fff',l1.part,8,8,30);} // v4.17: +15 → +10 分（跳跃增强保留）
@@ -1173,6 +1184,7 @@ function drL1(){
     const ox=o.x0+o.sw-l1.dist;if(ox<-80||ox>W+80)continue;
     if(o.t==='headset')ds(ctx,S.headphone,ox,o.y,o.w,o.h,false);
     else if(o.t==='papers')ds(ctx,S.papers,ox,o.y,o.w,o.h,false);
+    else if(o.t==='tel')ds(ctx,S.tel,ox,o.y,o.w,o.h,false);
     else if(o.t==='alarm')ds(ctx,S.alarm,ox,o.y,o.w,o.h,false);
     else if(o.t==='printer')ds(ctx,S.printer,ox,o.y,o.w,o.h,false);
     else if(o.t==='hr')ds(ctx,S.hr,ox,o.y,o.w,o.h,false);
@@ -1376,7 +1388,7 @@ function drL1Sel(){
     ctx.font='bold 18px "PingFang SC","Microsoft YaHei",Arial,sans-serif';
     ctx.fillText(L1_LV[i]+'  '+L1_NAME[i],x0+22,y+36);
     ctx.fillStyle='#333';ctx.font='12px "PingFang SC","Microsoft YaHei",Arial,sans-serif';
-    const desc=i===0?'基础障碍 · 奖励较多':i===1?'移动障碍 · 风险提升':'车辆路障 · 奖励更稀少';
+    const desc=i===0?'静态障碍 · 奖励较多':i===1?'移动干扰 · 看准节奏':'高速停车场 · 提前预判';
     ctx.fillText(desc,x0+22,y+65);
     if(save.l1c[i]){
       ctx.textAlign='right';ctx.fillStyle='#111';ctx.font='bold 12px "PingFang SC","Microsoft YaHei",Arial,sans-serif';
@@ -1427,21 +1439,32 @@ function genL2(){
   const st=l2.stage;
   l2.rushAnnounced=false;
   l2.posters=shuffledPosters(); // v2.18: 每关重新打乱——这一关墙上的每张海报都不同，下一关又是新的一轮
-  l2.horse=false; // 每关开局没有马蹄：必须先吃浮动平台上的马蹄印记才能踩 boss
+  l2.horse=false;
+  l2.bossReady=false;
+  l2.bossKey=st===1?'pancake':'horseshoe'; // v4.21: 第2关改成吃“大饼通行证”，不再三关都重复找马蹄
   const lw=4600+st*1400; // v4.5: 加长，给障碍留出更多生成位
   l2.lw=lw; l2.gy=Math.floor(H*0.85);
-  // v4.5: 区域位置每局随机抖动——不再每次都在同样的坐标遇到同样的挑战
+  // v4.21: 每关只保留 2 种路线机制，减少“什么都来一点”的混乱。
   const airX=700+Math.floor(Math.random()*260)+st*60,airW=420+st*30;
   const lzW=240+st*18;
-  const g1=Math.max(airX+airW+240,Math.min(lw-1500,Math.floor(lw*(0.42+Math.random()*0.09))));
-  const g2=g1+lzW+270+Math.floor(Math.random()*90);
-  const g3=Math.max(g2+lzW+280,Math.min(lw-1000,g2+lzW+300+Math.floor(Math.random()*90)));
-  l2.zones=[
-    {x:airX,w:airW,type:'air',ph:0},
-    {x:g1,w:lzW,type:'ground',ph:85},
-    {x:g2,w:lzW,type:'sky',ph:Math.random()*120},
-    {x:g3,w:lzW,type:'pillar',ph:Math.random()*120}
-  ];
+  const g1=Math.max(airX+airW+260,Math.min(lw-1450,Math.floor(lw*(0.48+Math.random()*0.06))));
+  const g2=Math.max(g1+lzW+360,Math.min(lw-1050,g1+lzW+420+Math.floor(Math.random()*120)));
+  if(st===0){
+    l2.zones=[
+      {x:airX,w:airW,type:'air',ph:0},
+      {x:g1,w:lzW,type:'ground',ph:85}
+    ];
+  }else if(st===1){
+    l2.zones=[
+      {x:airX,w:airW,type:'air',ph:0},
+      {x:g1,w:lzW,type:'sky',ph:Math.random()*120}
+    ];
+  }else{
+    l2.zones=[
+      {x:airX,w:airW,type:'air',ph:0},
+      {x:g2,w:lzW,type:'pillar',ph:Math.random()*120}
+    ];
+  }
   // v4.2: 激光区必须能"贴地通过"——这些区间不放任何逼你起跳的东西
   const laserZ=l2.zones.filter(z=>z.type!=='air');
   const groundZ=l2.zones.filter(z=>z.type==='ground');
@@ -1450,7 +1473,7 @@ function genL2(){
   const mkObs=(t,x)=>{
     const late=x>lw*0.52;
     if(t==='elevator')return {x:x,y:l2.gy-110,type:'elevator',w:64,h:110,ph:Math.floor(Math.random()*150),gap:56,open:true,late};
-    if(t==='hr')return {x:x,y:l2.gy-58,type:'hr',w:46,h:58,ph:0,bx:x,dir:Math.random()<0.5?1:-1,spd:(1.2+st*0.5)*(late?1.22:1),bubbleT:0,late};
+    if(t==='hr')return {x:x,y:l2.gy-58,type:'hr',w:46,h:58,ph:0,bx:x,dir:Math.random()<0.5?1:-1,spd:1.2+st*0.45,bubbleT:0,late};
     if(t==='toilet')return {x:x,y:l2.gy-54,type:'toilet',w:58,h:54,ph:Math.floor(Math.random()*160),jet:0,warn:false,late};
     return {x:x,y:-70,type:'fallpot',w:54,h:42,vy:0,state:'wait',targetY:l2.gy-42,ph:0,armT:0,late,
       trigD:(late?300:220)+Math.floor(Math.random()*120),trigT:(late?48:78)+Math.floor(Math.random()*(late?34:50))};
@@ -1468,6 +1491,8 @@ function genL2(){
         const x=a+Math.random()*(b-a);
         if(laserZ.find(z=>x+130>z.x-clr&&x<z.x+z.w+clr))continue;
         if(l2.obs.some(o=>Math.abs(o.x-x)<near))continue;
+        const sameGap=t==='toilet'?720:t==='elevator'?620:t==='fallpot'?520:t==='hr'?420:420;
+        if(l2.obs.some(o=>o.type===t&&Math.abs(o.x-x)<sameGap))continue;
         return x;
       }
     }
@@ -1580,8 +1605,8 @@ function genL2(){
     }
   }
 
-  // BOSS 必需马蹄固定保留。
-  l2.colls.push({x:hp.x+hp.w/2,y:hp.y-34,type:'horseshoe',collected:false,pl:hp});
+  // BOSS 通行道具固定在浮动平台：第1/3关马蹄，第2关大饼。
+  l2.colls.push({x:hp.x+hp.w/2,y:hp.y-34,type:l2.bossKey,collected:false,pl:hp,bossToken:true});
 
   // BOSS 前补给也随机，但大饼不会挤在一起。
   const preCount=flow.preBoss[0]+Math.floor(Math.random()*(flow.preBoss[1]-flow.preBoss[0]+1));
@@ -1591,9 +1616,11 @@ function genL2(){
   }
 
   // 地面移动奖励：每次独立随机抽类型，位置随机，且同类/整体都保留间距。
-  const rewardPool=st===2
-    ?['pancake','coffee','mail','shoe','clockout','milktea']
-    :['headset','folder','pancake','coffee','mail','clockout','milktea'];
+  const rewardPool=st===0
+    ?['pancake','coffee','folder','clockout','headset']
+    :st===1
+      ?['pancake','coffee','mail','headset','milktea']
+      :['pancake','coffee','mail','shoe','clockout','milktea'];
   const rewardCount=flow.ground[0]+Math.floor(Math.random()*(flow.ground[1]-flow.ground[0]+1));
   const placedRx=[];
   let rewardLast='';
@@ -1614,9 +1641,11 @@ function genL2(){
 
   // 分段保底：只保证“有东西”，不会为了补数量强行堆同款。
   const minCollForSeg=i=>(st===1&&i>=2)?1:flow.minSeg;
-  const extraItemPool=st===2
-    ?['pancake','coffee','mail','shoe','clockout','milktea']
-    :['pancake','coffee','mail','clockout','milktea'];
+  const extraItemPool=st===0
+    ?['pancake','coffee','folder','clockout']
+    :st===1
+      ?['pancake','coffee','mail','headset','milktea']
+      :['pancake','coffee','mail','shoe','clockout','milktea'];
   for(let i=0;i<SEGN;i++){
     const [sa,sb]=segRange(i);
     const minCollPerSeg=minCollForSeg(i);
@@ -1688,8 +1717,8 @@ function genL2(){
   }
   // v4.20b: 第2关从每段 3 个降到 2 个；第3关仍保留高密度。
   const minObsForSeg=i=>{
-    const base=st===2?4:2;
-    return i>=2?base+1:base;
+    const base=[2,2,3][st];
+    return i>=2?base+1:base; // 后半段只多 1 个，不再靠堆数量
   };
   for(let i=0;i<SEGN;i++){
     const [sa,sb]=segRange(i),minObsPerSeg=minObsForSeg(i);
@@ -1707,23 +1736,14 @@ function genL2(){
       have++;
     }
   }
-  // 每段至少 1 口天降锅
-  for(let i=0;i<SEGN;i++){
-    const [sa,sb]=segRange(i);
-    if(l2.obs.some(o=>o.type==='fallpot'&&o.x>=sa&&o.x<sb))continue;
-    const x=freeSlot(sa,sb,'fallpot');
+  // v4.21: 锅是“事件”不是基础填充。整关只保底少量，并分散到不同赛段。
+  const potTarget=[2,3,3][st]+(Math.random()<0.30?1:0);
+  const potSegs=shuf([0,1,2,3]);
+  let potTry=0;
+  while(potCount<potTarget&&potTry++<20){
+    const seg=potSegs[potTry%potSegs.length],[sa,sb]=segRange(seg);
+    const x=freeSlot(sa+40,sb-40,'fallpot');
     if(x!==null){l2.obs.push(mkObs('fallpot',x));potCount++;}
-  }
-  // v4.19: 保底 3 口锅——密集段 freeSlot 可能拿不到空档导致总数不足，顺序扫描兜底
-  if(potCount<3){
-    let scanX=playA;
-    while(potCount<3&&scanX<playB-60){
-      let ok2=true;
-      if(laserZ.find(z=>scanX+130>z.x-120&&scanX<z.x+z.w+120))ok2=false;
-      else if(l2.obs.some(o=>Math.abs(o.x-scanX)<58))ok2=false;
-      if(ok2){l2.obs.push(mkObs('fallpot',scanX));potCount++;scanX+=80;}
-      else scanX+=20;
-    }
   }
   // v4.11: 第 3 关是合集——马桶和电梯前后两半都要有，缺谁就在那一半补谁
   if(st===2){
@@ -1737,28 +1757,26 @@ function genL2(){
     }
   }
   if(potCount===0)l2.obs.push(mkObs('fallpot',Math.min(lw-1050,900+Math.floor(Math.random()*400)+st*160)));
-  // v4.20b: 后半段补位不再给第2关追加马桶，只补 HR / 天降锅。
-  for(let t2=0;t2<24;t2++){
-    const front=l2.obs.filter(o=>o.x>=playA&&o.x<midX).length;
-    const back=l2.obs.filter(o=>o.x>=midX&&o.x<playB).length;
-    if(back>=front*0.72)break;
-    const t=st===1?pickType(['hr','fallpot']):pickType(null),x=freeSlot(midX,playB,t);
-    if(x===null)break;
-    if(t==='fallpot')potCount++;
-    l2.obs.push(mkObs(t,x));
-  }
-  // v4.20f: 后半程连续判断组——用 HR / 天降锅 / 电梯组合，不靠堆马桶制造难度。
-  for(const frac of [0.61,0.76]){
-    const cx=playA+(playB-playA)*frac;
-    const a0=Math.max(midX,cx-150),b0=Math.min(playB-80,cx+210);
-    let t1=st===0?pickType(['hr','fallpot','elevator']):st===1?pickType(['hr','fallpot']):pickType(['hr','fallpot','elevator']);
-    let x1=freeSlot(a0,b0,t1);
-    if(x1!==null){
-      if(t1==='fallpot')potCount++;
-      l2.obs.push(mkObs(t1,x1));
-      const t2=t1==='fallpot'?'hr':'fallpot';
-      const x2=freeSlot(Math.min(b0-60,x1+150),Math.min(playB-40,x1+300),t2);
-      if(x2!==null){if(t2==='fallpot')potCount++;l2.obs.push(mkObs(t2,x2));}
+  // v4.21: 后半段用“组合题”制造难度，而不是把所有东西一起加速。
+  const comboSets=st===0
+    ?[['hr','fallpot'],['elevator','hr'],['fallpot','elevator']]
+    :st===1
+      ?[['hr','fallpot'],['fallpot','hr']]
+      :[['elevator','fallpot'],['hr','elevator'],['toilet','fallpot'],['fallpot','hr']];
+  const comboCount=st===2?2:1;
+  const comboAnchors=shuf([0.60,0.68,0.76,0.82]).slice(0,comboCount).sort();
+  for(const frac of comboAnchors){
+    const seq=comboSets[Math.floor(Math.random()*comboSets.length)];
+    let cx=playA+(playB-playA)*frac;
+    for(const t of seq){
+      let type=t;
+      if(st===1&&type==='toilet'&&!canStage2Toilet(cx))type='hr';
+      const x=freeSlot(cx-70,cx+90,type);
+      if(x!==null){
+        if(type==='fallpot')potCount++;
+        l2.obs.push(mkObs(type,x));
+        cx=x+220+Math.random()*70;
+      }
     }
   }
 
@@ -1780,8 +1798,7 @@ function l2UpdPlats(){
   for(const pl of l2.plats){
     if(!pl.mv)continue;
     const ox=pl.x,oy=pl.y,axis=pl.mv.axis||'y';
-    const lateMul=pl.x>l2.lw*0.52?1.22:1;
-    pl[axis]+=pl.mv.dir*pl.mv.spd*lateMul*(l2.slowT>0?0.62:1);
+    pl[axis]+=pl.mv.dir*pl.mv.spd*(l2.slowT>0?0.62:1);
     if(pl[axis]<=pl.mv.a){pl[axis]=pl.mv.a;pl.mv.dir=1;}
     if(pl[axis]>=pl.mv.b){pl[axis]=pl.mv.b;pl.mv.dir=-1;}
     const dx=pl.x-ox,dy=pl.y-oy;
@@ -1790,11 +1807,10 @@ function l2UpdPlats(){
   }
 }
 function l2UpdElevator(ob,st,boss=false){
-  const lateMul=!boss&&ob.late?1.20:1;
-  ob.ph+=(l2.slowT>0?0.6:1)*lateMul;
+  ob.ph+=(l2.slowT>0?0.6:1);
   if(l2.doorT>0){ob.gap=56;ob.open=true;ob.warn=false;return;}
-  const period=Math.max(138,(boss?190:210)-st*18-(ob.late?18:0)),ph=ob.ph%period;
-  const openHold=Math.max(38,58-st*4-(ob.late?8:0)),closeEnd=openHold+30,closedEnd=closeEnd+48-st*3,openEnd=closedEnd+30;
+  const period=Math.max(150,(boss?190:210)-st*18),ph=ob.ph%period;
+  const openHold=58-st*4,closeEnd=openHold+34,closedEnd=closeEnd+48-st*3,openEnd=closedEnd+34;
   ob.warn=ph>openHold-18&&ph<openHold;
   if(ph<openHold)ob.gap=56;
   else if(ph<closeEnd)ob.gap=56-(ph-openHold)/(closeEnd-openHold)*50;
@@ -1860,6 +1876,7 @@ function l2PillarOn(z){return (z.ph%160)<52;} // 亮 52 帧 / 灭 108 帧：等�
 function l2Collect(c){
   c.collected=true;
   if(c.type==='pancake'){
+    if(c.bossToken)l2.bossReady=true;
     l2.piesEaten++;
     if(l2.big){l2.score+=30;sc();spP(c.x,c.y,6,'#fd4',l2.part);l2.floats.push({x:c.x,y:c.y-6,txt:'+30',t:36});}
     else{l2.big=true;l2.score+=20;sc();spP(c.x,c.y,8,'#fd4',l2.part);l2.floats.push({x:c.x,y:c.y-6,txt:'吃饼变大! 🥞',t:46});}
@@ -1871,7 +1888,7 @@ function l2Collect(c){
     }
   }
   else if(c.type==='horseshoe'){
-    l2.horse=true;l2.score+=50;sg();
+    l2.horse=true;if(c.bossToken)l2.bossReady=true;l2.score+=50;sg();
     spP(c.x,c.y,10,'#fd4',l2.part,6,6,30);
     l2.floats.push({x:c.x,y:c.y-6,txt:'马蹄印记! 🐴 可以踩BOSS了!',t:56});
   }
@@ -1902,7 +1919,14 @@ function l2Collect(c){
     l2.floats.push({x:c.x,y:c.y-6,txt:'☕ 提神加速!!',t:60});
   }
   else if(c.type==='mail'){ // v4.9: 拆邮件=从洗乱的 7 种结果里依次抽，抽完重洗——随机且不会连续重复
-    if(!l2.mailBag||!l2.mailBag.length)l2.mailBag=shuf(l2.stage===2?['redheart','horseshoe','milktea','clockout','pancake','burden','deduct']:['redheart','horseshoe','milktea','headset','pancake','burden','deduct']); // v4.11: 第 3 关连邮件里也抽不到耳机
+    if(!l2.mailBag||!l2.mailBag.length){
+      const mailPool=l2.stage===0
+        ?['redheart','horseshoe','milktea','headset','pancake','burden','deduct']
+        :l2.stage===1
+          ?['redheart','folder','milktea','headset','pancake','burden','deduct']
+          :['redheart','horseshoe','milktea','clockout','pancake','burden','deduct'];
+      l2.mailBag=shuf(mailPool);
+    } // v4.11: 第 3 关连邮件里也抽不到耳机
     const pick=l2.mailBag.pop();
     if(pick==='burden'){l2.burdenT=330;l2.inv=Math.max(l2.inv,42);sh();
       spP(c.x,c.y,8,'#555',l2.part,7,5,26);
@@ -1919,9 +1943,11 @@ function l2Collect(c){
   }
 }
 function l2Stomp(b){
-  if(!l2.horse){
+  const ready=l2.bossKey==='pancake'?l2.bossReady:l2.horse;
+  if(!ready){
     l2.p.vy=-8;l2.p.gnd=false;l2Hurt();
-    l2.floats.push({x:b.x+b.w/2,y:b.y-20,txt:'需要马蹄印记! 🐴',t:46});
+    const need=l2.bossKey==='pancake'?'先吃浮动平台上的大饼!':'需要马蹄印记! 🐴';
+    l2.floats.push({x:b.x+b.w/2,y:b.y-20,txt:need,t:54});
     return;
   }
   b.hp--;b.hit=26;l2.p.vy=-9;l2.p.gnd=false;l2.score+=20;shake=Math.max(shake,9);sh();
@@ -2008,7 +2034,7 @@ function uL2(){
   l2.cam=l2.p.x-W/3;l2.cam=Math.max(0,Math.min(l2.cam,l2.lw-W));
   if(!l2.rushAnnounced&&l2.p.x>l2.lw*0.52&&l2.p.x<l2.bp.x-100){
     l2.rushAnnounced=true;
-    l2.floats.push({x:l2.p.x+70,y:l2.p.y-58,txt:'加班模式',t:75});
+    l2.floats.push({x:l2.p.x+70,y:l2.p.y-58,txt:'加班高峰：开始连续题',t:75});
   }
   // Collectibles
   for(const c of l2.colls){
@@ -2026,8 +2052,7 @@ function uL2(){
   // Route rules: red floor zones must be crossed on rails; low scanner zones
   // must be crossed on the ground. Damage is gated by normal invincibility.
   for(const z of l2.zones){
-    const zoneLate=z.x>l2.lw*0.50?1.22:1;
-    z.ph+=(l2.slowT>0?0.6:1)*zoneLate;
+    z.ph+=(l2.slowT>0?0.6:1);
     if(l2.p.x+l2.p.w<=z.x||l2.p.x>=z.x+z.w)continue;
     if(z.type==='air'&&l2.p.y+l2.p.h>l2.gy-18){
       l2Hurt();
@@ -2060,11 +2085,10 @@ function uL2(){
         const ahead=ob.x-l2.p.x;
         if(ahead<720&&ahead>-140)ob.armT=(ob.armT||0)+1;
         if((ahead<(ob.trigD||300)&&ahead>-170)||(ob.armT||0)>(ob.trigT||90)){
-          ob.state='fall';ob.vy=ob.late?2.15:1.55;
+          ob.state='fall';ob.vy=1.65;
         }
       }else if(ob.state==='fall'){
-        const fallMul=ob.late?1.18:1;
-        ob.y+=ob.vy*fallMul*(l2.slowT>0?0.7:1);ob.vy+=0.58*fallMul;
+        ob.y+=ob.vy*(l2.slowT>0?0.7:1);ob.vy+=0.58;
         if(ob.y>=ob.targetY){ob.y=ob.targetY;ob.vy=0;ob.state='landed';ob.landT=115;shake=7;spP(ob.x+ob.w/2,ob.y+ob.h,8,'#666',l2.part,7,3,24);}
       }else if(ob.state==='landed'){
         ob.landT--;if(ob.landT<=0){ob.dead=true;continue;}
@@ -2132,7 +2156,12 @@ function uL2(){
   }
   // Boss
   const b=l2.boss;
-  if(l2.p.x>l2.bp.x-80&&!b.active&&!b.dead){b.active=true;l2.floats.push({x:l2.p.x+40,y:l2.p.y-70,txt:l2.horse?'⚠️ BOSS驾到！踩 '+b.hpMax+' 下！':'⚠️ BOSS驾到！先吃浮动平台上的马蹄🐴再踩！',t:110});}
+  if(l2.p.x>l2.bp.x-80&&!b.active&&!b.dead){
+    b.active=true;
+    const ready=l2.bossKey==='pancake'?l2.bossReady:l2.horse;
+    const needTxt=l2.bossKey==='pancake'?'先吃浮动平台上的大饼再踩！':'先吃浮动平台上的马蹄🐴再踩！';
+    l2.floats.push({x:l2.p.x+40,y:l2.p.y-70,txt:ready?('⚠️ BOSS驾到！踩 '+b.hpMax+' 下！'):('⚠️ BOSS驾到！'+needTxt),t:110});
+  }
   if(b.active&&!b.dead){
     b.hit=Math.max(0,b.hit-1);
     b.x+=b.dir*b.spd;
