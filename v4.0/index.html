@@ -803,10 +803,22 @@ const L1_FLOW=[
 const L1_POSITIVE=new Set(['badge','milktea','headset','burger','coffee','pancake','fish','skateboard','popcorn','sunglass','exit','heart','horseshoe']);
 function l1ItemCanSpawn(type,x){
   const active=l1.coll.filter(c=>!c.collected);
-  // 正向道具：一个视野范围内只允许 1 个，不管类型。
-  if(L1_POSITIVE.has(type)&&active.some(c=>L1_POSITIVE.has(c.type)&&Math.abs(c.x0-x)<W+160))return false;
-  // 同一种道具即使跨更大区域也不允许扎堆。
-  if(active.filter(c=>c.type===type&&Math.abs(c.x0-x)<W+180).length>=1)return false;
+  if(L1_POSITIVE.has(type)){
+    if(l1.stage===1){
+      // v4.21m: 第二关按“真实视野”判断。同屏只能有 1 个正向道具，
+      // 但已经离开画面的旧道具不再继续挡住下一枚生成。
+      if(active.some(c=>{
+        if(!L1_POSITIVE.has(c.type))return false;
+        const sx=c.x0-l1.dist;
+        return sx>-45&&sx<W+45;
+      }))return false;
+    }else{
+      if(active.some(c=>L1_POSITIVE.has(c.type)&&Math.abs(c.x0-x)<W+160))return false;
+    }
+  }
+  // 同款仍然保持错开，但第二关不再用超出屏幕的大范围去制造空档。
+  const sameGap=l1.stage===1?W-40:W+180;
+  if(active.filter(c=>c.type===type&&Math.abs(c.x0-x)<sameGap).length>=1)return false;
   return true;
 }
 function pickL1Item(stage,x){
@@ -821,13 +833,17 @@ function pickL1Item(stage,x){
   return pick;
 }
 // v4.21k: 第二关奖励保底放置器。普通模式找干净位置；强制模式会清掉屏幕外的一小段未来障碍，保证不空场。
-function l1PlaceStage2Reward(force=false){
+function l1PlaceStage2Reward(force=false,forcedType=''){
   if(l1.stage!==1)return false;
-  const tries=force?[0,90,180,270]:[0,90,180];
+  // 已经在画面里有正向道具时绝不再放第二个。
+  const hasVisible=l1.coll.some(c=>!c.collected&&L1_POSITIVE.has(c.type)&&c.x0-l1.dist>-45&&c.x0-l1.dist<W+45);
+  if(hasVisible)return false;
+  const tries=force?[0,55,110]:[0,55];
   for(const off of tries){
-    const ix=l1.dist+W+65+off;
+    // 新奖励直接出现在最右侧附近，玩家马上能看到，不再藏在屏幕外很久。
+    const ix=l1.dist+W-22+off;
     const lanes=shuf([0,1,2]);
-    const clear=force?145:190;
+    const clear=force?120:155;
     let lane=lanes.find(ln=>l1LaneFree(ln,ix-clear,ix+clear));
     if(lane==null&&force){
       // 选未来冲突最少的车道，并只清理还没进入画面的障碍。
@@ -847,7 +863,7 @@ function l1PlaceStage2Reward(force=false){
       });
     }
     if(lane==null)continue;
-    const type=pickL1Item(1,ix);
+    const type=forcedType||pickL1Item(1,ix);
     if(!type)return false;
     let toLane=lane;
     if(!force&&Math.random()<0.42){
@@ -944,7 +960,7 @@ function rL1(){
   if(save.items.headset>0){save.items.headset--;stSlow=true;}
   if(save.items.offcard>0){save.items.offcard--;stInv=true;}
   sv(save);
-  l1={py:H*0.66,pl:1,pvy:0,jump:false,gnd:true,inv:0,startInv:stInv?180:0,score:0,dist:0,cam:0,bs:2,spd:2,lives:3,obs:[],coll:[],part:[],gy:H*0.88,ly:[H*0.52,H*0.66,H*0.80],st:0,si:46,go:false,goSaved:false,boostT:0,startBoost:stBoost?180:0,bigT:0,slowT:0,startSlow:stSlow?180:0,jumpBoostT:0,dizzyT:0,stumbleT:0,chairRide:null,chairRideT:0,rideX:0,coinT:0,stage:0,goal:L1_GOAL[0],win:false,winT:0,winSaved:false,banner:'',bannerT:0,sel:true,cont:false,tip:'',tipT:0,heartGiven:false,horseGiven:false,patternN:0,lastSafe:1,luckLine:'',burdenT:0,floats:[],lastItemType:'',itemHistory:[],potShake:0,nextRewardAt:0,lastRewardX:0,rewardDueSince:0};
+  l1={py:H*0.66,pl:1,pvy:0,jump:false,gnd:true,inv:0,startInv:stInv?180:0,score:0,dist:0,cam:0,bs:2,spd:2,lives:3,obs:[],coll:[],part:[],gy:H*0.88,ly:[H*0.52,H*0.66,H*0.80],st:0,si:46,go:false,goSaved:false,boostT:0,startBoost:stBoost?180:0,bigT:0,slowT:0,startSlow:stSlow?180:0,jumpBoostT:0,dizzyT:0,stumbleT:0,chairRide:null,chairRideT:0,rideX:0,coinT:0,stage:0,goal:L1_GOAL[0],win:false,winT:0,winSaved:false,banner:'',bannerT:0,sel:true,cont:false,tip:'',tipT:0,heartGiven:false,horseGiven:false,patternN:0,lastSafe:1,luckLine:'',burdenT:0,floats:[],lastItemType:'',itemHistory:[],potShake:0,nextRewardAt:0,lastRewardX:0,rewardDueSince:0,mailRewardPending:''};
 }
 function l1Start(st){
   const continuing=l1.cont;
@@ -966,8 +982,8 @@ function l1Start(st){
   l1.bigT=0;l1.boostT=0;l1.inv=0;l1.slowT=0;l1.jumpBoostT=0;l1.dizzyT=0;l1.stumbleT=0;l1.chairRide=null;l1.chairRideT=0;l1.rideX=0;l1.burdenT=0;l1.floats=[];l1.callT=0;l1.mailBag=[];l1.shoeT=0;l1.ghostT=0; // v4.15: 红靴减速 / 墨镜影身
   l1.patternN=0;l1.lastSafe=1;l1.heartGiven=false;l1.lastItemType='';l1.itemHistory=[];l1.potShake=0;
   // v4.21l: 第二关奖励密度向第一关靠拢：更早、更持续，但同屏仍只允许 1 个正向奖励。
-  l1.nextRewardAt=st===1?300+Math.floor(Math.random()*101):0;
-  l1.lastRewardX=0;l1.rewardDueSince=0;
+  l1.nextRewardAt=st===1?210+Math.floor(Math.random()*91):0;
+  l1.lastRewardX=0;l1.rewardDueSince=0;l1.mailRewardPending='';
   if(!continuing){l1.score=0;l1.lives=3;l1.horseGiven=false;l1.boostT=l1.startBoost;l1.slowT=l1.startSlow;l1.inv=l1.startInv;}
   l1.luckLine='';
   l1.cont=false;
@@ -1032,17 +1048,24 @@ function uL1(){
   else if((inp.dt||inp.keys[' '])&&(l1.chairRideT>0||l1.stumbleT>0)){inp.dt=false;inp.keys[' ']=false;}
   l1.pvy+=0.5;l1.py+=l1.pvy;
   if(l1.py>=l1.ly[l1.pl]){l1.py=l1.ly[l1.pl];l1.pvy=0;l1.gnd=true;l1.jump=false;l1.jl=null;}
-  // v4.21k: 第二关空场看门狗——前方没有奖励且超期时，直接补一个，最大空档受控。
+  // v4.21m: 第二关按“当前看得见的画面”做奖励保底。
+  // 只要屏幕里已经没有正向道具，并且到了节奏点，就马上从右侧补下一枚。
   if(!raceOver&&l1.stage===1){
-    const upcoming=l1.coll.some(c=>!c.collected&&L1_POSITIVE.has(c.type)&&c.x0>=l1.dist-20&&c.x0<=l1.dist+W+220);
-    if(!upcoming&&l1.dist>=l1.nextRewardAt+90){
+    const visibleReward=l1.coll.some(c=>{
+      if(c.collected||!L1_POSITIVE.has(c.type))return false;
+      const sx=c.x0-l1.dist;
+      return sx>-45&&sx<W+45;
+    });
+    if(!visibleReward&&l1.dist>=l1.nextRewardAt){
       if(!l1.rewardDueSince)l1.rewardDueSince=l1.dist;
-      const force=l1.dist-l1.rewardDueSince>120;
-      if(l1PlaceStage2Reward(force)){
-        l1.nextRewardAt=l1.dist+390+Math.floor(Math.random()*131);
+      const force=l1.dist-l1.rewardDueSince>70;
+      const forcedType=l1.mailRewardPending||'';
+      if(l1PlaceStage2Reward(force,forcedType)){
+        l1.mailRewardPending='';
+        l1.nextRewardAt=l1.dist+285+Math.floor(Math.random()*96);
         l1.rewardDueSince=0;
       }
-    }else if(upcoming)l1.rewardDueSince=0;
+    }else if(visibleReward)l1.rewardDueSince=0;
   }
 
   // Spawn (per-stage pools, only while race is active)
@@ -1069,21 +1092,35 @@ function uL1(){
       let rr=Math.random(),acc=0,sel=pool[pool.length-1];
       for(const it of pool){acc+=it.p;if(rr<acc){sel=it;break;}}
       const sx=l1.dist+W+80;
-      const lanes=[0,1,2].sort(()=>Math.random()-0.5);
-      for(const lane of lanes){
-        if(!l1LaneBlocked(lane,sx,sel.t,sel.w)&&l1TryPlace(sel.t,sel.w,sel.h,lane,sx))break;
+      const lanes=shuf([0,1,2]);
+      if(l1.stage===1){
+        // v4.21m: 第二关一个类型放不下时换别的类型继续尝试，不再整次生成作废。
+        const candidates=[sel,...shuf(pool.filter(it=>it.t!==sel.t))];
+        let placed=false;
+        for(const it of candidates){
+          for(const lane of lanes){
+            if(!l1LaneBlocked(lane,sx,it.t,it.w)&&l1TryPlace(it.t,it.w,it.h,lane,sx)){placed=true;break;}
+          }
+          if(placed)break;
+        }
+      }else{
+        for(const lane of lanes){
+          if(!l1LaneBlocked(lane,sx,sel.t,sel.w)&&l1TryPlace(sel.t,sel.w,sel.h,lane,sx))break;
+        }
       }
     }
     else if(l1.stage===1?l1.dist>=l1.nextRewardAt:r<flow.single+flow.item){
       if(l1.stage===1){
         if(!l1.rewardDueSince)l1.rewardDueSince=l1.dist;
-        const force=l1.dist-l1.rewardDueSince>120;
-        if(l1PlaceStage2Reward(force)){
-          l1.nextRewardAt=l1.dist+390+Math.floor(Math.random()*131);
+        const force=l1.dist-l1.rewardDueSince>70;
+        const forcedType=l1.mailRewardPending||'';
+        if(l1PlaceStage2Reward(force,forcedType)){
+          l1.mailRewardPending='';
+          l1.nextRewardAt=l1.dist+285+Math.floor(Math.random()*96);
           l1.rewardDueSince=0;
         }else{
-          // 放不下时很快重试，而不是重新等一整个奖励周期。
-          l1.nextRewardAt=l1.dist+45;
+          // 放不下时只延后很短距离，持续重试。
+          l1.nextRewardAt=l1.dist+30;
         }
       }else{
         const ix=l1.dist+W+60+Math.floor(Math.random()*100);
@@ -1121,8 +1158,14 @@ function uL1(){
       l1.lastSafe=safe;
       const lanes=[0,1,2].filter(v=>v!==safe);
       const sx1=l1.dist+W+80,sx2=sx1+34+l1.stage*12;
-      if(!l1LaneBlocked(lanes[0],sx1,a.t,a.w))l1TryPlace(a.t,a.w,a.h,lanes[0],sx1);
-      if(!l1LaneBlocked(lanes[1],sx2,b.t,b.w))l1TryPlace(b.t,b.w,b.h,lanes[1],sx2);
+      const placedA=!l1LaneBlocked(lanes[0],sx1,a.t,a.w)&&l1TryPlace(a.t,a.w,a.h,lanes[0],sx1);
+      const placedB=!l1LaneBlocked(lanes[1],sx2,b.t,b.w)&&l1TryPlace(b.t,b.w,b.h,lanes[1],sx2);
+      if(l1.stage===1&&!placedA&&!placedB){
+        const fallback=pairMix.find(it=>it.t!==a.t&&it.t!==b.t)||pairMix[0];
+        for(const ln of shuf([0,1,2])){
+          if(!l1LaneBlocked(ln,sx1,fallback.t,fallback.w)&&l1TryPlace(fallback.t,fallback.w,fallback.h,ln,sx1))break;
+        }
+      }
 
       // v4.21j: 第二关中后段随机追加第二组封锁，安全车道必须变化。
       // 两组间隔约 340~430px，给足反应时间，但玩家必须再切一次道。
@@ -1197,16 +1240,13 @@ function uL1(){
         l1.floats.push({x:px+pw/2,y:py-26,txt:'来电话啦',t:72});
         continue;
       }
-      if(o.t==='mail'){ // v4.21g: 邮件 = 随机开出一个第二关正向道具
+      if(o.t==='mail'){ // v4.21m: 邮件奖励进入待发队列，不再塞到一两屏之外
         o.dead=true;sw();spP(px+pw/2,py+ph/2,8,'#fff',l1.part,7,6,26);
         const mailPool=['coffee','pancake','fish'];
         const item=mailPool[Math.floor(Math.random()*mailPool.length)];
-        let spawnX=l1.dist+330;
-        // 保持“同屏只有 1 个正向道具”：如果当前视野已有奖励，就把邮件奖励放到更远处。
-        while(!l1ItemCanSpawn(item,spawnX)&&spawnX<l1.dist+W*3)spawnX+=W+180;
-        const lane=l1.pl;
-        l1.coll.push({x0:spawnX,y:l1.ly[lane]-30,type:item,w:36,h:36,collected:false,fromLane:lane,toLane:lane,phase:Math.random()*6.28,fromMail:true});
-        if(l1.stage===1){l1.nextRewardAt=Math.max(l1.nextRewardAt,l1.dist+340+Math.floor(Math.random()*101));l1.rewardDueSince=0;}
+        l1.mailRewardPending=item;
+        l1.nextRewardAt=Math.min(l1.nextRewardAt,l1.dist+90);
+        l1.rewardDueSince=0;
         const itemName=item==='coffee'?'咖啡':item==='pancake'?'大饼':'带鱼';
         l1.floats.push({x:px+pw/2,y:py-26,txt:'邮件开出：'+itemName,t:78});
         continue;
