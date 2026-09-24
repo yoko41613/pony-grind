@@ -1655,9 +1655,16 @@ function rL2(){
 function shuf(a){const r=a.slice();for(let i=r.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));const t=r[i];r[i]=r[j];r[j]=t;}return r;}
 // v4.20: L2 道具密度按关卡分层，避免“台阶随机 + 地面奖励 + 分段补位”三层叠加后过密。
 const L2_ITEM_FLOW=[
-  {lid:[0,0],       coffee:[0.07,0.10],mail:[0.03,0.05],shoe:[0,0],       extra:[0,0],       pancake:[0.18,0.24],ground:[2,2],minSeg:2,preBoss:[1,1]},
-  {lid:[0.04,0.07], coffee:[0.05,0.07],mail:[0.03,0.05],shoe:[0,0],       extra:[0,0],       pancake:[0.12,0.17],ground:[2,2],minSeg:2,preBoss:[1,1]},
-  {lid:[0.12,0.16], coffee:[0.05,0.08],mail:[0.04,0.06],shoe:[0.03,0.05], extra:[0.05,0.08], pancake:[0.14,0.20],ground:[3,4],minSeg:2,preBoss:[1,2]}
+  // v4.21q: L2 改成单一“节奏器”生成。gap=普通奖励之间的横向间距；pool=本关道具权重。
+  {lid:[0,0],       gap:[680,820],pool:[
+    {t:'pancake',w:34},{t:'coffee',w:26},{t:'folder',w:18},{t:'headset',w:14},{t:'clockout',w:8}
+  ]},
+  {lid:[0.04,0.06], gap:[620,760],pool:[
+    {t:'pancake',w:28},{t:'coffee',w:20},{t:'mail',w:20},{t:'headset',w:16},{t:'milktea',w:16}
+  ]},
+  {lid:[0.10,0.14], gap:[560,700],pool:[
+    {t:'pancake',w:24},{t:'coffee',w:15},{t:'mail',w:18},{t:'shoe',w:15},{t:'clockout',w:14},{t:'milktea',w:14}
+  ]}
 ];
 
 function genL2(){
@@ -1666,6 +1673,9 @@ function genL2(){
   l2.posters=shuffledPosters(); // v2.18: 每关重新打乱——这一关墙上的每张海报都不同，下一关又是新的一轮
   l2.horse=false;
   l2.bossReady=false;
+  // v4.21q: 每关重新开始自己的道具状态，红心/邮件结果不再跨关残留。
+  l2.heartGiven=false;
+  l2.mailBag=[];
   l2.bossKey=st===1?'pancake':'horseshoe'; // v4.21: 第2关改成吃“大饼通行证”，不再三关都重复找马蹄
   const lw=4600+st*1400; // v4.5: 加长，给障碍留出更多生成位
   l2.lw=lw; l2.gy=Math.floor(H*0.85);
@@ -1778,129 +1788,93 @@ function genL2(){
   const rr=(a,b)=>a+Math.random()*(b-a);
   const flow=L2_ITEM_FLOW[Math.min(2,st)];
   const rate=r=>rr(r[0],r[1]);
-  const lidRate=rate(flow.lid),coffeeRate=rate(flow.coffee),mailRate=rate(flow.mail),
-        shoeRate=rate(flow.shoe),extraRate=rate(flow.extra),pieRate=rate(flow.pancake);
-  const extraPool=['clockout','milktea'];
-  const heartIdx=1+Math.floor(Math.random()*Math.max(1,plats.length-2));
-  let pieCount=0,lastPlatformItem='',lastFillItem='',stage2LidCount=0;
+  const lidRate=rate(flow.lid);
+
+  // v4.21q: 马桶盖只作为台阶障碍单独生成，不再和“道具抽奖”共用一次随机。
+  // 第2关最多 1 个，而且只放在前半段；第3关按较低概率分散。
+  let stage2LidCount=0;
   const itemMidX=playA+(playB-playA)/2;
-  const pickNoRepeat=(pool,last)=>{
-    const alt=pool.filter(t=>t!==last);
-    const use=alt.length?alt:pool;
-    return use[Math.floor(Math.random()*use.length)];
-  };
-
-  // v4.20g: 道具随机出现，但同类会自动错开，避免一屏同时刷很多个同款。
-  const canPlaceL2Item=(type,x)=>{
-    // v4.21l: 不只是同类，任何两个可见道具都至少错开一屏左右。
-    // 这样不会再出现“邮件 + 下班卡”之类不同道具叠在一起。
-    const anyGap=(type==='horseshoe'||type==='redheart')?430:540;
-    if(l2.colls.some(c=>Math.abs(c.x-x)<anyGap))return false;
-    const same=l2.colls.filter(c=>c.type===type);
-    if(same.some(c=>Math.abs(c.x-x)<760))return false;
-    return true;
-  };
-  const addL2Item=(c)=>{
-    if(!canPlaceL2Item(c.type,c.x))return false;
-    l2.colls.push(c);
-    return true;
-  };
-
-  // 台阶道具：每块台阶独立随机，类型也随机；同类过近时本次留空。
   for(let i=1;i<plats.length;i++){
     const pl=plats[i];
-    if(pl===hp)continue;
-    const r2=Math.random();
-    let type='';
-    if(r2<lidRate){
-      const allowLid=!(st===1&&(stage2LidCount>=1||pl.x>=itemMidX));
-      if(allowLid&&!pl.mv&&!pl.rail&&pl.w>=70){
-        l2.lids.push(mkLid(pl,rr(10,pl.w-54)));
-        if(st===1)stage2LidCount++;
-      }
-    }
-    else if(r2<lidRate+coffeeRate)type='coffee';
-    else if(r2<lidRate+coffeeRate+mailRate)type='mail';
-    else if(st===2&&r2<lidRate+coffeeRate+mailRate+shoeRate)type='shoe';
-    else if(st===2&&r2<lidRate+coffeeRate+mailRate+shoeRate+extraRate)type=pickNoRepeat(extraPool,lastPlatformItem);
-    else if(r2<lidRate+coffeeRate+mailRate+shoeRate+extraRate+pieRate)type='pancake';
-
-    if(type&&type!==lastPlatformItem){
-      const cx=pl.x+rr(16,Math.max(20,pl.w-16));
-      if(addL2Item({x:cx,y:pl.y-rr(30,64),type,collected:false}))lastPlatformItem=type;
-    }
-
-    if(!l2.heartGiven&&i>=heartIdx&&pl.x>lw*0.30){
-      if(addL2Item({x:pl.x+pl.w/2,y:pl.y-40,type:'redheart',collected:false}))l2.heartGiven=true;
-    }
+    if(pl===hp||pl.ground||pl.rail||pl.mv||pl.w<70)continue;
+    if(Math.random()>=lidRate)continue;
+    if(st===1&&(stage2LidCount>=1||pl.x>=itemMidX))continue;
+    l2.lids.push(mkLid(pl,rr(10,pl.w-54)));
+    if(st===1)stage2LidCount++;
   }
 
-  // BOSS 通行道具固定在浮动平台，并清掉附近普通奖励，避免两个道具挤在一起。
+  // 一套统一的 L2 道具节奏：从前到后按固定间距推进，不再叠加“台阶随机 / 地面随机 / 分段补位 / BOSS前补给”。
+  const weightedPick=(pool,last)=>{
+    let cand=pool.filter(v=>v.t!==last);
+    if(!cand.length)cand=pool;
+    let total=cand.reduce((n,v)=>n+v.w,0),r=Math.random()*total;
+    for(const v of cand){r-=v.w;if(r<=0)return v.t;}
+    return cand[cand.length-1].t;
+  };
+  const inDanger=x=>l2.zones.some(z=>x>z.x-95&&x<z.x+z.w+95);
+  const findSafeX=(target,minX,maxX)=>{
+    const tries=[0,-90,90,-170,170,-250,250];
+    for(const d of tries){
+      const x=Math.max(minX,Math.min(maxX,target+d));
+      if(!inDanger(x))return x;
+    }
+    return Math.max(minX,Math.min(maxX,target));
+  };
+  const placeScheduled=(x,type,index)=>{
+    // 奇偶交替：一枚在地面、一枚在台阶，避免“前半段全在台阶上”的感觉。
+    const wantPlatform=index%2===1;
+    if(wantPlatform){
+      const cands=plats.filter(pl=>pl!==hp&&!pl.ground&&!pl.rail&&Math.abs((pl.x+pl.w/2)-x)<230);
+      if(cands.length){
+        cands.sort((a,b)=>Math.abs((a.x+a.w/2)-x)-Math.abs((b.x+b.w/2)-x));
+        const pl=cands[0];
+        l2.colls.push({x:pl.x+pl.w/2,y:pl.y-34,type,collected:false,pl});
+        return;
+      }
+    }
+    l2.colls.push({x,y:l2.gy-40,type,collected:false});
+  };
+
+  // 先生成“槽位”，保证整条路的空档稳定；地图越长，后面关卡自然会多一些道具。
+  const slots=[];
+  let slotX=playA+rr(280,360);
+  let guardSlots=0;
+  while(slotX<playB-180&&guardSlots++<40){
+    slots.push(findSafeX(slotX,playA+120,playB-120));
+    slotX+=rr(flow.gap[0],flow.gap[1]);
+  }
+
+  // 如果随机恰好让某一整段没有槽位，就在该段中央补一个；这样不会再出现后半段整段空白。
+  for(let sg=0;sg<SEGN;sg++){
+    const [sa,sb]=segRange(sg);
+    if(slots.some(x=>x>=sa&&x<sb))continue;
+    slots.push(findSafeX((sa+sb)/2,sa+100,sb-100));
+  }
+  slots.sort((a,b)=>a-b);
+
+  // 每关恰好 1 颗红心，直接占用中段的一个普通槽位，不额外增加密度。
+  let heartSlot=0;
+  if(slots.length){
+    const heartTarget=playA+(playB-playA)*0.50;
+    heartSlot=slots.reduce((best,x,i)=>Math.abs(x-heartTarget)<Math.abs(slots[best]-heartTarget)?i:best,0);
+  }
+
+  let lastType='';
+  for(let i=0;i<slots.length;i++){
+    const type=i===heartSlot?'redheart':weightedPick(flow.pool,lastType);
+    placeScheduled(slots[i],type,i);
+    if(type!=='redheart')lastType=type;
+  }
+  l2.heartGiven=slots.length>0;
+
+  // BOSS 通行道具永远单独固定在最后的浮动平台；它不参与前面的普通随机。
   const bossTokenX=hp.x+hp.w/2;
-  l2.colls=l2.colls.filter(c=>Math.abs(c.x-bossTokenX)>=540);
   l2.colls.push({x:bossTokenX,y:hp.y-34,type:l2.bossKey,collected:false,pl:hp,bossToken:true});
 
-  // BOSS 前补给也随机，但大饼不会挤在一起。
-  const preCount=flow.preBoss[0]+Math.floor(Math.random()*(flow.preBoss[1]-flow.preBoss[0]+1));
-  for(let i=0;i<preCount;i++){
-    const px2=bp.x-rr(180,320)-i*390;
-    addL2Item({x:px2,y:rr(430,550),type:'pancake',collected:false});
-  }
-
-  // 地面移动奖励：每次独立随机抽类型，位置随机，且同类/整体都保留间距。
-  const rewardPool=st===0
-    ?['pancake','coffee','folder','clockout','headset']
-    :st===1
-      ?['pancake','coffee','mail','headset','milktea']
-      :['pancake','coffee','mail','shoe','clockout','milktea'];
-  const rewardCount=flow.ground[0]+Math.floor(Math.random()*(flow.ground[1]-flow.ground[0]+1));
-  const placedRx=[];
-  let rewardLast='';
-  for(let i=0;i<rewardCount;i++){
-    let placed=false;
-    for(let t=0;t<36&&!placed;t++){
-      const rx=rr(520,lw-1500);
-      if(laserZ.some(z=>rx+90>z.x-60&&rx-90<z.x+z.w+60))continue;
-      if(placedRx.some(p=>Math.abs(p-rx)<320))continue;
-      const type=pickNoRepeat(rewardPool,rewardLast);
-      if(!canPlaceL2Item(type,rx))continue;
-      const ry=Math.random()<0.5?l2.gy-42:l2.gy-150;
-      if(addL2Item({x:rx,y:ry,type,collected:false,motion:{a:rx-70,b:rx+70,dir:Math.random()<0.5?1:-1,spd:0.75+st*0.16}})){
-        placedRx.push(rx);rewardLast=type;placed=true;
-      }
-    }
-  }
-
-  // v4.21l: 四个赛段都至少 2 个奖励，后半段不再降到 1 个。
-  const minCollForSeg=i=>Math.max(2,flow.minSeg);
-  const extraItemPool=st===0
-    ?['pancake','coffee','folder','clockout']
-    :st===1
-      ?['pancake','coffee','mail','headset','milktea']
-      :['pancake','coffee','mail','shoe','clockout','milktea'];
-  for(let i=0;i<SEGN;i++){
-    const [sa,sb]=segRange(i);
-    const minCollPerSeg=minCollForSeg(i);
-    let have=l2.colls.filter(c=>c.x>=sa&&c.x<sb).length,tries=0;
-    while(have<minCollPerSeg&&tries++<60){
-      const cands=plats.filter(pl=>!pl.ground&&pl.x>=sa-20&&pl.x<sb);
-      let cx2,cy2;
-      if(cands.length){
-        const pl=cands[Math.floor(Math.random()*cands.length)];
-        cx2=pl.x+rr(16,Math.max(20,pl.w-16));cy2=pl.y-rr(30,64);
-      }else{
-        cx2=sa+Math.random()*(sb-sa);cy2=Math.random()<0.5?l2.gy-42:l2.gy-150;
-      }
-      cx2=Math.min(sb-24,Math.max(sa+16,cx2));
-      const type=pickNoRepeat(extraItemPool,lastFillItem);
-      if(addL2Item({x:cx2,y:cy2,type,collected:false})){
-        lastFillItem=type;have++;
-      }
-    }
-  }
-  pieCount=l2.colls.filter(c=>c.type==='pancake').length;
+  let pieCount=l2.colls.filter(c=>c.type==='pancake').length;
   l2.piesTotal=pieCount;
   l2.piesEaten=0;
+
   // v4.5: 障碍池按关配置——第 2 关马桶登场（顶替电梯），第 3 关马桶 + 电梯混合
   //       同时把激光区的清场缓冲从 160 收到 80、间距收紧，一关的障碍数量从 2~3 个提到 5~7 个
   l2.obs=[];
