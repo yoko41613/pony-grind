@@ -486,51 +486,68 @@ function drP(ctx,list){for(const p of list){ctx.fillStyle=p.color;ctx.globalAlph
 function drMenu(){
   startBGM(0);
   ctx.fillStyle='#ffffff';ctx.fillRect(0,0,W,H);
-  ctx.fillStyle='#99999930';
+  ctx.fillStyle='#99999924';
   for(let i=0;i<50;i++)ctx.fillRect((i*137+50)%W,(i*97+30)%(H*0.6),(i%3)+1,(i%3)+1);
+
+  // v4.20: 首页文字层级重排——标题 / 角色名 / 模式 / 数据四段，减少挤在一行的文字。
   ctx.textAlign='center';
   ctx.fillStyle='#222';ctx.font='bold 32px "PingFang SC","Microsoft YaHei",Arial,sans-serif';
-  ctx.fillText('马马打工记',W/2,95+Math.sin(af*0.05)*4);
-  ctx.fillStyle='#f84';ctx.font='12px "PingFang SC","Microsoft YaHei",Arial,sans-serif';ctx.fillText('"拍拍马屁，来好运气"',W/2,120);
-  ds(ctx,S.pony_idle,W/2-42,135,84,84,false);
-  ctx.fillStyle='#444';ctx.font='15px "PingFang SC","Microsoft YaHei",Arial,sans-serif';ctx.fillText('给你的打工马起个名字：',W/2,250);
-  ctx.fillStyle='#a0760a';ctx.font='bold 22px "PingFang SC","Microsoft YaHei",Arial,sans-serif';ctx.fillText(ponyName||'_______',W/2,282);
-  ctx.fillStyle='#888';ctx.font='12px "PingFang SC","Microsoft YaHei",Arial,sans-serif';ctx.fillText('（点这里改名）',W/2,300);
-  // 3 game buttons (free choice, no locks)
-  const by=345,bw=146,bh=72,gap=16,x0=(W-3*bw-2*gap)/2;
+  ctx.fillText('马马打工记',W/2,76+Math.sin(af*0.05)*3);
+  ctx.fillStyle='#f84';ctx.font='12px "PingFang SC","Microsoft YaHei",Arial,sans-serif';
+  ctx.fillText('"拍拍马屁，来好运气"',W/2,104);
+
+  ds(ctx,S.pony_idle,W/2-38,118,76,76,false);
+
+  ctx.fillStyle='#777';ctx.font='12px "PingFang SC","Microsoft YaHei",Arial,sans-serif';
+  ctx.fillText('我的打工马',W/2,220);
+  ctx.fillStyle='#a0760a';ctx.font='bold 22px "PingFang SC","Microsoft YaHei",Arial,sans-serif';
+  ctx.fillText(ponyName||'_______',W/2,250);
+  ctx.fillStyle='#999';ctx.font='11px "PingFang SC","Microsoft YaHei",Arial,sans-serif';
+  ctx.fillText('点击名字修改',W/2,272);
+
+  const bx=50,bw=380,bh=58,gap=10,by=304;
   const btns=[
-    {x:x0,c:'#4d4',t1:'办公室赛马',t2:'躲障碍 跑全程'},
-    {x:x0+bw+gap,c:'#48c',t1:'办公室大冒险',t2:'吃饼变大 踩BOSS'},
-    {x:x0+2*(bw+gap),c:'#f84',t1:'爱心工厂',t2:'无限合成 冲分'}
+    {c:'#4d4',t1:'办公室赛马',t2:'躲障碍 · 跑完全程'},
+    {c:'#48c',t1:'办公室大冒险',t2:'吃饼变大 · 踩 BOSS'},
+    {c:'#f84',t1:'爱心工厂',t2:'无限合成 · 冲最高分'}
   ];
-  for(const b of btns){
-    ctx.fillStyle=b.c;ctx.fillRect(b.x,by,bw,bh);
-    ctx.fillStyle='#000';ctx.font='bold 15px "PingFang SC","Microsoft YaHei",Arial,sans-serif';
-    ctx.fillText(b.t1,b.x+bw/2,by+28);
-    ctx.font='11px "PingFang SC","Microsoft YaHei",Arial,sans-serif';
-    ctx.fillText(b.t2,b.x+bw/2,by+54);
+  for(let i=0;i<btns.length;i++){
+    const b=btns[i],y=by+i*(bh+gap);
+    ctx.fillStyle=b.c;ctx.fillRect(bx,y,bw,bh);
+    ctx.fillStyle='#00000018';ctx.fillRect(bx,y,bw,3);
+    ctx.textAlign='left';ctx.fillStyle='#111';ctx.font='bold 16px "PingFang SC","Microsoft YaHei",Arial,sans-serif';
+    ctx.fillText(b.t1,bx+18,y+24);
+    ctx.fillStyle='#222';ctx.font='11px "PingFang SC","Microsoft YaHei",Arial,sans-serif';
+    ctx.fillText(b.t2,bx+18,y+44);
+    ctx.textAlign='right';ctx.font='bold 18px Arial,sans-serif';
+    ctx.fillText('›',bx+bw-18,y+36);
   }
-  // coins + shop
-  ctx.textAlign='left';
-  ctx.fillStyle='#b4a';ctx.font='bold 16px "PingFang SC","Microsoft YaHei",Arial,sans-serif';
-  ctx.fillText('💰 '+save.coins,30,452);
-  ctx.fillStyle='#fd4';ctx.fillRect(W-150,430,120,36);
-  ctx.fillStyle='#000';ctx.font='bold 14px "PingFang SC","Microsoft YaHei",Arial,sans-serif';ctx.textAlign='center';
-  ctx.fillText('🛒 商店',W-90,454);
+
+  const infoY=526;
+  ctx.textAlign='left';ctx.fillStyle='#6d2f86';ctx.font='bold 15px "PingFang SC","Microsoft YaHei",Arial,sans-serif';
+  ctx.fillText('💰 '+save.coins,50,infoY+23);
+  ctx.fillStyle='#fd4';ctx.fillRect(330,infoY,100,34);
+  ctx.fillStyle='#000';ctx.font='bold 13px "PingFang SC","Microsoft YaHei",Arial,sans-serif';ctx.textAlign='center';
+  ctx.fillText('🛒 商店',380,infoY+22);
+
   ctx.textAlign='left';ctx.fillStyle='#555';ctx.font='12px "PingFang SC","Microsoft YaHei",Arial,sans-serif';
-  ctx.fillText('等级：Lv.'+(Math.floor(save.xp/100)+1),30,496);
-  ctx.fillText('经验：'+save.xp+' XP',30,516);
-  ctx.fillText('最高分 办公室赛马:'+(save.hs.l1||0)+' 大冒险:'+(save.hs.l2||0)+' 爱心工厂:'+(save.hs.l3||0),30,536);
-  ctx.fillStyle='#888';ctx.font='12px "PingFang SC","Microsoft YaHei",Arial,sans-serif';
-  ctx.fillStyle='#f84';ctx.font='bold 12px "PingFang SC","Microsoft YaHei",Arial,sans-serif';ctx.textAlign='center';
-  if(menuTipT>0){ctx.fillStyle='#f84';ctx.font='bold 14px "PingFang SC","Microsoft YaHei",Arial,sans-serif';ctx.fillText(menuTip,W/2,618);}
+  ctx.fillText('Lv.'+(Math.floor(save.xp/100)+1)+'   ·   '+save.xp+' XP',50,586);
+  ctx.fillStyle='#777';ctx.font='11px "PingFang SC","Microsoft YaHei",Arial,sans-serif';
+  ctx.fillText('最高分',50,612);
+  ctx.fillText('赛马 '+(save.hs.l1||0),110,612);
+  ctx.fillText('大冒险 '+(save.hs.l2||0),220,612);
+  ctx.fillText('爱心工厂 '+(save.hs.l3||0),340,612);
+
+  ctx.textAlign='center';
+  if(menuTipT>0){ctx.fillStyle='#f84';ctx.font='bold 13px "PingFang SC","Microsoft YaHei",Arial,sans-serif';ctx.fillText(menuTip,W/2,646);}
   const qs=JOKES;
-  ctx.fillText(qs[Math.floor(af/120)%qs.length],W/2,640);
+  ctx.fillStyle='#999';ctx.font='11px "PingFang SC","Microsoft YaHei",Arial,sans-serif';
+  ctx.fillText(qs[Math.floor(af/120)%qs.length],W/2,678);
   drawMuteBtn(ctx,W-34,34);
 }
 
 function clMenu(mx,my){
-  if(my>240&&my<300){
+  if(my>218&&my<278){
     nameEditing=true;
     nameInput.value=ponyName;
     nameInput.style.display='block';
@@ -538,11 +555,15 @@ function clMenu(mx,my){
     nameInput.focus();
     return;
   }
-  const by=345,bw=146,bh=72,gap=16,x0=(W-3*bw-2*gap)/2;
-  if(mx>x0&&mx<x0+bw&&my>by&&my<by+bh){rL1();gs='level1';enterLock=18;ia();startBGM(3);return;}
-  if(mx>x0+bw+gap&&mx<x0+2*bw+gap&&my>by&&my<by+bh){rL2();gs='level2';enterLock=18;ia();startBGM(1);return;}
-  if(mx>x0+2*(bw+gap)&&mx<x0+3*bw+2*gap&&my>by&&my<by+bh){rL3();gs='level3';enterLock=18;ia();startBGM(2);return;}
-  if(mx>W-150&&mx<W-30&&my>430&&my<466){gs='shop';return;}
+  const bx=50,bw=380,bh=58,gap=10,by=304;
+  if(mx>bx&&mx<bx+bw){
+    if(my>by&&my<by+bh){rL1();gs='level1';enterLock=18;ia();startBGM(3);return;}
+    const y2=by+(bh+gap);
+    if(my>y2&&my<y2+bh){rL2();gs='level2';enterLock=18;ia();startBGM(1);return;}
+    const y3=by+2*(bh+gap);
+    if(my>y3&&my<y3+bh){rL3();gs='level3';enterLock=18;ia();startBGM(2);return;}
+  }
+  if(mx>330&&mx<430&&my>526&&my<560){gs='shop';return;}
 }
 
 // ===== SHOP =====
@@ -627,7 +648,28 @@ const L1_BANNER=['','',''];
 const L1_GOAL=[10800,12600,14400];
 const L1_LV=['第1关','第2关','第3关'];
 const L1_DESC=['办公室','会议室','停车场'];
-const L1_ITEMS=[['badge','headset','milktea','tel','burger'],['coffee','pancake','fish','mail'],['exit','popcorn','sunglass','skateboard']]; // v4.19: 第 3 关下班卡移除，安全出口替代; v4.17: 安全出口（无敌 240 帧）; v4.15: 墨镜/滑板
+// v4.20: L1 道具按关卡重新配比。重复项代表权重；负面/强力道具不再和普通奖励等概率。
+const L1_ITEMS=[
+  ['badge','badge','milktea','milktea','headset','burger','tel'],
+  ['coffee','coffee','pancake','pancake','fish','mail','mail'],
+  ['skateboard','skateboard','popcorn','popcorn','sunglass','exit']
+];
+const L1_FLOW=[
+  {single:0.72,item:0.14,bonusEvery:2}, // 第1关：奖励更常见，适合熟悉操作
+  {single:0.74,item:0.12,bonusEvery:3}, // 第2关：奖励收紧，随机邮件比重提高
+  {single:0.76,item:0.10,bonusEvery:3}  // 第3关：奖励最少，但保留强力逃生/加速
+];
+function pickL1Item(stage){
+  const pool=L1_ITEMS[stage];
+  let choices=pool;
+  if(l1.lastItemType){
+    const alt=pool.filter(t=>t!==l1.lastItemType);
+    if(alt.length)choices=alt;
+  }
+  const type=choices[Math.floor(Math.random()*choices.length)];
+  l1.lastItemType=type;
+  return type;
+}
 // 运势测试语录：根据得分和剩余生命随机调侃
 const L1_LUCK={
   god:['你今天踩了狗屎运才能通关吧','运气也是实力，你这实力藏不住了','今日宜下班，宜摸鱼，宜通关','这运气，买彩票去吧','老板看了都羡慕你的走位'],
@@ -704,7 +746,7 @@ function rL1(){
   if(save.items.headset>0){save.items.headset--;stSlow=true;}
   if(save.items.offcard>0){save.items.offcard--;stInv=true;}
   sv(save);
-  l1={py:H*0.66,pl:1,pvy:0,jump:false,gnd:true,inv:0,startInv:stInv?180:0,score:0,dist:0,cam:0,bs:2,spd:2,lives:3,obs:[],coll:[],part:[],gy:H*0.88,ly:[H*0.52,H*0.66,H*0.80],st:0,si:46,go:false,goSaved:false,boostT:0,startBoost:stBoost?180:0,bigT:0,slowT:0,startSlow:stSlow?180:0,jumpBoostT:0,dizzyT:0,stumbleT:0,chairRide:null,chairRideT:0,rideX:0,coinT:0,stage:0,goal:L1_GOAL[0],win:false,winT:0,winSaved:false,banner:'',bannerT:0,sel:true,cont:false,tip:'',tipT:0,heartGiven:false,horseGiven:false,patternN:0,lastSafe:1,luckLine:'',burdenT:0,floats:[]};
+  l1={py:H*0.66,pl:1,pvy:0,jump:false,gnd:true,inv:0,startInv:stInv?180:0,score:0,dist:0,cam:0,bs:2,spd:2,lives:3,obs:[],coll:[],part:[],gy:H*0.88,ly:[H*0.52,H*0.66,H*0.80],st:0,si:46,go:false,goSaved:false,boostT:0,startBoost:stBoost?180:0,bigT:0,slowT:0,startSlow:stSlow?180:0,jumpBoostT:0,dizzyT:0,stumbleT:0,chairRide:null,chairRideT:0,rideX:0,coinT:0,stage:0,goal:L1_GOAL[0],win:false,winT:0,winSaved:false,banner:'',bannerT:0,sel:true,cont:false,tip:'',tipT:0,heartGiven:false,horseGiven:false,patternN:0,lastSafe:1,luckLine:'',burdenT:0,floats:[],lastItemType:''};
 }
 function l1Start(st){
   const continuing=l1.cont;
@@ -723,7 +765,7 @@ function l1Start(st){
   }
   l1.banner='';l1.bannerT=0;
   l1.bigT=0;l1.boostT=0;l1.inv=0;l1.slowT=0;l1.jumpBoostT=0;l1.dizzyT=0;l1.stumbleT=0;l1.chairRide=null;l1.chairRideT=0;l1.rideX=0;l1.burdenT=0;l1.floats=[];l1.callT=0;l1.mailBag=[];l1.shoeT=0;l1.ghostT=0; // v4.15: 红靴减速 / 墨镜影身
-  l1.patternN=0;l1.lastSafe=1;l1.heartGiven=false;
+  l1.patternN=0;l1.lastSafe=1;l1.heartGiven=false;l1.lastItemType='';
   if(!continuing){l1.score=0;l1.lives=3;l1.horseGiven=false;l1.boostT=l1.startBoost;l1.slowT=l1.startSlow;l1.inv=l1.startInv;}
   l1.luckLine='';
   l1.cont=false;
@@ -789,7 +831,7 @@ function uL1(){
   // Spawn (per-stage pools, only while race is active)
   if(!raceOver){l1.st++;if(l1.st>l1.si){l1.st=0;l1.si=Math.max(24,72-l1.stage*7-l1.dist*0.0025);
     l1.patternN++;
-    const r=Math.random();
+    const r=Math.random(),flow=L1_FLOW[l1.stage];
     if(l1.stage===2&&!l1.horseGiven&&l1.dist>l1.goal*0.55){
       const lane=Math.floor(Math.random()*3),ix=l1.dist+W+60;
       if(l1LaneFree(lane,ix-200,ix+200)&&!l1.obs.some(o=>o.lane===lane&&(o.t==='car'||o.t==='boss_car'))){
@@ -797,7 +839,7 @@ function uL1(){
         l1.horseGiven=true;
       }
     }
-    else if(r<0.76){
+    else if(r<flow.single){
       const pools=[
         [{t:'papers',w:52,h:44,p:0.32},{t:'printer',w:56,h:52,p:0.24},{t:'hr',w:44,h:60,p:0.22},{t:'blackpot',w:POT_W,h:POT_H,p:0.22}], // v4.13: 删 手机/咖啡渍/白板，剩余按原比例缩放
         [{t:'slider',w:44,h:54,p:0.23},{t:'notebook',w:40,h:40,p:0.14},{t:'boss',w:52,h:58,p:0.12},{t:'blackpot',w:POT_W,h:POT_H,p:0.21},{t:'whiteboard',w:58,h:44,p:0.17},{t:'papers',w:52,h:44,p:0.13}], // v4.14: 删 会议桌、板擦换白板，剩余按原比例缩放
@@ -812,10 +854,8 @@ function uL1(){
         if(!l1LaneBlocked(lane,sx,sel.t,sel.w)&&l1TryPlace(sel.t,sel.w,sel.h,lane,sx))break;
       }
     }
-    else if(r<0.84){ // 道具保持稀少，后两关会在相邻车道间移动
-      let type;
-      const rewards=L1_ITEMS[l1.stage];
-      type=rewards[Math.floor(Math.random()*rewards.length)];
+    else if(r<flow.single+flow.item){ // v4.20: 各关独立控制奖励频率，避免前后关体感一样
+      const type=pickL1Item(l1.stage);
       const ix=l1.dist+W+60;
       // v4.3: 道具只落在"前后 200px 完全净空"的车道上——不再出现"为了吃道具必须撞障碍"的坑位
       const cand=[0,1,2].sort(()=>Math.random()-0.5);
@@ -850,8 +890,8 @@ function uL1(){
       const sx1=l1.dist+W+80,sx2=sx1+34+l1.stage*12;
       if(!l1LaneBlocked(lanes[0],sx1,a.t,a.w))l1TryPlace(a.t,a.w,a.h,lanes[0],sx1);
       if(!l1LaneBlocked(lanes[1],sx2,b.t,b.w))l1TryPlace(b.t,b.w,b.h,lanes[1],sx2);
-      if(l1.patternN%2===0){
-        const rp=L1_ITEMS[l1.stage],rt=rp[Math.floor(Math.random()*rp.length)];
+      if(l1.patternN%flow.bonusEvery===0){
+        const rt=pickL1Item(l1.stage);
         const ix2=sx1+30;
         // v4.3: 安全车道也必须前后 200px 净空才放道具
         if(l1LaneFree(safe,ix2-200,ix2+200)&&!l1.obs.some(o=>o.lane===safe&&(o.t==='car'||o.t==='boss_car'))){
@@ -991,9 +1031,11 @@ function drL1(){
   // 每关始终使用自己的固定主题图，但随奔跑持续向左滚动。
   const bgImg=stg===0?IMG_L1P1:stg===1?IMG_L1P2:IMG_L1P3;
   if(bgImg&&bgImg.complete){
-    const bgShift=-((l1.cam*0.12)%W);
+    // v4.20: 背景只落在整数像素，并让相邻两张重叠 2px，消除滚动时的细缝。
+    const bgShift=-Math.floor((l1.cam*0.12)%W);
     ctx.drawImage(bgImg,bgShift,0,W,H);
-    ctx.drawImage(bgImg,bgShift+W,0,W,H);
+    ctx.drawImage(bgImg,bgShift+W-2,0,W,H);
+    if(bgShift> -2)ctx.drawImage(bgImg,bgShift-W+2,0,W,H);
   }else{
     ctx.fillStyle=L1_BG[stg];ctx.fillRect(0,0,W,H);
   }
@@ -1117,19 +1159,22 @@ function drL1(){
     ctx.fillText(f.txt,f.x,f.y);
   }
   ctx.globalAlpha=1;
-  // HUD
+  // HUD — v4.20: 信息分组，不再四行文字挤在背景上
+  ctx.fillStyle='rgba(255,255,255,0.82)';ctx.fillRect(90,10,210,82);
+  ctx.fillStyle='rgba(255,255,255,0.82)';ctx.fillRect(W-126,10,72,34);
   ctx.textAlign='left';
-  ctx.fillStyle='#000';ctx.font='bold 14px "PingFang SC","Microsoft YaHei",Arial,sans-serif';
-  ctx.fillText(L1_LV[l1.stage]+' '+L1_NAME[l1.stage],95,25);
-  ctx.fillText('距离:'+Math.floor(l1.dist/10)+'/'+Math.floor(l1.goal/10)+'m',95,48);
-  ctx.fillText('分数:'+l1.score,95,71);
-  ctx.fillText('💰'+save.coins,95,94);
-  ctx.fillStyle='#f44';ctx.font='bold 15px "PingFang SC","Microsoft YaHei",Arial,sans-serif';
-  ctx.fillText('❤'.repeat(l1.lives),W-90,25);
-  if(l1.burdenT>0){ // 背锅状态：小锅图标 + 剩余时间条
-    ds(ctx,S.blackpot,W-150,30,26,19,false);
-    ctx.fillStyle='#0002';ctx.fillRect(W-150,52,26,4);
-    ctx.fillStyle='#444';ctx.fillRect(W-150,52,26*(l1.burdenT/330),4);
+  ctx.fillStyle='#222';ctx.font='bold 14px "PingFang SC","Microsoft YaHei",Arial,sans-serif';
+  ctx.fillText(L1_LV[l1.stage]+' · '+L1_NAME[l1.stage],104,30);
+  ctx.fillStyle='#555';ctx.font='12px "PingFang SC","Microsoft YaHei",Arial,sans-serif';
+  ctx.fillText('距离  '+Math.floor(l1.dist/10)+' / '+Math.floor(l1.goal/10)+' m',104,52);
+  ctx.fillText('分数  '+l1.score,104,76);
+  ctx.fillStyle='#7a5a00';ctx.fillText('马币  '+save.coins,205,76);
+  ctx.fillStyle='#f44';ctx.font='bold 14px "PingFang SC","Microsoft YaHei",Arial,sans-serif';ctx.textAlign='center';
+  ctx.fillText('❤'.repeat(l1.lives),W-90,32);
+  if(l1.burdenT>0){
+    ds(ctx,S.blackpot,W-118,52,26,19,false);
+    ctx.fillStyle='#0002';ctx.fillRect(W-118,74,26,4);
+    ctx.fillStyle='#444';ctx.fillRect(W-118,74,26*(l1.burdenT/330),4);
   }
   // 道具效果只通过角色闪烁、速度和粒子表达，不显示文字说明
   if(!l1.win&&l1.spd>3.5){ctx.strokeStyle='#fff4';ctx.lineWidth=1;for(let i=0;i<4;i++){const s2=Math.random()*W;ctx.beginPath();ctx.moveTo(s2,Math.random()*H*0.6);ctx.lineTo(s2+15,Math.random()*H*0.6);ctx.stroke();}}
@@ -1185,49 +1230,47 @@ function drL1(){
 }
 function drL1Sel(){
   ctx.fillStyle='#f2ead8';ctx.fillRect(0,0,W,H);
-  ctx.fillStyle='#c9b98f22';
+  ctx.fillStyle='#c9b98f18';
   for(let i=0;i<40;i++)ctx.fillRect((i*137+50)%W,(i*97+30)%(H*0.5),(i%3)+1,(i%3)+1);
-  // back
+
   ctx.fillStyle='#3a3a52';ctx.fillRect(10,10,72,32);
   ctx.fillStyle='#fff';ctx.font='bold 13px "PingFang SC","Microsoft YaHei",Arial,sans-serif';ctx.textAlign='center';
   ctx.fillText('← 菜单',46,29);
-  // title
+
   ctx.textAlign='center';
   ctx.fillStyle='#222';ctx.font='bold 26px "PingFang SC","Microsoft YaHei",Arial,sans-serif';
-  ctx.fillText('🏢 办公室赛马',W/2,70);
-  ctx.fillStyle='#888';ctx.font='13px "PingFang SC","Microsoft YaHei",Arial,sans-serif';
-  ctx.fillText('三关制 · 测试版全部解锁',W/2,98);
-  // coins / best
-  ctx.textAlign='left';
-  ctx.fillStyle='#b4a';ctx.font='bold 14px "PingFang SC","Microsoft YaHei",Arial,sans-serif';
-  ctx.fillText('💰 '+save.coins,16,112);
-  ctx.textAlign='right';
-  ctx.fillStyle='#888';ctx.font='12px "PingFang SC","Microsoft YaHei",Arial,sans-serif';
-  ctx.fillText('最高分 '+ (save.hs.l1||0),W-16,112);
-  // stage cards
+  ctx.fillText('办公室赛马',W/2,68);
+  ctx.fillStyle='#777';ctx.font='12px "PingFang SC","Microsoft YaHei",Arial,sans-serif';
+  ctx.fillText('3 个场景 · 可自由选择',W/2,94);
+
+  ctx.fillStyle='rgba(255,255,255,0.62)';ctx.fillRect(50,104,380,24);
+  ctx.textAlign='left';ctx.fillStyle='#6d2f86';ctx.font='bold 12px "PingFang SC","Microsoft YaHei",Arial,sans-serif';
+  ctx.fillText('💰 '+save.coins,62,121);
+  ctx.textAlign='right';ctx.fillStyle='#777';ctx.font='12px "PingFang SC","Microsoft YaHei",Arial,sans-serif';
+  ctx.fillText('最高分 '+(save.hs.l1||0),418,121);
+
   const cy=140,cw=380,ch2=96,gap2=18,x0=(W-cw)/2;
   const cols=['#4d4','#48c','#f84'];
   for(let i=0;i<3;i++){
-    const un=true; // 测试版：全部解锁
+    const un=true;
     const y=cy+i*(ch2+gap2);
     ctx.fillStyle=un?cols[i]:'#9a9aa0';
     ctx.fillRect(x0,y,cw,ch2);
-    ctx.fillStyle='#00000020';ctx.fillRect(x0,y,cw,4);
-    ctx.textAlign='left';
-    ctx.fillStyle='#000';
-    ctx.font='bold 19px "PingFang SC","Microsoft YaHei",Arial,sans-serif';
-    ctx.fillText((un?'':'🔒 ')+L1_LV[i]+' · '+L1_NAME[i],x0+22,y+38);
-    ctx.font='12px "PingFang SC","Microsoft YaHei",Arial,sans-serif';
-    ctx.fillText(un?L1_DESC[i]:'通关上一关解锁',x0+22,y+66);
+    ctx.fillStyle='#00000018';ctx.fillRect(x0,y,cw,4);
+    ctx.textAlign='left';ctx.fillStyle='#111';
+    ctx.font='bold 18px "PingFang SC","Microsoft YaHei",Arial,sans-serif';
+    ctx.fillText(L1_LV[i]+'  '+L1_NAME[i],x0+22,y+36);
+    ctx.fillStyle='#333';ctx.font='12px "PingFang SC","Microsoft YaHei",Arial,sans-serif';
+    const desc=i===0?'基础障碍 · 奖励较多':i===1?'移动障碍 · 风险提升':'车辆路障 · 奖励更稀少';
+    ctx.fillText(desc,x0+22,y+65);
     if(save.l1c[i]){
-      ctx.textAlign='right';
-      ctx.font='bold 13px "PingFang SC","Microsoft YaHei",Arial,sans-serif';
-      ctx.fillText('✅ 已通关',x0+cw-20,y+38);
+      ctx.textAlign='right';ctx.fillStyle='#111';ctx.font='bold 12px "PingFang SC","Microsoft YaHei",Arial,sans-serif';
+      ctx.fillText('✓ 已通关',x0+cw-20,y+36);
     }
   }
-  ctx.fillStyle='#888';ctx.font='12px "PingFang SC","Microsoft YaHei",Arial,sans-serif';ctx.textAlign='center';
-  ctx.fillText('👆 点击卡片进入对应关卡（共 3 关）',W/2,cy+3*(ch2+gap2)+22);
-  if(l1.tipT>0){ctx.fillStyle='#f44';ctx.font='bold 15px "PingFang SC","Microsoft YaHei",Arial,sans-serif';ctx.textAlign='center';ctx.fillText(l1.tip,W/2,cy+3*(ch2+gap2)+40);}
+  ctx.fillStyle='#888';ctx.font='11px "PingFang SC","Microsoft YaHei",Arial,sans-serif';ctx.textAlign='center';
+  ctx.fillText('点击卡片进入对应场景',W/2,cy+3*(ch2+gap2)+22);
+  if(l1.tipT>0){ctx.fillStyle='#f44';ctx.font='bold 14px "PingFang SC","Microsoft YaHei",Arial,sans-serif';ctx.fillText(l1.tip,W/2,cy+3*(ch2+gap2)+42);}
 }
 function l1SelTap(mx,my){
   if(mx>10&&mx<82&&my>10&&my<42){gs='menu';startBGM(0);return;}
