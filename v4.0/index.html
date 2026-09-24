@@ -61,7 +61,7 @@ horse_coin:["tttttbbbttttt","tt1bbbbbbb1tt","t1bbb33ebbb1t","tbbb3333zbbbt","tbb
 horseshoe:["tttttbbbttttt","tt1bbbbbbb1tt","t1bbb33ebbb1t","tbbb3333zbbbt","tbb33fbb33bb1","bbb33bbb33bbb","bbb33bbb33bbb","bbb33bbb33bbb","tbbe3fbb33bb5","tb333fbb333bt","t1bbbbbbbbbbt","tt1bbbbbbbbtt","tttttbbb1tttt"],
 heart:["tt7tt7tt","t777777t","77777777","77777777","t777777t","t777777t","tt7777tt","ttt77ttt"],
 barrier:["tttt9llll9tttt","tttt9tttt9tttt","tttt9llll9tttt","tt9llllllll9tt","tt9l999999l9tt","tt9llllllll9tt","tt9l999999l9tt","tt9llllllll9tt","tttt9llll9tttt","tttt9llll9tttt","tt9llllllll9tt","tt9eeeeeeee9tt"],
-skateboard:["tttttttttttttttttttt","txxttttttttttttttxxt","tooxxttttttttttxxoot","t66ooxxxxxxxxxxoo66t","tttttoo9o9o9o9ottttt","ttttt7777777777ttttt","tttttkkttttttkkttttt","tttt666tttttt666tttt","ttt6bbb6tttt6bbb6ttt","ttt6b5b6tttt6b5b6ttt","ttt6bbb6tttt6bbb6ttt","tttt666tttttt666tttt"],
+skateboard:["ttttooooootttt","ttto444444ottt","bbbo444444obbb","b6bo444444ob6b","bbbo444444obbb","ttto444444ottt","ttto444444ottt","ttto444444ottt","ttto444444ottt","ttto444444ottt","ttto444444ottt","ttto444444ottt","ttto444444ottt","bbbo444444obbb","b6bo444444ob6b","bbbo444444obbb","ttto444444ottt","ttttooooootttt"],
 exit:["nnnnnnnnnnnnnnnn","n88888888888888n","n85555588888888n","n85888588888888n","n85888588888888n","n85888588888588n","n85888585555558n","n85888588888588n","n85888588888888n","n85888588888888n","n88888888888888n","nnnnnnnnnnnnnnnn"],
 sunglass:["tyyyyyyyyyyyyyyt","ty6k6666yy6k666t","ty666666yy66666t","tyyyyyyyyyyyyyyt"],
 envelope:["tttt","t77t","7bb7","t77t"],
@@ -627,7 +627,7 @@ const L1_BANNER=['','',''];
 const L1_GOAL=[10800,12600,14400];
 const L1_LV=['第1关','第2关','第3关'];
 const L1_DESC=['办公室','会议室','停车场'];
-const L1_ITEMS=[['badge','headset','milktea','tel','burger'],['coffee','pancake','fish','mail'],['clockout','popcorn','sunglass','skateboard','exit']]; // v4.14: 咖啡挪到第 2 关，汉堡换成大饼; v4.15: 第 3 关新增墨镜（影身无敌）/滑板（加速）; v4.17: 第 3 关新增安全出口（无敌 240 帧）
+const L1_ITEMS=[['badge','headset','milktea','tel','burger'],['coffee','pancake','fish','mail'],['exit','popcorn','sunglass','skateboard']]; // v4.19: 第 3 关下班卡移除，安全出口替代; v4.17: 安全出口（无敌 240 帧）; v4.15: 墨镜/滑板
 // 运势测试语录：根据得分和剩余生命随机调侃
 const L1_LUCK={
   god:['你今天踩了狗屎运才能通关吧','运气也是实力，你这实力藏不住了','今日宜下班，宜摸鱼，宜通关','这运气，买彩票去吧','老板看了都羡慕你的走位'],
@@ -1089,11 +1089,12 @@ function drL1(){
     ctx.strokeStyle='#7a4a20';ctx.lineWidth=3;
     ctx.beginPath();ctx.moveTo(ponyX+8,ponyY+24);ctx.lineTo(ponyX+42,ponyY+42);ctx.moveTo(ponyX+42,ponyY+24);ctx.lineTo(ponyX+8,ponyY+42);ctx.stroke();
   }
-  if(l1.shoeT>0){ // v4.18: 红靴穿在前后蹄上，靴筒包住小腿
-    const bw3=Math.round(pw2*0.30),bh3=Math.round(bw3*15/14);
-    const by=ponyY+ph2*0.78;
-    ds(ctx,S.shoe,baseX+pw2*0.34,by,bw3,bh3,false);
-    ds(ctx,S.shoe,baseX+pw2*0.54,by,bw3,bh3,false);
+  if(l1.shoeT>0){ // v4.19: 红靴按参考图外八字穿在脚上——靴子加大，左靴翻面朝左、右靴朝右，向外倾探出身体两侧
+    const bw3=Math.round(pw2*0.34),bh3=Math.round(bw3*15/14);
+    ctx.save();ctx.translate(baseX+pw2*0.14,ponyY+ph2*0.86);ctx.rotate(0.42);
+    ds(ctx,S.shoe,-bw3/2,-bh3/2,bw3,bh3,true);ctx.restore();
+    ctx.save();ctx.translate(baseX+pw2*0.86,ponyY+ph2*0.86);ctx.rotate(-0.42);
+    ds(ctx,S.shoe,-bw3/2,-bh3/2,bw3,bh3,false);ctx.restore();
   }
   if(l1.callT>0){ // v4.12: 接电话中——头顶座机晃动 + 通话波纹
     ds(ctx,S.tel,ponyX+pw2/2-13,ponyY-24+Math.sin(af*0.25)*2,26,18,false);
@@ -1468,6 +1469,17 @@ function genL2(){
     if(l2.obs.some(o=>o.type==='fallpot'&&o.x>=sa&&o.x<sb))continue;
     const x=freeSlot(sa,sb,'fallpot');
     if(x!==null){l2.obs.push(mkObs('fallpot',x));potCount++;}
+  }
+  // v4.19: 保底 3 口锅——密集段 freeSlot 可能拿不到空档导致总数不足，顺序扫描兜底
+  if(potCount<3){
+    let scanX=playA;
+    while(potCount<3&&scanX<playB-60){
+      let ok2=true;
+      if(laserZ.find(z=>scanX+130>z.x-120&&scanX<z.x+z.w+120))ok2=false;
+      else if(l2.obs.some(o=>Math.abs(o.x-scanX)<58))ok2=false;
+      if(ok2){l2.obs.push(mkObs('fallpot',scanX));potCount++;scanX+=80;}
+      else scanX+=20;
+    }
   }
   // v4.11: 第 3 关是合集——马桶和电梯前后两半都要有，缺谁就在那一半补谁
   if(st===2){
