@@ -753,33 +753,36 @@ const L1_LV=['第1关','第2关','第3关'];
 const L1_DESC=['办公室','会议室','停车场'];
 // v4.20: L1 道具按关卡重新配比。重复项代表权重；负面/强力道具不再和普通奖励等概率。
 // v4.21: L1“可捡道具”只保留明确收益；电话/邮件不再伪装成奖励。
+// v4.21d: L1 奖励重新配权。强力道具更稀有，普通奖励更常见，但顺序完全随机。
 const L1_ITEMS=[
-  ['badge','badge','milktea','milktea','headset','burger','burger'],
-  ['coffee','coffee','pancake','pancake','fish','fish'],
-  ['skateboard','skateboard','popcorn','popcorn','sunglass','exit']
+  [{t:'badge',w:1.0},{t:'milktea',w:1.15},{t:'headset',w:0.70},{t:'burger',w:1.15}],
+  [{t:'coffee',w:1.05},{t:'pancake',w:1.20},{t:'fish',w:0.75}],
+  [{t:'skateboard',w:1.20},{t:'popcorn',w:1.10},{t:'sunglass',w:0.58},{t:'exit',w:0.48}]
 ];
 const L1_FLOW=[
-  {single:0.72,item:0.14,bonusChance:0.42}, // 第1关：奖励较多，但是否出现完全随机
-  {single:0.74,item:0.12,bonusChance:0.34}, // 第2关：奖励收紧
-  {single:0.76,item:0.10,bonusChance:0.30}  // 第3关：奖励最少
+  {single:0.74,item:0.11,bonusChance:0.24},
+  {single:0.75,item:0.10,bonusChance:0.20},
+  {single:0.77,item:0.09,bonusChance:0.18}
 ];
+const L1_POSITIVE=new Set(['badge','milktea','headset','burger','coffee','pancake','fish','skateboard','popcorn','sunglass','exit','heart','horseshoe']);
 function l1ItemCanSpawn(type,x){
-  // 同款约一屏内不重复；更大范围内最多同时存在 2 个。
-  const same=l1.coll.filter(c=>!c.collected&&c.type===type);
-  if(same.some(c=>Math.abs(c.x0-x)<520))return false;
-  if(same.filter(c=>Math.abs(c.x0-x)<1200).length>=2)return false;
+  const active=l1.coll.filter(c=>!c.collected);
+  // 正向道具：一个视野范围内只允许 1 个，不管类型。
+  if(L1_POSITIVE.has(type)&&active.some(c=>L1_POSITIVE.has(c.type)&&Math.abs(c.x0-x)<W+160))return false;
+  // 同一种道具即使跨更大区域也不允许扎堆。
+  if(active.filter(c=>c.type===type&&Math.abs(c.x0-x)<W+180).length>=1)return false;
   return true;
 }
 function pickL1Item(stage,x){
-  const pool=L1_ITEMS[stage];
-  const recent=l1.itemHistory||[];
-  let choices=pool.filter(t=>!recent.includes(t)&&l1ItemCanSpawn(t,x));
-  if(!choices.length)choices=pool.filter(t=>l1ItemCanSpawn(t,x));
+  const pool=L1_ITEMS[stage],recent=l1.itemHistory||[];
+  let choices=pool.filter(it=>!recent.includes(it.t)&&l1ItemCanSpawn(it.t,x));
+  if(!choices.length)choices=pool.filter(it=>l1ItemCanSpawn(it.t,x));
   if(!choices.length)return '';
-  const type=choices[Math.floor(Math.random()*choices.length)];
-  l1.lastItemType=type;
-  l1.itemHistory=[type,...recent.filter(t=>t!==type)].slice(0,2);
-  return type;
+  let total=choices.reduce((a,it)=>a+it.w,0),r=Math.random()*total,pick=choices[choices.length-1].t;
+  for(const it of choices){r-=it.w;if(r<=0){pick=it.t;break;}}
+  l1.lastItemType=pick;
+  l1.itemHistory=[pick,...recent.filter(t=>t!==pick)].slice(0,2);
+  return pick;
 }
 // 运势测试语录：根据得分和剩余生命随机调侃
 const L1_LUCK={
@@ -808,7 +811,7 @@ function l1MkObs(t,w,h,lane,sx){
   else if(t==='hr'){ob.amp=16;ob.ph=Math.random()*6.28;}
   else if(t==='phone'){ob.amp=18+Math.random()*10;ob.ph=Math.random()*6.28;}
   else if(t==='whiteboard'){ob.amp=10+Math.random()*8;ob.ph=Math.random()*6.28;}
-  else if(t==='blackpot'){ob.fall=true;ob.vy=0;ob.landed=false;ob.landT=0;ob.y=l1.ly[lane]-POT_DROP;}
+  else if(t==='blackpot'){ob.fall=true;ob.vy=0;ob.landed=false;ob.y=Math.max(42,l1.ly[lane]-POT_DROP);ob.dropArmed=false;}
   else if(t==='boss'){ob.dir=Math.random()<0.5?1:-1;ob.spd=0.8+l1.stage*0.2;ob.origX=sx;}
   l1.obs.push(ob);
 }
@@ -834,6 +837,9 @@ function l1LaneFree(lane,a,b){
   return true;
 }
 function l1TryPlace(t,w,h,lane,sx){
+  // v4.21d: 同一视野范围内，同一种障碍/事件最多 3 个。
+  const sameNear=l1.obs.filter(o=>!o.dead&&o.t===t&&Math.abs((o.x0+(o.sw||0))-sx)<W+100).length;
+  if(sameNear>=3)return false;
   // v4.3: 新障碍不能压在已放好的道具上——否则道具就变成"必须撞一下才拿得到"
   for(const c of l1.coll){
     if(c.fromLane!==lane&&c.toLane!==lane)continue;
@@ -949,7 +955,7 @@ function uL1(){
     const r=Math.random(),flow=L1_FLOW[l1.stage];
     if(l1.stage===2&&!l1.horseGiven&&l1.dist>l1.goal*0.55){
       const lane=Math.floor(Math.random()*3),ix=l1.dist+W+60;
-      if(l1LaneFree(lane,ix-200,ix+200)&&!l1.obs.some(o=>o.lane===lane&&(o.t==='car'||o.t==='boss_car'))){
+      if(l1ItemCanSpawn('horseshoe',ix)&&l1LaneFree(lane,ix-200,ix+200)&&!l1.obs.some(o=>o.lane===lane&&(o.t==='car'||o.t==='boss_car'))){
         l1.coll.push({x0:ix,y:l1.ly[lane]-30,type:'horseshoe',w:38,h:38,collected:false,fromLane:lane,toLane:lane,phase:0});
         l1.horseGiven=true;
       }
@@ -1029,11 +1035,16 @@ function uL1(){
     else if(o.t==='phone')o.sw=Math.sin(l1.dist*0.026+o.ph)*o.amp;
     else if(o.t==='whiteboard')o.sw=Math.sin(l1.dist*0.018+o.ph)*o.amp;
     else if(o.t==='blackpot'){
-      if(!o.landed){ // v4.1: 从天上砸下来
-        o.vy+=0.55;o.y+=o.vy;
-        const gy=l1.ly[o.lane];
-        if(o.y>=gy){o.y=gy;o.vy=0;o.landed=true;l1.potShake=7;spP(o.x0+o.sw-l1.dist+o.w/2,gy+o.h,8,'#666',l1.part,7,3,24);}
-      } // v4.21b: 落地后一直留在地上，直到小马撞上背锅，或随赛道自然滚出画面。
+      if(!o.landed){
+        // v4.21d: 锅先进入玩家视野，再开始下落，保证能看见完整掉落过程。
+        const potX=o.x0+o.sw-l1.dist;
+        if(potX<W-18)o.dropArmed=true;
+        if(o.dropArmed){
+          o.vy+=0.46;o.y+=o.vy;
+          const gy=l1.ly[o.lane];
+          if(o.y>=gy){o.y=gy;o.vy=0;o.landed=true;l1.potShake=7;spP(o.x0+o.sw-l1.dist+o.w/2,gy+o.h,8,'#666',l1.part,7,3,24);}
+        }
+      } // 落地后一直留在地上，直到小马撞上背锅，或随赛道自然滚出画面。
     }
     else if(o.t==='car'||o.t==='boss_car')o.sw-=o.vspd;
     else if(o.t==='boss'){o.x0+=o.dir*o.spd;if(o.x0<o.origX-80||o.x0>o.origX+80)o.dir*=-1;}
@@ -1055,7 +1066,7 @@ function uL1(){
       if(o.t==='tel'){ // v4.21: 电话是“随机事件/干扰”，不是奖励；不扣命，只让人分心减速。
         o.dead=true;l1.callT=Math.max(l1.callT,240);sh();
         spP(px+pw/2,py+ph/2,7,'#f66',l1.part);
-        l1.floats.push({x:px+pw/2,y:py-26,txt:'老板来电，先接一下…',t:72});
+        l1.floats.push({x:px+pw/2,y:py-26,txt:'来电话啦',t:72});
         continue;
       }
       if(o.t==='boss_car'&&(l1.boostT>0||l1.bigT>0||l1.inv>0)){
@@ -1116,7 +1127,7 @@ function uL1(){
       else if(c.type==='exit'){l1.score+=10;sw();spP(cx2+c.w/2,c.y,7,'#4d8',l1.part);l1.inv=Math.max(l1.inv,240);l1.floats.push({x:cx2+c.w/2,y:c.y-6,txt:'🚪 安全出口！无敌一会儿',t:70});} // v4.17: 安全出口=无敌 240 帧
       else if(c.type==='tel'){ // v4.12: 座机电话——老板来电，被迫接电话，减速几秒
         l1.callT=270;sh();spP(cx2+c.w/2,c.y,7,'#f44',l1.part);
-        l1.floats.push({x:cx2,y:c.y-8,txt:'📞 老板来电！接一下…',t:70});
+        l1.floats.push({x:cx2,y:c.y-8,txt:'来电话啦',t:70});
       }
       else if(c.type==='mail'){ // v4.12: 邮件——和 L2 一样拆开随机开出一件道具（好坏随机，洗牌袋不连续重复）
         if(!l1.mailBag||!l1.mailBag.length)l1.mailBag=shuf(['score','score','life','inv','boost','burden','deduct']);
