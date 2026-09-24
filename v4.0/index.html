@@ -866,9 +866,10 @@ function l1LaneFree(lane,a,b){
   return true;
 }
 function l1TryPlace(t,w,h,lane,sx){
-  // v4.21d: 同一视野范围内，同一种障碍/事件最多 3 个。
+  // v4.21f: 第2关同一视野内同类只允许 1 个；其他关仍最多 3 个。
   const sameNear=l1.obs.filter(o=>!o.dead&&o.t===t&&Math.abs((o.x0+(o.sw||0))-sx)<W+100).length;
-  if(sameNear>=3)return false;
+  const sameLimit=l1.stage===1?1:3;
+  if(sameNear>=sameLimit)return false;
   // v4.3: 新障碍不能压在已放好的道具上——否则道具就变成"必须撞一下才拿得到"
   for(const c of l1.coll){
     if(c.fromLane!==lane&&c.toLane!==lane)continue;
@@ -885,7 +886,11 @@ function l1TryPlace(t,w,h,lane,sx){
 }
 // v4.3: 开局预热用的温和障碍（三关一致，保证开局就有东西要躲，但不会一上来就劝退）
 // v4.16: 开局预热也按关取池，第 3 关不再出现文件堆（文件夹）
-const L1_OPEN=[[{t:'papers',w:52,h:44},{t:'laptop',w:58,h:44},{t:'mouse',w:40,h:32}],[{t:'alarm',w:46,h:44}],[{t:'cone',w:34,h:44},{t:'car',w:96,h:54}]];
+const L1_OPEN=[
+  [{t:'papers',w:52,h:44},{t:'laptop',w:58,h:44},{t:'mouse',w:40,h:32}],
+  [{t:'alarm',w:46,h:44},{t:'notebook',w:40,h:40},{t:'mail',w:42,h:34}],
+  [{t:'cone',w:34,h:44},{t:'car',w:96,h:54}]
+];
 function rL1(){
   let stBoost=false,stSlow=false,stInv=false;
   if(save.items.coffee>0){save.items.coffee--;stBoost=true;}
@@ -902,8 +907,9 @@ function l1Start(st){
   // v4.3: 开局预热——第一组障碍直接摆在眼前（约 300px 后就要做选择），不再有空场
   {
     const OPEN=L1_OPEN[l1.stage]; // v4.16: 按关取预热池
-    const o1=OPEN[Math.floor(Math.random()*OPEN.length)];
-    const o2=OPEN[Math.floor(Math.random()*OPEN.length)];
+    const openMix=shuf(OPEN);
+    const o1=openMix[0];
+    const o2=openMix[Math.min(1,openMix.length-1)];
     const ln1=Math.floor(Math.random()*3);
     const ln2=(ln1+1+Math.floor(Math.random()*2))%3;
     l1TryPlace(o1.t,o1.w,o1.h,ln1,430);
@@ -992,7 +998,7 @@ function uL1(){
     else if(r<flow.single){
       const pools=[
         [{t:'papers',w:52,h:44,p:0.12},{t:'laptop',w:58,h:44,p:0.09},{t:'mouse',w:40,h:32,p:0.07},{t:'printer',w:56,h:52,p:0.23},{t:'hr',w:44,h:60,p:0.17},{t:'blackpot',w:POT_W,h:POT_H,p:0.18},{t:'tel',w:54,h:38,p:0.14}], // v4.21: 办公室以静态障碍为主，座机作为负面事件
-        [{t:'slider',w:44,h:54,p:0.23},{t:'notebook',w:40,h:40,p:0.14},{t:'boss',w:52,h:58,p:0.12},{t:'blackpot',w:POT_W,h:POT_H,p:0.21},{t:'whiteboard',w:58,h:44,p:0.17},{t:'alarm',w:46,h:44,p:0.13}], // v4.14: 删 会议桌、板擦换白板，剩余按原比例缩放
+        [{t:'slider',w:44,h:54,p:0.18},{t:'notebook',w:40,h:40,p:0.12},{t:'boss',w:52,h:58,p:0.10},{t:'blackpot',w:POT_W,h:POT_H,p:0.17},{t:'whiteboard',w:58,h:44,p:0.13},{t:'alarm',w:46,h:44,p:0.12},{t:'mail',w:42,h:34,p:0.18}], // v4.14: 删 会议桌、板擦换白板，剩余按原比例缩放
         [{t:'car',w:96,h:54,p:0.30},{t:'cone',w:34,h:44,p:0.27},{t:'barrier',w:56,h:46,p:0.14},{t:'shoe',w:42,h:38,p:0.14},{t:'blackpot',w:POT_W,h:POT_H,p:0.15}] // v4.15: 老板的车换黄色路障、白板换红靴子
       ];
       const pool=pools[l1.stage];
@@ -1028,12 +1034,13 @@ function uL1(){
     else{ // 两道封锁、一道放行；安全车道持续变化，始终保证可通过
       const pools2=[
         [{t:'papers',w:52,h:44},{t:'laptop',w:58,h:44},{t:'mouse',w:40,h:32}], // v4.21e: 文件夹/电脑/鼠标同效果，随机混排
-        [{t:'blackpot',w:POT_W,h:POT_H},{t:'slider',w:44,h:54},{t:'whiteboard',w:58,h:44}], // v4.14: 板擦换白板
+        [{t:'blackpot',w:POT_W,h:POT_H},{t:'slider',w:44,h:54},{t:'whiteboard',w:58,h:44},{t:'mail',w:42,h:34}], // v4.14: 板擦换白板
         [{t:'cone',w:34,h:44},{t:'car',w:96,h:54},{t:'shoe',w:42,h:38}] // v4.15: 白板换红靴子
       ];
       const pool2=pools2[l1.stage];
-      const a=pool2[Math.floor(Math.random()*pool2.length)];
-      const b=pool2[Math.floor(Math.random()*pool2.length)];
+      const pairMix=shuf(pool2);
+      const a=pairMix[0];
+      const b=pairMix[Math.min(1,pairMix.length-1)];
       let safe=Math.floor(Math.random()*3);
       if(safe===l1.lastSafe)safe=(safe+1+(Math.random()<0.5?0:1))%3;
       l1.lastSafe=safe;
@@ -1092,10 +1099,16 @@ function uL1(){
         l1.floats.push({x:px+pw/2,y:py-26,txt:'这锅你背了',t:70});
         continue;
       }
-      if(o.t==='tel'){ // v4.21: 电话是“随机事件/干扰”，不是奖励；不扣命，只让人分心减速。
+      if(o.t==='tel'){ // 电话：负面事件，不扣命
         o.dead=true;l1.callT=Math.max(l1.callT,240);sh();
         spP(px+pw/2,py+ph/2,7,'#f66',l1.part);
         l1.floats.push({x:px+pw/2,y:py-26,txt:'来电话啦',t:72});
+        continue;
+      }
+      if(o.t==='mail'){ // v4.21f: 第二关邮件作为负面事件
+        o.dead=true;l1.slowT=Math.max(l1.slowT,210);l1.score=Math.max(0,l1.score-10);sh();
+        spP(px+pw/2,py+ph/2,7,'#6af',l1.part);
+        l1.floats.push({x:px+pw/2,y:py-26,txt:'新邮件！先处理一下',t:72});
         continue;
       }
       if(o.t==='boss_car'&&(l1.boostT>0||l1.bigT>0||l1.inv>0)){
@@ -1230,6 +1243,7 @@ function drL1(){
     else if(o.t==='mouse')ds(ctx,S.mouse,ox,o.y,o.w,o.h,false);
     else if(o.t==='tel')ds(ctx,S.tel,ox,o.y,o.w,o.h,false);
     else if(o.t==='alarm')ds(ctx,S.alarm,ox,o.y,o.w,o.h,false);
+    else if(o.t==='mail')ds(ctx,S.mail,ox,o.y,o.w,o.h,false);
     else if(o.t==='printer')ds(ctx,S.printer,ox,o.y,o.w,o.h,false);
     else if(o.t==='hr')ds(ctx,S.hr,ox,o.y,o.w,o.h,false);
     else if(o.t==='desk')ds(ctx,S.desk,ox,o.y,o.w,o.h,false);
