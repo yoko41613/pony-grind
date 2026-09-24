@@ -797,7 +797,7 @@ const L1_ITEMS=[
 ];
 const L1_FLOW=[
   {single:0.74,item:0.11,bonusChance:0.24},
-  {single:0.75,item:0.10,bonusChance:0.20},
+  {single:0.75,item:0.10,bonusChance:0.00}, // 第2关正向道具改为距离节奏制，避免忽多忽少
   {single:0.77,item:0.09,bonusChance:0.18}
 ];
 const L1_POSITIVE=new Set(['badge','milktea','headset','burger','coffee','pancake','fish','skateboard','popcorn','sunglass','exit','heart','horseshoe']);
@@ -904,7 +904,7 @@ function rL1(){
   if(save.items.headset>0){save.items.headset--;stSlow=true;}
   if(save.items.offcard>0){save.items.offcard--;stInv=true;}
   sv(save);
-  l1={py:H*0.66,pl:1,pvy:0,jump:false,gnd:true,inv:0,startInv:stInv?180:0,score:0,dist:0,cam:0,bs:2,spd:2,lives:3,obs:[],coll:[],part:[],gy:H*0.88,ly:[H*0.52,H*0.66,H*0.80],st:0,si:46,go:false,goSaved:false,boostT:0,startBoost:stBoost?180:0,bigT:0,slowT:0,startSlow:stSlow?180:0,jumpBoostT:0,dizzyT:0,stumbleT:0,chairRide:null,chairRideT:0,rideX:0,coinT:0,stage:0,goal:L1_GOAL[0],win:false,winT:0,winSaved:false,banner:'',bannerT:0,sel:true,cont:false,tip:'',tipT:0,heartGiven:false,horseGiven:false,patternN:0,lastSafe:1,luckLine:'',burdenT:0,floats:[],lastItemType:'',itemHistory:[],potShake:0};
+  l1={py:H*0.66,pl:1,pvy:0,jump:false,gnd:true,inv:0,startInv:stInv?180:0,score:0,dist:0,cam:0,bs:2,spd:2,lives:3,obs:[],coll:[],part:[],gy:H*0.88,ly:[H*0.52,H*0.66,H*0.80],st:0,si:46,go:false,goSaved:false,boostT:0,startBoost:stBoost?180:0,bigT:0,slowT:0,startSlow:stSlow?180:0,jumpBoostT:0,dizzyT:0,stumbleT:0,chairRide:null,chairRideT:0,rideX:0,coinT:0,stage:0,goal:L1_GOAL[0],win:false,winT:0,winSaved:false,banner:'',bannerT:0,sel:true,cont:false,tip:'',tipT:0,heartGiven:false,horseGiven:false,patternN:0,lastSafe:1,luckLine:'',burdenT:0,floats:[],lastItemType:'',itemHistory:[],potShake:0,nextRewardAt:0};
 }
 function l1Start(st){
   const continuing=l1.cont;
@@ -925,6 +925,8 @@ function l1Start(st){
   l1.banner='';l1.bannerT=0;
   l1.bigT=0;l1.boostT=0;l1.inv=0;l1.slowT=0;l1.jumpBoostT=0;l1.dizzyT=0;l1.stumbleT=0;l1.chairRide=null;l1.chairRideT=0;l1.rideX=0;l1.burdenT=0;l1.floats=[];l1.callT=0;l1.mailBag=[];l1.shoeT=0;l1.ghostT=0; // v4.15: 红靴减速 / 墨镜影身
   l1.patternN=0;l1.lastSafe=1;l1.heartGiven=false;l1.lastItemType='';l1.itemHistory=[];l1.potShake=0;
+  // v4.21h: 第2关奖励采用随机距离窗。首个约 560~720px，之后约 760~980px 一个。
+  l1.nextRewardAt=st===1?560+Math.floor(Math.random()*161):0;
   if(!continuing){l1.score=0;l1.lives=3;l1.horseGiven=false;l1.boostT=l1.startBoost;l1.slowT=l1.startSlow;l1.inv=l1.startInv;}
   l1.luckLine='';
   l1.cont=false;
@@ -1002,7 +1004,7 @@ function uL1(){
         l1.horseGiven=true;
       }
     }
-    else if(r<flow.single){
+    else if(!(l1.stage===1&&l1.dist>=l1.nextRewardAt)&&r<flow.single){
       const pools=[
         [{t:'papers',w:52,h:44,p:0.12},{t:'laptop',w:58,h:44,p:0.09},{t:'mouse',w:40,h:32,p:0.07},{t:'printer',w:56,h:52,p:0.23},{t:'hr',w:44,h:60,p:0.17},{t:'blackpot',w:POT_W,h:POT_H,p:0.18},{t:'tel',w:54,h:38,p:0.14}], // v4.21: 办公室以静态障碍为主，座机作为负面事件
         [{t:'slider',w:44,h:54,p:0.18},{t:'notebook',w:40,h:40,p:0.12},{t:'boss',w:52,h:58,p:0.10},{t:'blackpot',w:POT_W,h:POT_H,p:0.17},{t:'whiteboard',w:58,h:44,p:0.13},{t:'alarm',w:46,h:44,p:0.12},{t:'mail',w:42,h:34,p:0.18}], // v4.14: 删 会议桌、板擦换白板，剩余按原比例缩放
@@ -1017,8 +1019,8 @@ function uL1(){
         if(!l1LaneBlocked(lane,sx,sel.t,sel.w)&&l1TryPlace(sel.t,sel.w,sel.h,lane,sx))break;
       }
     }
-    else if(r<flow.single+flow.item){
-      const ix=l1.dist+W+50+Math.floor(Math.random()*130);
+    else if(l1.stage===1?l1.dist>=l1.nextRewardAt:r<flow.single+flow.item){
+      const ix=l1.dist+W+60+Math.floor(Math.random()*100);
       const type=pickL1Item(l1.stage,ix);
       if(!type)return;
       // v4.3: 道具只落在"前后 200px 完全净空"的车道上——不再出现"为了吃道具必须撞障碍"的坑位
@@ -1037,6 +1039,7 @@ function uL1(){
         if(l1LaneFree(cand2,ix-200,ix+200))toLane=cand2;
       }
       l1.coll.push({x0:ix,y:l1.ly[ilane]-30,type,w:36,h:36,collected:false,fromLane:ilane,toLane,phase:Math.random()*6.28});
+      if(l1.stage===1)l1.nextRewardAt=l1.dist+760+Math.floor(Math.random()*221);
     }
     else{ // 两道封锁、一道放行；安全车道持续变化，始终保证可通过
       const pools2=[
@@ -1055,7 +1058,7 @@ function uL1(){
       const sx1=l1.dist+W+80,sx2=sx1+34+l1.stage*12;
       if(!l1LaneBlocked(lanes[0],sx1,a.t,a.w))l1TryPlace(a.t,a.w,a.h,lanes[0],sx1);
       if(!l1LaneBlocked(lanes[1],sx2,b.t,b.w))l1TryPlace(b.t,b.w,b.h,lanes[1],sx2);
-      if(Math.random()<flow.bonusChance){
+      if(l1.stage!==1&&Math.random()<flow.bonusChance){
         const ix2=sx1+35+Math.floor(Math.random()*120);
         const rt=pickL1Item(l1.stage,ix2);
         if(rt&&l1LaneFree(safe,ix2-200,ix2+200)&&!l1.obs.some(o=>o.lane===safe&&(o.t==='car'||o.t==='boss_car'))){
@@ -1121,6 +1124,7 @@ function uL1(){
         while(!l1ItemCanSpawn(item,spawnX)&&spawnX<l1.dist+W*3)spawnX+=W+180;
         const lane=l1.pl;
         l1.coll.push({x0:spawnX,y:l1.ly[lane]-30,type:item,w:36,h:36,collected:false,fromLane:lane,toLane:lane,phase:Math.random()*6.28,fromMail:true});
+        if(l1.stage===1)l1.nextRewardAt=Math.max(l1.nextRewardAt,l1.dist+720+Math.floor(Math.random()*181));
         const itemName=item==='coffee'?'咖啡':item==='pancake'?'大饼':'带鱼';
         l1.floats.push({x:px+pw/2,y:py-26,txt:'邮件开出：'+itemName,t:78});
         continue;
