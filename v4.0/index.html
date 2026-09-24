@@ -965,8 +965,8 @@ function l1Start(st){
   l1.banner='';l1.bannerT=0;
   l1.bigT=0;l1.boostT=0;l1.inv=0;l1.slowT=0;l1.jumpBoostT=0;l1.dizzyT=0;l1.stumbleT=0;l1.chairRide=null;l1.chairRideT=0;l1.rideX=0;l1.burdenT=0;l1.floats=[];l1.callT=0;l1.mailBag=[];l1.shoeT=0;l1.ghostT=0; // v4.15: 红靴减速 / 墨镜影身
   l1.patternN=0;l1.lastSafe=1;l1.heartGiven=false;l1.lastItemType='';l1.itemHistory=[];l1.potShake=0;
-  // v4.21i: 第2关奖励节奏加快。首个约 420~560px，之后约 560~760px 一个。
-  l1.nextRewardAt=st===1?380+Math.floor(Math.random()*121):0;
+  // v4.21l: 第二关奖励密度向第一关靠拢：更早、更持续，但同屏仍只允许 1 个正向奖励。
+  l1.nextRewardAt=st===1?300+Math.floor(Math.random()*101):0;
   l1.lastRewardX=0;l1.rewardDueSince=0;
   if(!continuing){l1.score=0;l1.lives=3;l1.horseGiven=false;l1.boostT=l1.startBoost;l1.slowT=l1.startSlow;l1.inv=l1.startInv;}
   l1.luckLine='';
@@ -1035,11 +1035,11 @@ function uL1(){
   // v4.21k: 第二关空场看门狗——前方没有奖励且超期时，直接补一个，最大空档受控。
   if(!raceOver&&l1.stage===1){
     const upcoming=l1.coll.some(c=>!c.collected&&L1_POSITIVE.has(c.type)&&c.x0>=l1.dist-20&&c.x0<=l1.dist+W+220);
-    if(!upcoming&&l1.dist>=l1.nextRewardAt+150){
+    if(!upcoming&&l1.dist>=l1.nextRewardAt+90){
       if(!l1.rewardDueSince)l1.rewardDueSince=l1.dist;
-      const force=l1.dist-l1.rewardDueSince>170;
+      const force=l1.dist-l1.rewardDueSince>120;
       if(l1PlaceStage2Reward(force)){
-        l1.nextRewardAt=l1.dist+500+Math.floor(Math.random()*151);
+        l1.nextRewardAt=l1.dist+390+Math.floor(Math.random()*131);
         l1.rewardDueSince=0;
       }
     }else if(upcoming)l1.rewardDueSince=0;
@@ -1077,13 +1077,13 @@ function uL1(){
     else if(l1.stage===1?l1.dist>=l1.nextRewardAt:r<flow.single+flow.item){
       if(l1.stage===1){
         if(!l1.rewardDueSince)l1.rewardDueSince=l1.dist;
-        const force=l1.dist-l1.rewardDueSince>170;
+        const force=l1.dist-l1.rewardDueSince>120;
         if(l1PlaceStage2Reward(force)){
-          l1.nextRewardAt=l1.dist+500+Math.floor(Math.random()*151);
+          l1.nextRewardAt=l1.dist+390+Math.floor(Math.random()*131);
           l1.rewardDueSince=0;
         }else{
           // 放不下时很快重试，而不是重新等一整个奖励周期。
-          l1.nextRewardAt=l1.dist+70;
+          l1.nextRewardAt=l1.dist+45;
         }
       }else{
         const ix=l1.dist+W+60+Math.floor(Math.random()*100);
@@ -1206,7 +1206,7 @@ function uL1(){
         while(!l1ItemCanSpawn(item,spawnX)&&spawnX<l1.dist+W*3)spawnX+=W+180;
         const lane=l1.pl;
         l1.coll.push({x0:spawnX,y:l1.ly[lane]-30,type:item,w:36,h:36,collected:false,fromLane:lane,toLane:lane,phase:Math.random()*6.28,fromMail:true});
-        if(l1.stage===1){l1.nextRewardAt=Math.max(l1.nextRewardAt,l1.dist+420+Math.floor(Math.random()*121));l1.rewardDueSince=0;}
+        if(l1.stage===1){l1.nextRewardAt=Math.max(l1.nextRewardAt,l1.dist+340+Math.floor(Math.random()*101));l1.rewardDueSince=0;}
         const itemName=item==='coffee'?'咖啡':item==='pancake'?'大饼':'带鱼';
         l1.floats.push({x:px+pw/2,y:py-26,txt:'邮件开出：'+itemName,t:78});
         continue;
@@ -1655,6 +1655,7 @@ function genL2(){
         const x=a+Math.random()*(b-a);
         if(laserZ.find(z=>x+130>z.x-clr&&x<z.x+z.w+clr))continue;
         if(l2.obs.some(o=>Math.abs(o.x-x)<near))continue;
+        if(l2.colls&&l2.colls.some(c=>Math.abs(c.x-x)<150))continue;
         const sameGap=t==='toilet'?720:t==='elevator'?820:t==='fallpot'?520:t==='hr'?680:420;
         if(l2.obs.some(o=>o.type===t&&Math.abs(o.x-x)<sameGap))continue;
         return x;
@@ -1682,7 +1683,11 @@ function genL2(){
     }
     plats.push(pl);
     lastY=y;
-    px+=w+(215+st*12)+Math.random()*(115+st*12);
+    // v4.21l: 前半段平台稍疏、后半段稍密，避免“前面全是阶梯、后面变空”。
+    const prog=px/lw;
+    const gapBase=prog<0.50?(255+st*10):(190+st*8);
+    const gapRand=prog<0.50?(125+st*10):(100+st*8);
+    px+=w+gapBase+Math.random()*gapRand;
   }
   // Guaranteed horizontal rails bridge the floor-danger section.
   const railY=[l2.gy-105,l2.gy-165,l2.gy-120];
@@ -1726,11 +1731,12 @@ function genL2(){
 
   // v4.20g: 道具随机出现，但同类会自动错开，避免一屏同时刷很多个同款。
   const canPlaceL2Item=(type,x)=>{
-    if(type==='horseshoe'||type==='redheart')return true;
+    // v4.21l: 不只是同类，任何两个可见道具都至少错开一屏左右。
+    // 这样不会再出现“邮件 + 下班卡”之类不同道具叠在一起。
+    const anyGap=(type==='horseshoe'||type==='redheart')?430:540;
+    if(l2.colls.some(c=>Math.abs(c.x-x)<anyGap))return false;
     const same=l2.colls.filter(c=>c.type===type);
-    const nearGap=type==='pancake'?380:500;
-    if(same.some(c=>Math.abs(c.x-x)<nearGap))return false;
-    if(same.filter(c=>Math.abs(c.x-x)<1250).length>=2)return false;
+    if(same.some(c=>Math.abs(c.x-x)<760))return false;
     return true;
   };
   const addL2Item=(c)=>{
@@ -1764,13 +1770,14 @@ function genL2(){
     }
 
     if(!l2.heartGiven&&i>=heartIdx&&pl.x>lw*0.30){
-      addL2Item({x:pl.x+pl.w/2,y:pl.y-40,type:'redheart',collected:false});
-      l2.heartGiven=true;
+      if(addL2Item({x:pl.x+pl.w/2,y:pl.y-40,type:'redheart',collected:false}))l2.heartGiven=true;
     }
   }
 
-  // BOSS 通行道具固定在浮动平台：第1/3关马蹄，第2关大饼。
-  l2.colls.push({x:hp.x+hp.w/2,y:hp.y-34,type:l2.bossKey,collected:false,pl:hp,bossToken:true});
+  // BOSS 通行道具固定在浮动平台，并清掉附近普通奖励，避免两个道具挤在一起。
+  const bossTokenX=hp.x+hp.w/2;
+  l2.colls=l2.colls.filter(c=>Math.abs(c.x-bossTokenX)>=540);
+  l2.colls.push({x:bossTokenX,y:hp.y-34,type:l2.bossKey,collected:false,pl:hp,bossToken:true});
 
   // BOSS 前补给也随机，但大饼不会挤在一起。
   const preCount=flow.preBoss[0]+Math.floor(Math.random()*(flow.preBoss[1]-flow.preBoss[0]+1));
@@ -1803,8 +1810,8 @@ function genL2(){
     }
   }
 
-  // 分段保底：只保证“有东西”，不会为了补数量强行堆同款。
-  const minCollForSeg=i=>(st===1&&i>=2)?1:flow.minSeg;
+  // v4.21l: 四个赛段都至少 2 个奖励，后半段不再降到 1 个。
+  const minCollForSeg=i=>Math.max(2,flow.minSeg);
   const extraItemPool=st===0
     ?['pancake','coffee','folder','clockout']
     :st===1
@@ -1814,7 +1821,7 @@ function genL2(){
     const [sa,sb]=segRange(i);
     const minCollPerSeg=minCollForSeg(i);
     let have=l2.colls.filter(c=>c.x>=sa&&c.x<sb).length,tries=0;
-    while(have<minCollPerSeg&&tries++<24){
+    while(have<minCollPerSeg&&tries++<60){
       const cands=plats.filter(pl=>!pl.ground&&pl.x>=sa-20&&pl.x<sb);
       let cx2,cy2;
       if(cands.length){
@@ -1991,6 +1998,24 @@ function genL2(){
       else o.dead=true;
     }
     l2.obs=l2.obs.filter(o=>!o.dead);
+  }
+
+  // v4.21l: 后半段再切成 4 小段，每小段至少有 1 个障碍。
+  // 这是最后保险，防止随机/激光清场后出现很长一段什么都没有。
+  for(let bi=0;bi<4;bi++){
+    const ba=midX+(playB-midX)*bi/4;
+    const bb=midX+(playB-midX)*(bi+1)/4;
+    if(l2.obs.some(o=>o.x>=ba&&o.x<bb))continue;
+    const allow=st===1?['hr','fallpot']:st===0?['hr','fallpot','elevator']:['hr','fallpot','elevator','toilet'];
+    let placed=false;
+    for(const t of shuf(allow)){
+      if(st===1&&t==='toilet'&&!canStage2Toilet((ba+bb)/2))continue;
+      const x=freeSlot(ba+35,bb-35,t);
+      if(x!==null){
+        if(t==='fallpot')potCount++;
+        l2.obs.push(mkObs(t,x));placed=true;break;
+      }
+    }
   }
   l2.p.x=60;l2.p.y=250;l2.p.vx=0;l2.p.vy=0;l2.p.h=44;
 }
