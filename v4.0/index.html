@@ -1082,7 +1082,8 @@ function uL1(){
         l1.horseGiven=true;
       }
     }
-    else if(!(l1.stage===1&&l1.dist>=l1.nextRewardAt)&&!stage2ForceBlock&&r<flow.single){
+    // v4.21n: 第二关奖励已在上方独立节奏器生成，不再占用障碍生成轮次；避免奖励停在屏幕里时把整段障碍“饿死”。
+    else if(!stage2ForceBlock&&r<flow.single){
       const pools=[
         [{t:'papers',w:52,h:44,p:0.12},{t:'laptop',w:58,h:44,p:0.09},{t:'mouse',w:40,h:32,p:0.07},{t:'printer',w:56,h:52,p:0.23},{t:'hr',w:44,h:60,p:0.17},{t:'blackpot',w:POT_W,h:POT_H,p:0.18},{t:'tel',w:54,h:38,p:0.14}], // v4.21: 办公室以静态障碍为主，座机作为负面事件
         [{t:'slider',w:44,h:54,p:0.18},{t:'notebook',w:40,h:40,p:0.12},{t:'boss',w:52,h:58,p:0.10},{t:'blackpot',w:POT_W,h:POT_H,p:0.17},{t:'whiteboard',w:58,h:44,p:0.13},{t:'alarm',w:46,h:44,p:0.12},{t:'mail',w:42,h:34,p:0.18}], // v4.14: 删 会议桌、板擦换白板，剩余按原比例缩放
@@ -1103,43 +1104,31 @@ function uL1(){
           }
           if(placed)break;
         }
+        // v4.21n: 本轮被间距规则挡掉时，12 帧后立刻补试，不再白等完整生成周期。
+        if(!placed)l1.si=Math.min(l1.si,12);
       }else{
         for(const lane of lanes){
           if(!l1LaneBlocked(lane,sx,sel.t,sel.w)&&l1TryPlace(sel.t,sel.w,sel.h,lane,sx))break;
         }
       }
     }
-    else if(l1.stage===1?l1.dist>=l1.nextRewardAt:r<flow.single+flow.item){
-      if(l1.stage===1){
-        if(!l1.rewardDueSince)l1.rewardDueSince=l1.dist;
-        const force=l1.dist-l1.rewardDueSince>70;
-        const forcedType=l1.mailRewardPending||'';
-        if(l1PlaceStage2Reward(force,forcedType)){
-          l1.mailRewardPending='';
-          l1.nextRewardAt=l1.dist+285+Math.floor(Math.random()*96);
-          l1.rewardDueSince=0;
-        }else{
-          // 放不下时只延后很短距离，持续重试。
-          l1.nextRewardAt=l1.dist+30;
+    else if(l1.stage!==1&&r<flow.single+flow.item){
+      const ix=l1.dist+W+60+Math.floor(Math.random()*100);
+      const type=pickL1Item(l1.stage,ix);
+      if(type){
+        const cand=[0,1,2].sort(()=>Math.random()-0.5);
+        let ilane=-1;
+        for(const ln of cand){
+          if(l1.obs.some(o=>o.lane===ln&&(o.t==='car'||o.t==='boss_car')))continue;
+          if(l1LaneFree(ln,ix-200,ix+200)){ilane=ln;break;}
         }
-      }else{
-        const ix=l1.dist+W+60+Math.floor(Math.random()*100);
-        const type=pickL1Item(l1.stage,ix);
-        if(type){
-          const cand=[0,1,2].sort(()=>Math.random()-0.5);
-          let ilane=-1;
-          for(const ln of cand){
-            if(l1.obs.some(o=>o.lane===ln&&(o.t==='car'||o.t==='boss_car')))continue;
-            if(l1LaneFree(ln,ix-200,ix+200)){ilane=ln;break;}
+        if(ilane>=0){
+          let toLane=ilane;
+          if(l1.stage>0&&Math.random()<0.58){
+            const cand2=Math.max(0,Math.min(2,ilane+(Math.random()<0.5?-1:1)));
+            if(l1LaneFree(cand2,ix-200,ix+200))toLane=cand2;
           }
-          if(ilane>=0){
-            let toLane=ilane;
-            if(l1.stage>0&&Math.random()<0.58){
-              const cand2=Math.max(0,Math.min(2,ilane+(Math.random()<0.5?-1:1)));
-              if(l1LaneFree(cand2,ix-200,ix+200))toLane=cand2;
-            }
-            l1.coll.push({x0:ix,y:l1.ly[ilane]-30,type,w:36,h:36,collected:false,fromLane:ilane,toLane,phase:Math.random()*6.28});
-          }
+          l1.coll.push({x0:ix,y:l1.ly[ilane]-30,type,w:36,h:36,collected:false,fromLane:ilane,toLane,phase:Math.random()*6.28});
         }
       }
     }
@@ -1162,9 +1151,12 @@ function uL1(){
       const placedB=!l1LaneBlocked(lanes[1],sx2,b.t,b.w)&&l1TryPlace(b.t,b.w,b.h,lanes[1],sx2);
       if(l1.stage===1&&!placedA&&!placedB){
         const fallback=pairMix.find(it=>it.t!==a.t&&it.t!==b.t)||pairMix[0];
+        let fallbackPlaced=false;
         for(const ln of shuf([0,1,2])){
-          if(!l1LaneBlocked(ln,sx1,fallback.t,fallback.w)&&l1TryPlace(fallback.t,fallback.w,fallback.h,ln,sx1))break;
+          if(!l1LaneBlocked(ln,sx1,fallback.t,fallback.w)&&l1TryPlace(fallback.t,fallback.w,fallback.h,ln,sx1)){fallbackPlaced=true;break;}
         }
+        // v4.21n: 双道封锁整组失败时快速重试，避免连续空白。
+        if(!fallbackPlaced)l1.si=Math.min(l1.si,12);
       }
 
       // v4.21j: 第二关中后段随机追加第二组封锁，安全车道必须变化。
