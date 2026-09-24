@@ -1409,7 +1409,8 @@ function genL2(){
         shoeRate=rate(flow.shoe),extraRate=rate(flow.extra),pieRate=rate(flow.pancake);
   const extraPool=['clockout','milktea'];
   const heartIdx=1+Math.floor(Math.random()*Math.max(1,plats.length-2));
-  let pieCount=0,lastPlatformItem='',lastFillItem='';
+  let pieCount=0,lastPlatformItem='',lastFillItem='',stage2LidCount=0;
+  const itemMidX=playA+(playB-playA)/2;
   const pickNoRepeat=(pool,last)=>{
     const alt=pool.filter(t=>t!==last);
     const use=alt.length?alt:pool;
@@ -1423,7 +1424,12 @@ function genL2(){
     const r2=Math.random();
     let type='';
     if(r2<lidRate){
-      if(!pl.mv&&!pl.rail&&pl.w>=70)l2.lids.push(mkLid(pl,rr(10,pl.w-54)));
+      // v4.20c: 第2关台阶马桶整关最多 1 个，并且只允许出现在前半段。
+      const allowLid=!(st===1&&(stage2LidCount>=1||pl.x>=itemMidX));
+      if(allowLid&&!pl.mv&&!pl.rail&&pl.w>=70){
+        l2.lids.push(mkLid(pl,rr(10,pl.w-54)));
+        if(st===1)stage2LidCount++;
+      }
     }
     else if(r2<lidRate+coffeeRate)type='coffee';
     else if(r2<lidRate+coffeeRate+mailRate)type='mail';
