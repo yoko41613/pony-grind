@@ -86,14 +86,17 @@ mouse:[
 "ttt66666666ttt"
 ],
 // v4.20f: 会议室闹钟——双铃机械闹钟，替代会议室文件夹。
+// v4.21g: 第二关黄色双铃闹钟——按确认稿更新，黄色框体/双铃/白表盘/黑指针。
 alarm:[
-"ttt77tttttt77ttt",
-"tt777tttttt777tt",
 "ttt66tttttt66ttt",
-"tt666666666666tt",
-"t66555555555566t",
-"6655556556555566",
-"6555555655555556",
+"tt6b66tttt66b6tt",
+"t6bbb66tt66bbb6t",
+"6bb5bb6666bb5bb6",
+"6bbbb666666bbbb6",
+"t66b66666666b66t",
+"tt665555555566tt",
+"t66555565555566t",
+"6655555655555566",
 "6555555666555556",
 "6555555666655556",
 "6555555556555556",
@@ -280,16 +283,20 @@ cctv:[
 "tttttt666tttt"],
 // v4.7: 神秘邮件（信封 + 右上角红点 1）——拆开随机开出一件道具
 mail:[
-"ttttttttttt777t",
-"ttttttttttt757t",
-"ttttttttttt777t",
-"tt66666666666tt",
-"t6555555555556t",
-"t6556555556556t",
-"t6555565655556t",
-"t6555556555556t",
-"t6555555555556t",
-"t6666666666666t"]
+"tttttttttt777tt",
+"tttttttttt757tt",
+"tttttttttt777tt",
+"tt666666666666t",
+"t65555555555556",
+"655655555556556",
+"655565555565556",
+"655556555655556",
+"655555666555556",
+"655556555655556",
+"655565555565556",
+"655655555556556",
+"t65555555555556",
+"tt666666666666t"]
 };
 
 // v4.20e: 像素精灵预渲染缓存。原来每只精灵每帧都逐格 fillRect，物体一多容易掉帧。
@@ -1105,10 +1112,23 @@ function uL1(){
         l1.floats.push({x:px+pw/2,y:py-26,txt:'来电话啦',t:72});
         continue;
       }
-      if(o.t==='mail'){ // v4.21f: 第二关邮件作为负面事件
-        o.dead=true;l1.slowT=Math.max(l1.slowT,210);l1.score=Math.max(0,l1.score-10);sh();
-        spP(px+pw/2,py+ph/2,7,'#6af',l1.part);
-        l1.floats.push({x:px+pw/2,y:py-26,txt:'新邮件！先处理一下',t:72});
+      if(o.t==='mail'){ // v4.21g: 邮件 = 随机开出一个第二关正向道具
+        o.dead=true;sw();spP(px+pw/2,py+ph/2,8,'#fff',l1.part,7,6,26);
+        const mailPool=['coffee','pancake','fish'];
+        const item=mailPool[Math.floor(Math.random()*mailPool.length)];
+        let spawnX=l1.dist+330;
+        // 保持“同屏只有 1 个正向道具”：如果当前视野已有奖励，就把邮件奖励放到更远处。
+        while(!l1ItemCanSpawn(item,spawnX)&&spawnX<l1.dist+W*3)spawnX+=W+180;
+        const lane=l1.pl;
+        l1.coll.push({x0:spawnX,y:l1.ly[lane]-30,type:item,w:36,h:36,collected:false,fromLane:lane,toLane:lane,phase:Math.random()*6.28,fromMail:true});
+        const itemName=item==='coffee'?'咖啡':item==='pancake'?'大饼':'带鱼';
+        l1.floats.push({x:px+pw/2,y:py-26,txt:'邮件开出：'+itemName,t:78});
+        continue;
+      }
+      if(o.t==='alarm'){
+        o.dead=true;l1.dizzyT=Math.max(l1.dizzyT,300);l1.inv=Math.max(l1.inv,36);sh();
+        spP(px+pw/2,py+ph/2,9,'#fd4',l1.part,8,5,28);
+        l1.floats.push({x:px+pw/2,y:py-26,txt:'醒醒',t:72});
         continue;
       }
       if(o.t==='boss_car'&&(l1.boostT>0||l1.bigT>0||l1.inv>0)){
