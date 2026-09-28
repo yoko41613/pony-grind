@@ -830,9 +830,9 @@ const L1_ITEMS=[
   [{t:'skateboard',w:0.90},{t:'popcorn',w:1.55},{t:'sunglass',w:0.72},{t:'exit',w:1.35}]
 ];
 const L1_FLOW=[
-  {single:0.65,item:0.20,bonusChance:0.40},
+  {single:0.62,item:0.23,bonusChance:0.46},
   {single:0.56,item:0.10,bonusChance:0.00}, // v4.21j: 第2关改为“切道关”，双道封锁明显增多
-  {single:0.70,item:0.16,bonusChance:0.34} // v4.21p: 第3关奖励整体更密，仍给双道封锁保留足够比例
+  {single:0.67,item:0.19,bonusChance:0.40} // v4.21p: 第3关奖励整体更密，仍给双道封锁保留足够比例
 ];
 const L1_POSITIVE=new Set(['badge','milktea','headset','burger','coffee','pancake','fish','skateboard','popcorn','sunglass','exit','heart','horseshoe']);
 function l1ItemCanSpawn(type,x){
@@ -842,7 +842,7 @@ function l1ItemCanSpawn(type,x){
       if(l1ActiveReward())return false;
     }else{
       // 第一关缩短普通奖励间距，仍避免同屏堆叠；第三关保持现有节奏。
-      const anyGap=l1.stage===2?Math.max(520,Math.round(W*0.72)):W+40;
+      const anyGap=l1.stage===2?Math.max(480,Math.round(W*0.72)):W+10;
       if(active.some(c=>L1_POSITIVE.has(c.type)&&Math.abs(c.x0-x)<anyGap))return false;
     }
   }
@@ -862,8 +862,8 @@ function pickL1Item(stage,x){
   l1.itemHistory=[pick,...recent.filter(t=>t!==pick)].slice(0,2);
   return pick;
 }
-// 第二关统一奖励调度：仅一个活动奖励；无奖励 18 帧后补位，最多空档 60 帧。
-const L1_REWARD_WAIT=18,L1_REWARD_MAX_EMPTY=60;
+// 第二关统一奖励调度：仅一个活动奖励；无奖励 12 帧后补位，最多空档 60 帧。
+const L1_REWARD_WAIT=12,L1_REWARD_MAX_EMPTY=60;
 function l1ActiveReward(){
   return l1.coll.some(c=>!c.collected&&L1_POSITIVE.has(c.type)&&c.x0+(c.w||36)>l1.dist);
 }
