@@ -315,6 +315,17 @@ mail:[
 
 // v4.20e: 像素精灵预渲染缓存。原来每只精灵每帧都逐格 fillRect，物体一多容易掉帧。
 const SPR_CACHE=new WeakMap();
+// 穿鞋参考：鞋头朝身体内侧，靴筒露在身体两侧，随角色尺寸同步缩放。
+function drawWornShoes(ctx,x,y,w,h){
+  const sw=w*0.38,sh=sw*15/14,cy=y+h*0.74;
+  for(const side of [-1,1]){
+    ctx.save();
+    ctx.translate(x+w*(side<0?0.04:0.96),cy);
+    ctx.rotate(side<0?0.24:-0.24);
+    ds(ctx,S.shoe,-sw/2,-sh/2,sw,sh,side>0);
+    ctx.restore();
+  }
+}
 function ds(ctx,spr,x,y,w,h,flip){
   if(!spr||!spr.length)return;
   let bmp=SPR_CACHE.get(spr);
@@ -1464,15 +1475,12 @@ function drL1(){
     ctx.strokeStyle='#7a4a20';ctx.lineWidth=3;
     ctx.beginPath();ctx.moveTo(ponyX+8,ponyY+24);ctx.lineTo(ponyX+42,ponyY+42);ctx.moveTo(ponyX+42,ponyY+24);ctx.lineTo(ponyX+8,ponyY+42);ctx.stroke();
   }
-  if(l1.shoeT>0){ // v4.21p: 两只红靴直接套在左右两只翘起的脚端，参考确认图的位置/比例。
-    const bw3=Math.max(18,Math.round(pw2*0.40)),bh3=Math.round(bw3*10/12);
-    const footY=ponyY+ph2*0.66;
-    // 左脚端更靠外：鞋口接住腿，鞋头朝画面外侧。
-    ctx.save();ctx.translate(baseX+pw2*0.035,footY+bh3/2);ctx.rotate(0.18);
-    ds(ctx,S.shoe_wear,-bw3/2,-bh3/2,bw3,bh3,true);ctx.restore();
-    // 右脚镜像，保持两只靴子与马身左右对称。
-    ctx.save();ctx.translate(baseX+pw2*0.965,footY+bh3/2);ctx.rotate(-0.18);
-    ds(ctx,S.shoe_wear,-bw3/2,-bh3/2,bw3,bh3,false);ctx.restore();
+  if(l1.shoeT>0){
+    // 跌倒时鞋子与身体使用同一旋转中心，避免附着部件脱离。
+    if(l1.stumbleT>0){
+      ctx.save();ctx.translate(ponyX+pw2/2,ponyY+ph2/2);ctx.rotate(Math.sin(af*0.8)*0.34);
+      drawWornShoes(ctx,-pw2/2,-ph2/2,pw2,ph2);ctx.restore();
+    }else drawWornShoes(ctx,baseX,ponyY,pw2,ph2);
   }
   if(l1.callT>0){ // v4.12: 接电话中——头顶座机晃动 + 通话波纹
     ds(ctx,S.tel,ponyX+pw2/2-13,ponyY-24+Math.sin(af*0.25)*2,26,18,false);
@@ -2676,13 +2684,7 @@ function drL2(){
   const pw=l2.big?l2.p.w+22:l2.p.w+8;
   const ph2=l2.big?l2.p.h+20:l2.p.h+8;
   ds(ctx,spr,l2.p.x-bx,l2.p.y-8,pw,ph2,l2.p.face<0);
-  // v4.20e: 红鞋贴在左右两只脚上，位置跟角色尺寸同步。
-  if(l2.shoeT>0){
-    const shoeW=Math.max(10,Math.round(pw*0.23)),shoeH=Math.round(shoeW*15/14);
-    const bodyX=l2.p.x-bx,bodyY=l2.p.y-8,footY=bodyY+ph2*0.79;
-    ds(ctx,S.shoe,bodyX+pw*0.30-shoeW/2,footY,shoeW,shoeH,true);
-    ds(ctx,S.shoe,bodyX+pw*0.68-shoeW/2,footY,shoeW,shoeH,false);
-  }
+  if(l2.shoeT>0)drawWornShoes(ctx,l2.p.x-bx,l2.p.y-8,pw,ph2);
   if(l2.burdenT>0){
     const potX=l2.p.x-bx+(l2.p.face<0?18:8),potY=l2.p.y+8;
     ds(ctx,S.blackpot,potX,potY,30,23,l2.p.face<0);
@@ -3156,6 +3158,7 @@ loop();
 </script>
 </body>
 </html>
+
 
 
 
