@@ -2244,7 +2244,7 @@ function uL2(){
   // Route rules: red floor zones must be crossed on rails; low scanner zones
   // must be crossed on the ground. Damage is gated by normal invincibility.
   for(const z of l2.zones){
-    z.ph+=(l2.slowT>0?0.6:1);
+    z.ph+=(l2.slowT>0?0.48:0.8);
     if(l2.p.x+l2.p.w<=z.x||l2.p.x>=z.x+z.w)continue;
     if(z.type==='air'&&l2.p.y+l2.p.h>l2.gy-18){
       l2Hurt();
