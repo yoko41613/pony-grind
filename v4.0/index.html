@@ -858,7 +858,7 @@ function l1PlaceStage2Reward(force=false,forcedType=''){
   const tries=force?[0,55,110]:[0,55];
   for(const off of tries){
     // 新奖励直接出现在最右侧附近，玩家马上能看到，不再藏在屏幕外很久。
-    const ix=l1.dist+W-22+off;
+    const ix=l1.dist+W-72+off;
     const lanes=shuf([0,1,2]);
     const clear=force?120:155;
     let lane=lanes.find(ln=>l1LaneFree(ln,ix-clear,ix+clear));
@@ -977,7 +977,7 @@ function rL1(){
   if(save.items.headset>0){save.items.headset--;stSlow=true;}
   if(save.items.offcard>0){save.items.offcard--;stInv=true;}
   sv(save);
-  l1={py:H*0.66,pl:1,pvy:0,jump:false,gnd:true,inv:0,startInv:stInv?180:0,score:0,dist:0,cam:0,bs:2,spd:2,lives:3,obs:[],coll:[],part:[],gy:H*0.88,ly:[H*0.52,H*0.66,H*0.80],st:0,si:46,go:false,goSaved:false,boostT:0,startBoost:stBoost?180:0,bigT:0,slowT:0,startSlow:stSlow?180:0,jumpBoostT:0,dizzyT:0,stumbleT:0,chairRide:null,chairRideT:0,rideX:0,coinT:0,stage:0,goal:L1_GOAL[0],win:false,winT:0,winSaved:false,banner:'',bannerT:0,sel:true,cont:false,tip:'',tipT:0,heartGiven:false,horseGiven:false,patternN:0,lastSafe:1,luckLine:'',burdenT:0,floats:[],lastItemType:'',itemHistory:[],potShake:0,nextRewardAt:0,lastRewardX:0,rewardDueSince:0};
+  l1={py:H*0.66,pl:1,pvy:0,jump:false,gnd:true,inv:0,startInv:stInv?180:0,score:0,dist:0,cam:0,bs:2,spd:2,lives:3,obs:[],coll:[],part:[],gy:H*0.88,ly:[H*0.52,H*0.66,H*0.80],st:0,si:46,go:false,goSaved:false,boostT:0,startBoost:stBoost?180:0,bigT:0,slowT:0,startSlow:stSlow?180:0,jumpBoostT:0,dizzyT:0,stumbleT:0,chairRide:null,chairRideT:0,rideX:0,coinT:0,stage:0,goal:L1_GOAL[0],win:false,winT:0,winSaved:false,banner:'',bannerT:0,sel:true,cont:false,tip:'',tipT:0,heartGiven:false,horseGiven:false,patternN:0,lastSafe:1,luckLine:'',burdenT:0,floats:[],lastItemType:'',itemHistory:[],potShake:0,nextRewardAt:0,lastRewardX:0,rewardDueSince:0,lastContentFillAt:-9999};
 }
 function l1Start(st){
   const continuing=l1.cont;
@@ -1000,7 +1000,7 @@ function l1Start(st){
   l1.patternN=0;l1.lastSafe=1;l1.heartGiven=false;l1.lastItemType='';l1.itemHistory=[];l1.potShake=0;
   // v4.21l: 第二关奖励密度向第一关靠拢：更早、更持续，但同屏仍只允许 1 个正向奖励。
   l1.nextRewardAt=st===1?210+Math.floor(Math.random()*91):0;
-  l1.lastRewardX=0;l1.rewardDueSince=0;
+  l1.lastRewardX=0;l1.rewardDueSince=0;l1.lastContentFillAt=-9999;
   if(!continuing){l1.score=0;l1.lives=3;l1.horseGiven=false;l1.boostT=l1.startBoost;l1.slowT=l1.startSlow;l1.inv=l1.startInv;}
   l1.luckLine='';
   l1.cont=false;
@@ -1077,15 +1077,42 @@ function uL1(){
       if(!l1.rewardDueSince)l1.rewardDueSince=l1.dist;
       const force=l1.dist-l1.rewardDueSince>70;
       if(l1PlaceStage2Reward(force,'')){
-        l1.nextRewardAt=l1.dist+285+Math.floor(Math.random()*96);
+        l1.nextRewardAt=l1.dist+210+Math.floor(Math.random()*81);
         l1.rewardDueSince=0;
       }
     }else if(visibleReward)l1.rewardDueSince=0;
   }
 
+  // v4.21q: 第二关“画面不能为空”硬保底。
+  // 当前视野没有任何障碍/事件，也没有正向奖励时，直接从右侧补 1 个奖励。
+  // 仍遵守同屏只能有 1 个正向奖励，所以不会变成奖励扎堆。
+  if(!raceOver&&l1.stage===1){
+    const hasVisibleObstacle=l1.obs.some(o=>{
+      if(o.dead)return false;
+      const ox=o.x0+(o.sw||0)-l1.dist;
+      return ox>-70&&ox<W+70;
+    });
+    const hasVisibleReward=l1.coll.some(c=>{
+      if(c.collected||!L1_POSITIVE.has(c.type))return false;
+      const cx=c.x0-l1.dist;
+      return cx>-55&&cx<W+55;
+    });
+    if(!hasVisibleObstacle&&!hasVisibleReward&&l1.dist>180&&l1.dist-l1.lastContentFillAt>120){
+      if(l1PlaceStage2Reward(true,'')){
+        l1.lastContentFillAt=l1.dist;
+        l1.nextRewardAt=l1.dist+190+Math.floor(Math.random()*71);
+        l1.rewardDueSince=0;
+      }else{
+        // 如果正向奖励因为极端间距条件仍放不下，让常规障碍生成立刻重试。
+        l1.si=Math.min(l1.si,4);
+        l1.lastContentFillAt=l1.dist;
+      }
+    }
+  }
+
   // Spawn (per-stage pools, only while race is active)
   if(!raceOver){l1.st++;if(l1.st>l1.si){l1.st=0;
-    const spawnBase=[76,61,61][l1.stage],spawnMin=[30,25,24][l1.stage];
+    const spawnBase=[76,55,61][l1.stage],spawnMin=[30,22,24][l1.stage];
     l1.si=Math.max(spawnMin,spawnBase-l1.dist*0.0023);
     l1.patternN++;
     const r=Math.random(),flow=L1_FLOW[l1.stage];
@@ -1120,7 +1147,7 @@ function uL1(){
           if(placed)break;
         }
         // v4.21n: 本轮被间距规则挡掉时，12 帧后立刻补试，不再白等完整生成周期。
-        if(!placed)l1.si=Math.min(l1.si,12);
+        if(!placed)l1.si=Math.min(l1.si,6);
       }else{
         for(const lane of lanes){
           if(!l1LaneBlocked(lane,sx,sel.t,sel.w)&&l1TryPlace(sel.t,sel.w,sel.h,lane,sx))break;
@@ -1171,7 +1198,7 @@ function uL1(){
           if(!l1LaneBlocked(ln,sx1,fallback.t,fallback.w)&&l1TryPlace(fallback.t,fallback.w,fallback.h,ln,sx1)){fallbackPlaced=true;break;}
         }
         // v4.21n: 双道封锁整组失败时快速重试，避免连续空白。
-        if(!fallbackPlaced)l1.si=Math.min(l1.si,12);
+        if(!fallbackPlaced)l1.si=Math.min(l1.si,6);
       }
 
       // v4.21j: 第二关中后段随机追加第二组封锁，安全车道必须变化。
