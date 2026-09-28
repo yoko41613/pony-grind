@@ -2,13 +2,14 @@
 <html lang="zh-CN" data-page-node-id="Z3PH23vXC2r1Qsu6oZ1Ruo">
 <head data-page-node-id="b0VQgYk6F6dpcYQEowhFIZ">
 <meta charset="UTF-8" data-page-node-id="J5Ycp79FN3DeM6Sj1mVPdw">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" data-page-node-id="kpA19DFiH8wdpBUdHSyTdd">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" data-page-node-id="kpA19DFiH8wdpBUdHSyTdd">
 <title>马马打工记 · 触屏跳跃版</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
-html,body{width:100%;height:100%;background:#ffffff;overflow:hidden;touch-action:none;user-select:none;-webkit-user-select:none;font-family:'PingFang SC','Microsoft YaHei',Arial,sans-serif}
-body{display:flex;justify-content:center;align-items:center}
-canvas{display:block;flex-shrink:0}
+html,body{width:100%;height:100%;background:#ffffff;overflow:hidden;touch-action:none;overscroll-behavior:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent;font-family:'PingFang SC','Microsoft YaHei',Arial,sans-serif}
+body{position:fixed;inset:0;display:flex;justify-content:center;align-items:center}
+@supports(height:100dvh){html,body{height:100dvh}}
+canvas{display:block;flex-shrink:0;touch-action:none;max-width:100vw;max-height:100dvh}
 </style>
 </head>
 <body data-page-node-id="AzNWysTOAV7LKbwEOjyPBh">
