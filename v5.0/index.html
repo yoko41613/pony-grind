@@ -1641,7 +1641,7 @@ function rL2(){
   // 每一关都随机：三关背景色调顺序洗牌；标语每关/每次随机；地图布局由 genL2 随机生成
   const bgOrder=[0,1,2];
   for(let i=2;i>0;i--){const j=Math.floor(Math.random()*(i+1));const t=bgOrder[i];bgOrder[i]=bgOrder[j];bgOrder[j]=t;}
-  l2={stage:0,bgOrder:bgOrder,posters:shuffledPosters(),p:{x:60,y:250,vx:0,vy:0,w:34,h:44,gnd:false,face:1},grav:0.5,jumpV:-16*jb,lives:3+el,score:0,big:false,horse:false,shield:0,slowT:0,doorT:0,boostT:0,burdenT:0,inv:0,coffeeT:0,shoeT:0,mailBag:[],go:false,won:false,cam:0,part:[],floats:[],bossT:0,bossDone:false,overSaved:false,winSaved:false,heartGiven:false,piesEaten:0,piesTotal:0};
+  l2={stage:0,bgOrder:bgOrder,posters:shuffledPosters(),p:{x:60,y:250,vx:0,vy:0,w:34,h:44,gnd:false,face:1},grav:0.34,jumpV:-13.2*jb,lives:3+el,score:0,big:false,horse:false,shield:0,slowT:0,doorT:0,boostT:0,burdenT:0,inv:0,coffeeT:0,shoeT:0,mailBag:[],go:false,won:false,cam:0,part:[],floats:[],bossT:0,bossDone:false,overSaved:false,winSaved:false,heartGiven:false,piesEaten:0,piesTotal:0};
   genL2();
 }
 // v4.5: 通用洗牌——用于道具类型池，保证每局出现的顺序都不一样
@@ -2137,12 +2137,12 @@ function l2Collect(c){
 function l2Stomp(b){
   const ready=l2.bossKey==='pancake'?l2.bossReady:l2.horse;
   if(!ready){
-    l2.p.vy=-8;l2.p.gnd=false;l2Hurt();
+    l2.p.vy=-6.6;l2.p.gnd=false;l2Hurt();
     const need=l2.bossKey==='pancake'?'先吃浮动平台上的大饼!':'需要马蹄印记! 🐴';
     l2.floats.push({x:b.x+b.w/2,y:b.y-20,txt:need,t:54});
     return;
   }
-  b.hp--;b.hit=26;l2.p.vy=-9;l2.p.gnd=false;l2.score+=20;shake=Math.max(shake,9);sh();
+  b.hp--;b.hit=26;l2.p.vy=-7.4;l2.p.gnd=false;l2.score+=20;shake=Math.max(shake,9);sh();
   // v2.17: 马蹄吃一次全程有效——踩中不消耗，直到 BOSS 被打死
   spP(b.x+b.w/2,b.y,10,'#f84',l2.part,7,7,22);
   // v4.6: 每一下都把剩余血量喊出来，踩中不至于像"没掉血"
@@ -2248,7 +2248,7 @@ function uL2(){
     if(l2.p.x+l2.p.w<=z.x||l2.p.x>=z.x+z.w)continue;
     if(z.type==='air'&&l2.p.y+l2.p.h>l2.gy-18){
       l2Hurt();
-      if(!l2.go){l2.p.vy=-9;l2.p.gnd=false;}
+      if(!l2.go){l2.p.vy=-7.4;l2.p.gnd=false;}
     }
     if(z.type==='ground'){
       // v4.4: 短光柱碰撞——只有光束这一小段有伤害，且它一直在动
