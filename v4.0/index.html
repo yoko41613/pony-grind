@@ -315,14 +315,14 @@ mail:[
 
 // v4.20e: 像素精灵预渲染缓存。原来每只精灵每帧都逐格 fillRect，物体一多容易掉帧。
 const SPR_CACHE=new WeakMap();
-// 穿鞋参考：鞋头朝身体内侧，靴筒露在身体两侧，随角色尺寸同步缩放。
+// 横穿靴子：鞋尖向上，靴口朝内接住马身；先镜像再旋转四分之一圈。
 function drawWornShoes(ctx,x,y,w,h){
   const sw=w*0.38,sh=sw*15/14,cy=y+h*0.74;
   for(const side of [-1,1]){
     ctx.save();
     ctx.translate(x+w*(side<0?0.04:0.96),cy);
-    ctx.rotate(side<0?0.24:-0.24);
-    ds(ctx,S.shoe,-sw/2,-sh/2,sw,sh,side>0);
+    ctx.rotate(side<0?Math.PI/2+0.24:-Math.PI/2-0.24);
+    ds(ctx,S.shoe,-sw/2,-sh/2,sw,sh,side<0);
     ctx.restore();
   }
 }
@@ -3158,6 +3158,7 @@ loop();
 </script>
 </body>
 </html>
+
 
 
 
