@@ -813,13 +813,13 @@ const L1_DESC=['办公室','会议室','停车场'];
 // v4.21: L1“可捡道具”只保留明确收益；电话/邮件不再伪装成奖励。
 // v4.21d: L1 奖励重新配权。强力道具更稀有，普通奖励更常见，但顺序完全随机。
 const L1_ITEMS=[
-  [{t:'badge',w:1.0},{t:'milktea',w:1.15},{t:'headset',w:0.70},{t:'burger',w:1.15}],
+  [{t:'badge',w:1.60},{t:'milktea',w:1.70},{t:'headset',w:0.35},{t:'burger',w:1.70}],
   [{t:'coffee',w:1.05},{t:'pancake',w:1.20},{t:'fish',w:0.75}],
   // v4.21p: 第3关重新配比——爆米花/紧急出口是主奖励，滑板次之，3D眼镜保持稀有但不再难遇到。
   [{t:'skateboard',w:0.90},{t:'popcorn',w:1.55},{t:'sunglass',w:0.72},{t:'exit',w:1.35}]
 ];
 const L1_FLOW=[
-  {single:0.74,item:0.11,bonusChance:0.24},
+  {single:0.65,item:0.20,bonusChance:0.40},
   {single:0.56,item:0.10,bonusChance:0.00}, // v4.21j: 第2关改为“切道关”，双道封锁明显增多
   {single:0.70,item:0.16,bonusChance:0.34} // v4.21p: 第3关奖励整体更密，仍给双道封锁保留足够比例
 ];
@@ -830,8 +830,8 @@ function l1ItemCanSpawn(type,x){
     if(l1.stage===1){
       if(l1ActiveReward())return false;
     }else{
-      // v4.21p: 第3关奖励允许更紧凑地连续出现；第1关保持原来的稀疏节奏。
-      const anyGap=l1.stage===2?Math.max(520,Math.round(W*0.72)):W+160;
+      // 第一关缩短普通奖励间距，仍避免同屏堆叠；第三关保持现有节奏。
+      const anyGap=l1.stage===2?Math.max(520,Math.round(W*0.72)):W+40;
       if(active.some(c=>L1_POSITIVE.has(c.type)&&Math.abs(c.x0-x)<anyGap))return false;
     }
   }
@@ -841,7 +841,7 @@ function l1ItemCanSpawn(type,x){
   return true;
 }
 function pickL1Item(stage,x){
-  const pool=L1_ITEMS[stage],recent=stage===1?[]:stage===2?(l1.itemHistory||[]).slice(0,1):(l1.itemHistory||[]);
+  const pool=L1_ITEMS[stage],recent=stage===1?[]:(l1.itemHistory||[]).slice(0,1);
   let choices=pool.filter(it=>!recent.includes(it.t)&&l1ItemCanSpawn(it.t,x));
   if(!choices.length)choices=pool.filter(it=>l1ItemCanSpawn(it.t,x));
   if(!choices.length)return '';
@@ -1243,7 +1243,8 @@ function uL1(){
       }
       if(o.t==='mail'){ // 邮件随机开出正向奖励；已有奖励时直接兑现，避免同屏第二枚或延后普通奖励
         o.dead=true;sw();spP(px+pw/2,py+ph/2,8,'#fff',l1.part,7,6,26);
-        const mailPool=['coffee','pancake','fish','milktea','headset','badge','burger','skateboard','popcorn','sunglass','exit','heart'];
+        const mailPool=['coffee','pancake','fish','milktea','headset','badge','burger','skateboard','popcorn','sunglass','exit','heart']
+          .filter(type=>l1.stage!==1||(type!=='sunglass'&&type!=='skateboard'));
         const item=mailPool[Math.floor(Math.random()*mailPool.length)];
         const iw=36,ih=36;
         // 用邮件本身的世界坐标直接生成，完全跳过 l1ItemCanSpawn / l1LaneFree。
@@ -3155,5 +3156,6 @@ loop();
 </script>
 </body>
 </html>
+
 
 
